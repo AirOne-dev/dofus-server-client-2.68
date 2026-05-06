@@ -40,6 +40,8 @@ Dofus\ Stump.app/
 *.log
 *.bak
 .DS_Store
+server/backups/*
+!server/backups/.gitkeep
 
 # IDE / editors
 .vscode/
