@@ -34,6 +34,8 @@ captif des deux côtés, pas de Wine).
 | Server custom IP/port/nom via Options avancées | ✅ |
 | **Havre-sac** (entrée/sortie, zaap intérieur, coffre, perso, loterie) | ✅ |
 | **Capture des actions non gérées** (panel admin → onglet Non géré, copy-paste vers Claude) | ✅ |
+| Handlers d'effets d'items pods/skin (`Effect_IncreaseWeight`, `Effect_Apparence_Wrapper`, `Effect_CastSpell_1175`) | ✅ |
+| Stubs no-op pour les messages réseau client → serveur sans logique métier (Haapi, Spouse, Alliance, Anomaly, ClientKey, SequenceNumber) | ✅ |
 | **Sortie de bâtiment** (étoile au sol bones=3507 ; détection on-walk + lookup outdoor via Position.Point comme `.relative`) | ✅ |
 
 ## Commandes admin custom (OneAir)
