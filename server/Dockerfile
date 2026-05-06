@@ -96,6 +96,8 @@ COPY OneAirHavenBagPatch.cs   Sources/Servers/Giny.World/Managers/Chat/OneAirHav
 COPY OneAirDungeons.cs        Sources/Servers/Giny.World/Managers/Chat/OneAirDungeons.cs
 COPY OneAirDeathManager.cs    Sources/Servers/Giny.World/Managers/Chat/OneAirDeathManager.cs
 COPY OneAirDungeonSeeder.cs   Sources/Servers/Giny.World/Managers/Chat/OneAirDungeonSeeder.cs
+COPY OneAirItemEffects.cs     Sources/Servers/Giny.World/Managers/Items/OneAirItemEffects.cs
+COPY OneAirNoopHandlers.cs    Sources/Servers/Giny.World/Handlers/OneAir/OneAirNoopHandlers.cs
 
 # Patch 14 (havre-sac) : intercepte les clics sur les zaaps via le dispatcher
 # générique. Le hook mémorise tous les zaaps utilisés par le joueur (pour la
@@ -110,9 +112,15 @@ RUN sed -i 's|character\.OpenZaap((MapElement)parameter);|Giny.World.Managers.Ch
 # Le hook OneAirHavenBagPatch.HandleTeleportInteraction route les bones=3507
 # vers TryExitBuilding (recalcul live de la map extérieure + cellule
 # d'entrée). Les autres téléporteurs vanilla passent inchangés.
+#
+# Le cast est volontairement `as MapElement` (et pas `(MapElement)`) :
+# HandleTeleportAction est aussi appelé depuis NpcTalkDialog.Reply avec un
+# NpcReplyRecord (les répliques de PNJ qui téléportent). Un cast strict
+# crashait avec InvalidCastException — `as` rend `null` et notre handler
+# null-safe retombe sur le comportement vanilla.
 RUN sed -i \
-    -e 's|character\.Teleport(int\.Parse(parameter\.Param1), cellId);|Giny.World.Managers.Chat.OneAirHavenBagPatch.HandleTeleportInteraction(character, (MapElement)parameter, int.Parse(parameter.Param1), cellId, true);|' \
-    -e 's|character\.Teleport(int\.Parse(parameter\.Param1));|Giny.World.Managers.Chat.OneAirHavenBagPatch.HandleTeleportInteraction(character, (MapElement)parameter, int.Parse(parameter.Param1), (short)0, false);|' \
+    -e 's|character\.Teleport(int\.Parse(parameter\.Param1), cellId);|Giny.World.Managers.Chat.OneAirHavenBagPatch.HandleTeleportInteraction(character, parameter as MapElement, int.Parse(parameter.Param1), cellId, true);|' \
+    -e 's|character\.Teleport(int\.Parse(parameter\.Param1));|Giny.World.Managers.Chat.OneAirHavenBagPatch.HandleTeleportInteraction(character, parameter as MapElement, int.Parse(parameter.Param1), (short)0, false);|' \
     Sources/Servers/Giny.World/Managers/Generic/GenericActions.cs
 
 # Patch 14ter (curseur silencieux) : pour les étoiles de sortie
@@ -234,6 +242,16 @@ RUN sed -i '/public void AddEffects/,/public void RemoveEffects/ s|if (Handlers.
 # warn "Unknown effect handler" mais ça reste enfoui dans les logs.
 RUN sed -i 's|Cast.Source.Fight.Warn("Unknown effect handler " + effect.EffectEnum);|Giny.World.Managers.Chat.OneAirUnhandledLogger.LogSpellEffect((Cast.Source as Giny.World.Managers.Fights.Fighters.CharacterFighter)?.Character, effect, (int)Cast.SpellId, (int)(Cast.Spell?.Level?.Grade ?? 0)); Cast.Source.Fight.Warn("Unknown effect handler " + effect.EffectEnum);|' \
     Sources/Servers/Giny.World/Managers/Fights/Cast/DefaultSpellCastHandler.cs
+
+# Patch 27bis : SpellEffectManager.GetSpellEffectHandler appelait
+# Activator.CreateInstance(null, ...) quand aucun handler n'était enregistré
+# pour l'effet — d'où une ArgumentNullException qui faisait crasher tout le
+# tour de combat (vu sur monstres dont l'IA caste un sort sans handler côté
+# serveur). Le caller (DefaultSpellCastHandler.Initialize) gère déjà un retour
+# null (cf. la branche "Unknown effect handler"), donc on rend un null propre
+# si type est introuvable.
+RUN sed -i 's|return (SpellEffectHandler)Activator.CreateInstance(type, new object\[\] { effect, castHandler });|if (type == null) return null; return (SpellEffectHandler)Activator.CreateInstance(type, new object[] { effect, castHandler });|' \
+    Sources/Servers/Giny.World/Managers/Fights/Effects/SpellEffectManager.cs
 
 # Patch 28 : actions génériques non implémentées (ex: GenericActionEnum.Paddock
 # n'a PAS de handler dans GenericActions.cs — c'est exactement ce qui se passe

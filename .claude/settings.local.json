@@ -223,7 +223,10 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Bash(xargs -I{} stat -c '%y %s {}' {})"
+      "Bash(xargs -I{} stat -c '%y %s {}' {})",
+      "Bash(zcat server/backups/manual-pre-unhandledfix-20260506-133542.sql.gz)",
+      "Bash(file server/backups/manual-pre-unhandledfix-*.sql.gz)",
+      "Bash(./scripts/publish-article.sh /tmp/article-fixes-mai-2026.md)"
     ]
   }
 }

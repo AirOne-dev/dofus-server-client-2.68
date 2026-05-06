@@ -544,6 +544,50 @@ Le logger est :
   Claude.
 - `DELETE /api/unhandled?category=&characterId=&id=&all=1` → purge.
 
+## Handlers stub OneAir
+
+Deux fichiers compagnons court-circuitent les actions Giny qui remontaient
+silencieusement dans `oneair_unhandled_log` (panel "Non géré") sans qu'aucun
+code métier soit nécessaire :
+
+- `server/OneAirItemEffects.cs` (copié dans
+  `Sources/Servers/Giny.World/Managers/Items/`) — handlers `[ItemEffect]`
+  pour `Effect_IncreaseWeight` (pods → `CharacteristicEnum.WEIGHT.Objects`),
+  `Effect_Apparence_Wrapper` (cosmétique, no-op : la logique d'apparence
+  passe par `Inventory.WrapItem`), et `Effect_CastSpell_1175` (no-op à
+  l'équip — déclenché en combat seulement via `SpellEffectHandler`). Le
+  scan `ItemEffectsManager.Initialize` parcourt l'assembly et enregistre
+  les méthodes annotées : pas de patch sur `ItemEffects.cs` nécessaire.
+- `server/OneAirNoopHandlers.cs` (copié dans
+  `Sources/Servers/Giny.World/Handlers/OneAir/`) — handlers `[MessageHandler]`
+  vides pour les messages que le client envoie en boucle mais que le serveur
+  n'a pas besoin d'acquitter (`HaapiApiKeyRequestMessage`,
+  `HaapiShopApiKeyRequestMessage`, `SpouseGetInformationsMessage`,
+  `AllianceGetPlayerApplicationMessage`, `AllianceRanksRequestMessage`,
+  `AnomalySubareaInformationRequestMessage`, `SequenceNumberMessage`,
+  `ClientKeyMessage`). Sans handler ils tombaient dans
+  `WorldClient.OnMessageUnhandled` → `LogNetMessage`.
+
+Pour ajouter un nouvel effet d'item ou un nouveau stub réseau : éditer le
+fichier concerné, `docker compose build auth && docker compose up -d
+--no-deps --force-recreate auth world`. Pas de sed Dockerfile à modifier.
+
+### Pièges connus côté patches Dockerfile
+
+- **Patch 14bis (HandleTeleportAction)** doit utiliser
+  `parameter as MapElement` et **pas** `(MapElement)parameter`. Pourquoi :
+  `GenericActions.HandleTeleportAction` est aussi appelé depuis
+  `NpcTalkDialog.Reply(replyId)` (les répliques de PNJ qui téléportent),
+  où `parameter` est un `NpcReplyRecord`. Un cast strict lève
+  `InvalidCastException` et fait crasher tout le dialogue NPC.
+  `HandleTeleportInteraction` est null-safe et retombe sur le comportement
+  vanilla quand `element` est null.
+- **Patch 27bis (`SpellEffectManager.GetSpellEffectHandler`)** : court-circuite
+  `Activator.CreateInstance(null, …)` quand le type est introuvable.
+  Sans ça, n'importe quel sort caste par un monstre dont l'effet n'a pas
+  de `[SpellEffectHandler]` côté serveur faisait crasher tout le tour
+  (TargetInvocationException remontée à `HandleGameFightTurnReadyMessage`).
+
 ## Bindings interactifs globaux (sortie de bâtiment)
 
 Le système de bindings OneAir (`oneair_havenbag_interactives`, BonesId →
