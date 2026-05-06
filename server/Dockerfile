@@ -171,18 +171,17 @@ RUN sed -i 's|Giny.World.Managers.Chat.OneAirHavenBagPatch.EnsureSchema();|Giny.
 RUN sed -i 's|client\.Character\.Teleport(client\.Character\.Record\.MapId, client\.Character\.Record\.CellId);|Giny.World.Managers.Chat.OneAirHavenBagPatch.RedirectIfHavenBagSpawn(client.Character); client.Character.Teleport(client.Character.Record.MapId, client.Character.Record.CellId);|' \
     Sources/Servers/Giny.World/Handlers/ContextHandler.cs
 
-# Patch 22 (mort) : persiste les PV de fin de combat sur le character +
-# applique la perte d'énergie/ghost/tp sur défaite. Hook avant le dispatch
-# vanilla de OnFightEnding (qui ne fait rien en mode classical).
+# Patch 22 (mort) : persiste les PV de fin de combat sur le character (sans
+# ça, les PV reviennent à leur valeur pré-combat — quirk Giny vanilla).
+# Pas de perte d'énergie ni de tp Phoenix : ces mécaniques reposent sur
+# PlayerLifeStatus / Phoenix actifs que Giny ne supporte pas et qui
+# soft-lockent le perso (apparence tombe persistante, tp impossible).
 RUN sed -i 's|AchievementManager\.Instance\.OnPlayerFightEnding(this);|Giny.World.Managers.Chat.OneAirDeathManager.OnFightEnding(this); AchievementManager.Instance.OnPlayerFightEnding(this);|' \
     Sources/Servers/Giny.World/Managers/Fights/Fighters/CharacterFighter.cs
 
-# Patch 23 (mort) : SpawnPoint() utilisé par RejoinMap pour les non-admins
-# perdants TP normalement vers Record.SpawnPointMapId. On consulte le
-# pending override de OneAirDeathManager pour rerouter vers donjon-entrance
-# ou Phoenix.
-RUN sed -i 's|MapRecord targetMap = MapRecord.GetMap(Record\.SpawnPointMapId);|MapRecord targetMap = MapRecord.GetMap(Giny.World.Managers.Chat.OneAirDeathManager.GetDeathSpawnPoint(this));|' \
-    Sources/Servers/Giny.World/Managers/Entities/Characters/Character.cs
+# Patch 23 (mort) : SUPPRIMÉ — l'override de SpawnPoint() ne sert plus
+# depuis qu'on n'applique plus de tp post-défaite. RejoinMap retombe sur
+# le comportement vanilla (Record.SpawnPointMapId).
 
 # Patch 20 (havre-sac) : SUPPRIMÉ — depuis qu'on insère des interactive_skills
 # rows (avec ActionIdentifier=Zaap) pour les éléments bound, le flow vanilla

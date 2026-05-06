@@ -106,14 +106,12 @@ cp "$ZAAP_EXE" "$APP_DIR/zaap-server.exe"
 # Swift remplace Contents/MacOS/Dofus et l'original devient dofus-real.
 LAUNCHER_DIR="$SCRIPT_DIR/OneAirLauncher-win"
 LAUNCHER_EXE="$LAUNCHER_DIR/bin/Release/net8.0-windows/win-x64/publish/OneAirLauncher.exe"
-if [ ! -x "$LAUNCHER_EXE" ]; then
-    echo "==> Build OneAirLauncher.exe (dotnet publish)"
-    if ! command -v dotnet >/dev/null 2>&1 && [ -x /opt/dotnet/dotnet ]; then
-        export PATH="/opt/dotnet:$PATH"
-    fi
-    (cd "$LAUNCHER_DIR" && dotnet publish -c Release -r win-x64 --self-contained \
-        -p:PublishSingleFile=true -p:EnableWindowsTargeting=true)
+echo "==> Build OneAirLauncher.exe (dotnet publish — incremental)"
+if ! command -v dotnet >/dev/null 2>&1 && [ -x /opt/dotnet/dotnet ]; then
+    export PATH="/opt/dotnet:$PATH"
 fi
+(cd "$LAUNCHER_DIR" && dotnet publish -c Release -r win-x64 --self-contained \
+    -p:PublishSingleFile=true -p:EnableWindowsTargeting=true)
 echo "==> Intégration du launcher Windows"
 mv "$APP_DIR/Dofus.exe" "$APP_DIR/dofus-real.exe"
 cp "$LAUNCHER_EXE" "$APP_DIR/Dofus.exe"

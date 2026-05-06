@@ -357,7 +357,8 @@
                                  PasswordChanged="PassField_Changed"
                                  KeyDown="Field_KeyDown"/>
                     <TextBox x:Name="PassFieldVisible"
-                             Style="{StaticResource GoldPasswordBox}"
+                             Style="{StaticResource GoldTextBox}"
+                             Padding="36,0,56,0"
                              Visibility="Collapsed"
                              KeyDown="Field_KeyDown"/>
                     <TextBlock x:Name="PassPlaceholder"

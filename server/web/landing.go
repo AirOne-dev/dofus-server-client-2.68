@@ -182,7 +182,7 @@ func winDownloadURL() string {
 //
 // Quatre modes (par ordre de priorité) :
 //   1) DOWNLOAD_MACOS_URL pointe vers une URL externe (https://...) → 302.
-//   2) ONEAIR_APP_ZIP (par défaut /app/dist/OneAir.app.zip) existe → on sert
+//   2) ONEAIR_APP_ZIP (par défaut /app/dist/OneAir-MacOS.zip) existe → on sert
 //      le fichier directement via http.ServeFile (Range supporté, instant).
 //      C'est ce que produisent client/build-docker-darwin.sh à chaque build.
 //   3) ONEAIR_APP_DIR (par défaut /app/OneAir.app) existe → on streame un .zip
@@ -194,10 +194,10 @@ func handleDownloadMac(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	zipPath := envOr("ONEAIR_APP_ZIP", "/app/dist/OneAir.app.zip")
+	zipPath := envOr("ONEAIR_APP_ZIP", "/app/dist/OneAir-MacOS.zip")
 	if st, err := os.Stat(zipPath); err == nil && !st.IsDir() {
 		w.Header().Set("Content-Type", "application/zip")
-		w.Header().Set("Content-Disposition", `attachment; filename="OneAir.app.zip"`)
+		w.Header().Set("Content-Disposition", `attachment; filename="OneAir-MacOS.zip"`)
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		http.ServeFile(w, r, zipPath)
 		return

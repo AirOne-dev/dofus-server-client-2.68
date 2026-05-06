@@ -17,6 +17,9 @@ services:
       MYSQL_DATABASE: ${MYSQL_AUTH_DB:-giny_auth}
       MYSQL_USER: ${MYSQL_USER:-giny}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD requis dans .env}
+      # Lu par init-sql/03_patch_world_servers.sh au premier setup pour
+      # renseigner world_servers.Host (sinon fallback 127.0.0.1).
+      SERVER_HOST: ${SERVER_HOST:-127.0.0.1}
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
@@ -27,8 +30,12 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
       - ./server/init-sql:/docker-entrypoint-initdb.d:ro
+    # Bind localhost-only : MySQL n'est jamais consommé depuis l'extérieur du
+    # VPS (les containers Giny passent par giny-net via le hostname `mysql`,
+    # cf. MYSQL_HOST=mysql plus bas). Un dump distant peut toujours se faire
+    # via SSH tunnel : `ssh vps -L 3306:127.0.0.1:3306`.
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD"]
       interval: 5s
@@ -108,7 +115,7 @@ services:
       # Bundle Windows du client : fallback du /download/windows.
       - ./OneAir-Windows:/app/OneAir-Windows:ro
       # Zips statiques produits par build-docker-{darwin,windows}.sh.
-      # Chemins par défaut : /app/dist/OneAir.app.zip + OneAir-Windows.zip
+      # Chemins par défaut : /app/dist/OneAir-MacOS.zip + OneAir-Windows.zip
       # → servis directement par http.ServeFile (Range supporté, instant).
       # Override via env ONEAIR_APP_ZIP / ONEAIR_WIN_ZIP.
       - ./dist:/app/dist:ro
@@ -134,10 +141,16 @@ services:
       AUTH_PORT: ${AUTH_PORT:-5555}
       IPC_PORT: ${IPC_PORT:-800}
       AUTH_API_PORT: ${AUTH_API_PORT:-9001}
+    # 5555 = protocole jeu Dofus (auth), exposé publiquement (le client y tape).
+    # 800 = IPC auth↔world : aucune authentification du handshake côté Giny,
+    #       donc bind localhost-only. World y accède via le hostname `auth`
+    #       sur giny-net (cf. IPC_HOST=auth dans le service world).
+    # 9001 = API HTTP auth (Account/auth, Account/register, Version/launcher)
+    #       : non gated, expose register/login. Bind localhost-only.
     ports:
       - "${PUBLIC_AUTH_PORT:-5555}:5555"
-      - "${IPC_PORT:-800}:800"
-      - "${AUTH_API_PORT:-9001}:9001"
+      - "127.0.0.1:${IPC_PORT:-800}:800"
+      - "127.0.0.1:${AUTH_API_PORT:-9001}:9001"
     networks: [giny-net]
 
   world:
@@ -165,9 +178,13 @@ services:
       JOB_RATE: ${JOB_RATE:-1}
       DROP_RATE: ${DROP_RATE:-1}
       XP_RATE: ${XP_RATE:-1}
+    # 5556 = protocole jeu Dofus (world), exposé publiquement.
+    # 9000 = API HTTP world (Common/stats, Reload/items, Reload/npcs) : non
+    #       authentifiée, déclencher `/Reload/items` est un DoS à la demande.
+    #       Bind localhost-only.
     ports:
       - "${PUBLIC_WORLD_PORT:-5556}:5556"
-      - "${WORLD_API_PORT:-9000}:9000"
+      - "127.0.0.1:${WORLD_API_PORT:-9000}:9000"
     networks: [giny-net]
 
   db:

@@ -7,7 +7,7 @@
 #    2. fetch les assets Dofus 2.68 darwin via cytrus-downloader si absents
 #    3. assemble un Swift SDK Darwin si pas déjà en cache (~3-5 min, 1ère fois)
 #    4. lance build-app-darwin.sh dans le container avec le SDK monté
-#    5. zippe le bundle final dans dist/OneAir.app.zip pour le download web
+#    5. zippe le bundle final dans dist/OneAir-MacOS.zip pour le download web
 #
 #  Pour skip le cross-compile Swift et utiliser uniquement le binaire
 #  pré-buildé : ONEAIR_SKIP_SWIFT_SDK=1 ./client/build-docker-darwin.sh
@@ -21,7 +21,7 @@ DOCKERFILE="$SCRIPT_DIR/Dockerfile.darwin"
 SDK_BUNDLE="$SCRIPT_DIR/.cache/darwin.artifactbundle.zip"
 DIST_DIR="$ROOT_DIR/dist"
 APP_DIR="$ROOT_DIR/OneAir.app"
-ZIP_OUT="$DIST_DIR/OneAir.app.zip"
+ZIP_OUT="$DIST_DIR/OneAir-MacOS.zip"
 
 [ -f "$DOCKERFILE" ] || { echo "ERREUR : $DOCKERFILE introuvable." >&2; exit 1; }
 command -v docker >/dev/null || { echo "ERREUR : docker absent." >&2; exit 1; }
@@ -90,10 +90,10 @@ echo "==> [5/5] Zip → $ZIP_OUT (Store, pas de compression)"
 # différences de version host → container.
 docker run --rm -v "$ROOT_DIR:/work" -w /work "$IMAGE_TAG" bash -c "
     apt-get update -qq && apt-get install -y -qq zip >/dev/null 2>&1
-    cd /work && rm -f dist/OneAir.app.zip.tmp
-    zip -ryq0 dist/OneAir.app.zip.tmp OneAir.app
-    mv dist/OneAir.app.zip.tmp dist/OneAir.app.zip
-    echo \"    Zip : \$(du -h dist/OneAir.app.zip | cut -f1)\"
+    cd /work && rm -f dist/OneAir-MacOS.zip.tmp
+    zip -ryq0 dist/OneAir-MacOS.zip.tmp OneAir.app
+    mv dist/OneAir-MacOS.zip.tmp dist/OneAir-MacOS.zip
+    echo \"    Zip : \$(du -h dist/OneAir-MacOS.zip | cut -f1)\"
 "
 
 echo
