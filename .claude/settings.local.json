@@ -198,7 +198,32 @@
       "Bash(grep -n 'CREATE TABLE.*maps\\\\|INSERT INTO `maps`' server/init-sql/02_giny_world.sql)",
       "Bash(grep -c '^INSERT INTO `maps`' server/init-sql/02_giny_world.sql)",
       "Bash(/usr/bin/python3 -)",
-      "Bash(grep -v '\\\\.env$\\\\|node_modules')"
+      "Bash(grep -v '\\\\.env$\\\\|node_modules')",
+      "Bash(grep -nA 20 \"web:\" \"/home/ubuntu/dofus server/docker-compose.yml\")",
+      "Bash(grep -nA 50 \"web:\" \"/home/ubuntu/dofus server/docker-compose.yml\")",
+      "Bash(./client/build-docker-darwin.sh)",
+      "Bash(./client/build-docker-windows.sh)",
+      "Bash(docker port *)",
+      "Bash(grep -nA 25 \"  mysql:\" \"/home/ubuntu/dofus server/docker-compose.yml\")",
+      "Bash(sudo ss -tlnp)",
+      "Bash(systemctl is-active *)",
+      "Bash(sudo iptables -t nat -L PREROUTING -n)",
+      "Bash(grep -aE \"\\\\.look\\\\b|^look$|\\\\\"look\\\\\"\" \"/home/ubuntu/dofus server/server/SWF/DofusInvoker.swf\")",
+      "Bash(grep -inE \"\\\\`\\\\.[a-z]+\" \"/home/ubuntu/dofus server/README.md\")",
+      "Bash(zcat server/backups/manual-20260506-095634.sql.gz)",
+      "Bash(timeout 3 mysql -h 127.0.0.1 -P 3306 -u root -p\"wrongpw\" -e \"SELECT 1\")",
+      "Bash(sudo iptables -L INPUT -n)",
+      "Bash(sudo ufw status)",
+      "Bash(sort -k4)",
+      "Bash(timeout 4 bash -c 'echo '\\\\'''\\\\'' > /dev/tcp/__TRACKED_VAR__/3306')",
+      "Bash(timeout 4 bash -c 'echo '\\\\'''\\\\'' > /dev/tcp/__TRACKED_VAR__/5555')",
+      "Bash(timeout 3 bash -c 'echo '\\\\'''\\\\'' > /dev/tcp/2001:41d0:404:200::1072/__TRACKED_VAR__')",
+      "Bash(touch server/backups/.gitkeep)",
+      "Bash(git rm *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(xargs -I{} stat -c '%y %s {}' {})"
     ]
   }
 }

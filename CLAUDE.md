@@ -312,7 +312,7 @@ construites à la volée par les wrappers :
 
 # Bundle macOS complet (assembly, zaap-server Mach-O, signature ad-hoc,
 # cross-compile launcher Swift via SDK Darwin auto-assemblé)
-./client/build-docker-darwin.sh    # → OneAir.app/ + dist/OneAir.app.zip
+./client/build-docker-darwin.sh    # → OneAir.app/ + dist/OneAir-MacOS.zip
 ```
 
 Chaque wrapper finit par `zip -ryq0` du bundle dans `dist/<nom>.zip`
