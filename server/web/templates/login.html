@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>OneAir Admin · Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="login">
+  <form method="POST" action="/login" class="card">
+    <h1>OneAir Admin</h1>
+    {{if .Error}}<p class="err">{{.Error}}</p>{{end}}
+    <label>Identifiant</label>
+    <input type="text" name="username" autocomplete="username" autofocus required>
+    <label>Mot de passe</label>
+    <input type="password" name="password" autocomplete="current-password" required>
+    <button type="submit">Se connecter</button>
+  </form>
+</body>
+</html>

@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OneAir Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">⚜</div>
+      <div class="brand-text">
+        <div class="brand-title">OneAir</div>
+        <div class="brand-sub">Admin</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <a href="#dashboard" class="nav-item active" data-tab="dashboard">
+        <span class="nav-ico">⌂</span><span>Tableau de bord</span>
+      </a>
+      <a href="#accounts" class="nav-item" data-tab="accounts">
+        <span class="nav-ico">⚇</span><span>Comptes</span>
+      </a>
+      <a href="#characters" class="nav-item" data-tab="characters">
+        <span class="nav-ico">⚔</span><span>Personnages</span>
+      </a>
+      <a href="#backups" class="nav-item" data-tab="backups">
+        <span class="nav-ico">⤓</span><span>Sauvegardes</span>
+      </a>
+      <a href="#events" class="nav-item" data-tab="events">
+        <span class="nav-ico">★</span><span>Événements</span>
+      </a>
+      <a href="#articles" class="nav-item" data-tab="articles">
+        <span class="nav-ico">✎</span><span>Articles</span>
+      </a>
+      <a href="#actions" class="nav-item" data-tab="actions">
+        <span class="nav-ico">⏱</span><span>Historique</span>
+      </a>
+      <a href="#unhandled" class="nav-item" data-tab="unhandled">
+        <span class="nav-ico">⚠</span><span>Non géré</span>
+        <span class="nav-badge" id="unhandled-badge" hidden></span>
+      </a>
+      <a href="#dbgate" class="nav-item" data-tab="dbgate">
+        <span class="nav-ico">⛁</span><span>Base de données</span>
+      </a>
+      <div class="nav-divider"></div>
+      <a href="/" class="nav-item">
+        <span class="nav-ico">←</span><span>Retour au site</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar">{{initials .User}}</div>
+        <div class="user-meta">
+          <div class="user-name">{{.User}}</div>
+          <a href="/logout" class="user-logout">Déconnexion</a>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <section id="dashboard" class="panel active">
+      <header class="panel-head">
+        <h1>Tableau de bord</h1>
+        <p class="muted">Vue d'ensemble du serveur OneAir.</p>
+      </header>
+
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-label">Auth</div>
+          <div class="stat-value" id="status-auth">…</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">World</div>
+          <div class="stat-value" id="status-world">…</div>
+        </div>
+        <div class="stat-card highlight">
+          <div class="stat-label">Joueurs en ligne</div>
+          <div class="stat-value" id="status-online">…</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Comptes</div>
+          <div class="stat-value" id="status-accounts">…</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Personnages</div>
+          <div class="stat-value" id="status-characters">…</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Uptime admin</div>
+          <div class="stat-value small" id="status-uptime">…</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Actions globales</h2>
+        <form id="broadcast-form" class="row gap">
+          <input type="text" name="message" placeholder="Diffuser un message à tous les joueurs (HTML)" required style="flex:1; min-width:280px;">
+          <button type="submit">Diffuser</button>
+        </form>
+        <div class="row gap" style="margin-top:8px;">
+          <button id="act-save-now" class="ghost">Sauvegarde immédiate</button>
+          <button id="act-reload-items" class="ghost">Reload items</button>
+          <button id="act-shutdown" class="danger">Shutdown programmé…</button>
+        </div>
+        <p class="muted small">Toutes ces actions passent par <code>oneair_actions</code> (poll côté world, intervalle 1.5s).</p>
+      </div>
+
+      <div class="card">
+        <h2>Joueurs en ligne <span class="muted small" id="online-count"></span></h2>
+        <div id="online-list" class="players-grid">
+          <div class="muted small" style="padding:24px; text-align:center;">Chargement…</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Actions de masse — tous les joueurs en ligne</h2>
+        <div class="row gap">
+          <input type="number" id="bulk-kamas" placeholder="Kamas" style="width:140px">
+          <button id="bulk-kamas-btn">+ Kamas pour tous</button>
+          <input type="number" id="bulk-xp" placeholder="XP" style="width:140px">
+          <button id="bulk-xp-btn">+ XP pour tous</button>
+          <button id="bulk-heal-btn" class="ghost">Heal général</button>
+        </div>
+        <div class="row gap" style="margin-top:8px;">
+          <input type="number" id="bulk-gid" placeholder="GId item" style="width:140px">
+          <input type="number" id="bulk-qty" placeholder="Qté" value="1" style="width:90px">
+          <button id="bulk-item-btn">Donner objet à tous</button>
+          <button id="bulk-item-pick" class="ghost">Catalogue…</button>
+        </div>
+        <p class="muted small">Ces actions s'appliquent à tous les joueurs <strong>actuellement en ligne</strong>. Un broadcast notifie les bénéficiaires.</p>
+      </div>
+    </section>
+
+    <section id="accounts" class="panel">
+      <header class="panel-head">
+        <h1>Comptes</h1>
+        <p class="muted">Gestion des comptes joueurs Giny.</p>
+      </header>
+
+      <div class="card">
+        <h2>Créer un compte</h2>
+        <form id="create-account" class="row gap">
+          <input type="text" name="username" placeholder="Identifiant (2-32, [A-Za-z0-9_-])" required>
+          <input type="text" name="password" placeholder="Mot de passe (>=4)" required>
+          <select name="role">
+            <option value="1">Joueur</option>
+            <option value="2">Modérateur</option>
+            <option value="3">GM Padawan</option>
+            <option value="4">Gamemaster</option>
+            <option value="5">Administrateur</option>
+          </select>
+          <button type="submit">Créer / Mettre à jour</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Comptes existants</h2>
+        <div class="table-wrap">
+          <table id="accounts-table">
+            <thead>
+              <tr><th>ID</th><th>Username</th><th>Mdp</th><th>Rôle</th><th>Banni</th><th>Slots</th><th class="actions-col">Actions</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="characters" class="panel">
+      <header class="panel-head">
+        <h1>Personnages</h1>
+        <p class="muted">Liste de tous les personnages, leur statut online et actions admin.</p>
+      </header>
+
+      <div class="card">
+        <input type="search" id="char-filter" placeholder="Filtrer (nom, account, ID)…">
+        <div class="table-wrap">
+          <table id="characters-table">
+            <thead>
+              <tr><th>ID</th><th>Nom</th><th>Compte</th><th>Sexe</th><th>XP</th><th>Kamas</th><th>Map</th><th>État</th><th class="actions-col">Actions</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="char-modal" class="modal hidden">
+        <div class="modal-card">
+          <div class="modal-head">
+            <h2 id="char-modal-title">Actions sur <span></span></h2>
+            <button id="char-modal-close" class="modal-close">×</button>
+          </div>
+          <p id="char-modal-online" class="muted small"></p>
+          <div class="action-grid">
+            <div class="action-tile"><button data-act="heal" class="ghost">Heal complet</button></div>
+            <div class="action-tile"><button data-act="kick" class="danger">Kicker</button></div>
+            <div class="action-tile"><button data-act="reload_inventory" class="ghost">Reload inventaire</button></div>
+            <div class="action-tile"><button data-act="reset_character" class="danger">Reset perso</button></div>
+            <div class="action-tile"><button data-act="delete_character" class="danger">Supprimer perso</button></div>
+          </div>
+          <div class="action-section">
+            <label>Message privé</label>
+            <div class="row gap">
+              <input type="text" id="cm-pm" placeholder="Message" style="flex:1;">
+              <button data-act="send_pm">Envoyer</button>
+            </div>
+          </div>
+          <div class="action-section">
+            <label>Téléportation</label>
+            <div class="row gap">
+              <input type="number" id="cm-mapid" placeholder="MapId">
+              <input type="number" id="cm-cellid" placeholder="CellId (opt.)">
+              <button data-act="teleport">Téléporter</button>
+            </div>
+          </div>
+          <div class="action-section">
+            <label>Économie</label>
+            <div class="row gap">
+              <input type="number" id="cm-kamas" placeholder="Kamas">
+              <button data-act="give_kamas">+ Kamas</button>
+              <button data-act="set_kamas" class="ghost">= Set</button>
+            </div>
+          </div>
+          <div class="action-section">
+            <label>Progression</label>
+            <div class="row gap">
+              <input type="number" id="cm-level" placeholder="Niveau (1-200)">
+              <button data-act="set_level">Set niveau</button>
+              <input type="number" id="cm-xp" placeholder="XP">
+              <button data-act="give_xp">+ XP</button>
+            </div>
+          </div>
+          <div class="action-section">
+            <label>Donner un objet</label>
+            <div class="row gap">
+              <input type="number" id="cm-gid" placeholder="GId item">
+              <input type="number" id="cm-qty" placeholder="Qté" value="1">
+              <button data-act="give_item">Donner</button>
+              <button id="cm-pick-item" class="ghost">Catalogue…</button>
+            </div>
+          </div>
+          <div class="action-section">
+            <label>Sorts</label>
+            <div class="row gap">
+              <button id="cm-spells-open">Gérer les sorts…</button>
+              <button data-act="reset_spells" class="danger">Reset tous les sorts</button>
+            </div>
+          </div>
+          <div class="action-section">
+            <label>Apparence</label>
+            <div class="row gap">
+              <select id="cm-breed">
+                <option value="">— Classe —</option>
+                <option value="1">Feca</option><option value="2">Osamodas</option>
+                <option value="3">Enutrof</option><option value="4">Sram</option>
+                <option value="5">Xelor</option><option value="6">Ecaflip</option>
+                <option value="7">Eniripsa</option><option value="8">Iop</option>
+                <option value="9">Cra</option><option value="10">Sadida</option>
+                <option value="11">Sacrieur</option><option value="12">Pandawa</option>
+                <option value="13">Roublard</option><option value="14">Zobal</option>
+                <option value="15">Steamer</option><option value="16">Eliotrope</option>
+                <option value="17">Huppermage</option><option value="18">Ouginak</option>
+                <option value="19">Forgelance</option>
+              </select>
+              <button data-act="set_breed">Set classe</button>
+              <select id="cm-sex">
+                <option value="">— Sexe —</option>
+                <option value="0">Masculin</option>
+                <option value="1">Féminin</option>
+              </select>
+              <button data-act="set_sex">Set sexe</button>
+            </div>
+            <div class="row gap" style="margin-top:6px;">
+              <input type="text" id="cm-look" placeholder="Look brut (ex: {200|0|24,1,2,3,4,5})" style="flex:1; min-width:240px;">
+              <button data-act="set_look" class="ghost">Set look brut</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal spells -->
+      <div id="spells-modal" class="modal hidden">
+        <div class="modal-card wide">
+          <div class="modal-head">
+            <h2>Sorts <span id="spells-title-name" class="muted small"></span></h2>
+            <button class="modal-close" data-close="spells">×</button>
+          </div>
+          <div class="row gap" style="padding: 0 20px 12px;">
+            <button id="spells-dump" class="ghost">Charger les sorts connus</button>
+            <span class="grow"></span>
+            <input type="search" id="spells-search" placeholder="Chercher un sort…" style="min-width:200px;">
+          </div>
+          <div class="spells-cols">
+            <div class="spells-col">
+              <h3>Sorts connus</h3>
+              <div id="spells-known"></div>
+            </div>
+            <div class="spells-col">
+              <h3>Catalogue (cliquer pour apprendre)</h3>
+              <div id="spells-catalog" class="spells-catalog"></div>
+              <div class="picker-footer">
+                <button id="spells-prev" class="ghost">← Précédent</button>
+                <span id="spells-page" class="muted small">page 1</span>
+                <button id="spells-next" class="ghost">Suivant →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="inventory" class="panel">
+      <header class="panel-head">
+        <a href="#characters" class="back-link">← Retour aux personnages</a>
+        <h1>Inventaire <span id="inv-char-name" class="muted small"></span></h1>
+        <p class="muted">UI inspirée du jeu : paperdoll équipement à gauche, sac à droite.</p>
+      </header>
+
+      <div class="card">
+        <div class="row gap">
+          <input type="number" id="inv-cid" placeholder="CharacterId">
+          <button id="inv-load">Charger</button>
+          <button id="inv-dump" class="ghost">Décoder en jeu (online)</button>
+          <button id="inv-picker" class="ghost">+ Donner un objet…</button>
+          <span class="grow"></span>
+          <span class="muted small" id="inv-meta"></span>
+        </div>
+      </div>
+
+      <!-- Layout type Dofus : paperdoll + sac -->
+      <div id="inv-board" class="inv-board hidden">
+        <!-- LEFT : paperdoll -->
+        <div class="paperdoll-panel">
+          <div class="paperdoll-title">Équipement</div>
+          <div class="paperdoll" id="paperdoll"></div>
+          <div class="paperdoll-row" id="paperdoll-dofus"></div>
+        </div>
+
+        <!-- RIGHT : sac -->
+        <div class="bag-panel">
+          <div id="inv-cat-tabs" class="inv-cat-tabs"></div>
+          <div class="inv-toolbar">
+            <input type="search" id="inv-search" placeholder="🔍 Rechercher dans l'inventaire…">
+            <select id="inv-sort">
+              <option value="name">Tri : Nom A→Z</option>
+              <option value="level">Tri : Niveau ↓</option>
+              <option value="level-asc">Tri : Niveau ↑</option>
+              <option value="qty">Tri : Quantité ↓</option>
+              <option value="type">Tri : Type</option>
+            </select>
+          </div>
+          <div id="bag-grid" class="bag-grid"></div>
+          <div class="bag-footer">
+            <span class="muted small" id="bag-count">0 objet</span>
+            <span class="grow"></span>
+            <span id="bag-kamas" class="kamas">— K</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="inv-empty" class="empty-state">
+        <h3>Aucun personnage chargé</h3>
+        <p>Entre un CharacterId et clique « Charger » (ou utilise le bouton « Inv » dans la liste des personnages).</p>
+      </div>
+
+      <!-- Modal édition d'un item -->
+      <div id="item-edit" class="modal hidden">
+        <div class="modal-card">
+          <div class="modal-head">
+            <h2>Éditer <span id="item-edit-title"></span></h2>
+            <button class="modal-close" data-close="itemedit">×</button>
+          </div>
+          <div id="item-edit-body" style="padding: 0 16px 16px;"></div>
+        </div>
+      </div>
+
+      <!-- Modal item picker -->
+      <div id="item-picker" class="modal hidden">
+        <div class="modal-card wide">
+          <div class="modal-head">
+            <h2>Catalogue d'objets <span class="muted small" id="picker-meta"></span></h2>
+            <button class="modal-close" data-close="picker">×</button>
+          </div>
+          <div class="picker-toolbar">
+            <input type="search" id="picker-search" placeholder="Recherche par nom…">
+            <div id="picker-cats" class="cat-chips"></div>
+            <div id="picker-subcats" class="cat-chips cat-chips-sub"></div>
+          </div>
+          <div id="picker-grid" class="picker-grid"></div>
+          <div id="picker-end" class="picker-end muted small"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="backups" class="panel">
+      <header class="panel-head">
+        <h1>Sauvegardes</h1>
+        <p class="muted">Dumps SQL via mysqldump, rotation automatique 20.</p>
+      </header>
+
+      <div class="card">
+        <button id="backup-trigger">+ Déclencher une sauvegarde maintenant</button>
+        <div class="table-wrap" style="margin-top:12px;">
+          <table id="backups-table">
+            <thead><tr><th>Nom</th><th>Taille</th><th>Date</th><th class="actions-col">Actions</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="events" class="panel">
+      <header class="panel-head">
+        <h1>Événements</h1>
+        <p class="muted">Multiplicateurs serveur — appliqués globalement, persistés en DB. Annoncés en jeu via broadcast quand activés.</p>
+      </header>
+
+      <div id="events-grid" class="events-grid">
+        <!-- 3 cards rendues par JS : XP / Kamas / Drop -->
+      </div>
+
+      <div class="card">
+        <h2>Astuces</h2>
+        <ul class="muted small" style="line-height: 1.8;">
+          <li>Multiplicateur = <code>1</code> revient à désactiver l'événement (équivalent à "Arrêter").</li>
+          <li>Durée = <code>0</code> = permanent jusqu'à arrêt manuel.</li>
+          <li>Les événements <strong>survivent au redémarrage</strong> — rechargés depuis <code>oneair_events</code> au boot world.</li>
+          <li>Le multiplicateur Drop dépend de l'implémentation Giny du loot — non garanti à 100%.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="articles" class="panel">
+      <header class="panel-head">
+        <h1>Articles</h1>
+        <p class="muted">Gestion des actualités publiées sur la landing publique. <strong>À chaque changement notable du serveur, créez un article ici</strong> (cf. CLAUDE.md, Règle d'or n°3).</p>
+      </header>
+
+      <div class="card">
+        <h2>Nouvel article</h2>
+        <form id="article-form" class="form-grid-admin">
+          <div class="row gap" style="flex-wrap:wrap">
+            <input type="hidden" name="id" value="">
+            <label class="grow">Titre
+              <input type="text" name="title" required maxlength="255" placeholder="ex. Patch 12.4 — Frigost rééquilibré">
+            </label>
+            <label>Slug (auto si vide)
+              <input type="text" name="slug" pattern="[a-z0-9-]*" maxlength="160" placeholder="patch-12-4-frigost">
+            </label>
+            <label>Tag
+              <input type="text" name="tag" maxlength="64" placeholder="patch / annonce / event">
+            </label>
+          </div>
+          <label>Résumé (1-2 phrases, affiché sur la home et la grille)
+            <input type="text" name="excerpt" maxlength="512" placeholder="Bilan court du changement, accroche pour la home.">
+          </label>
+          <label>Image de couverture (URL — facultatif)
+            <input type="url" name="coverImage" maxlength="512" placeholder="https://…">
+          </label>
+          <label>Contenu (Markdown léger : #, ##, ###, **gras**, *italique*, `code`, [lien](url), - liste)
+            <textarea name="content" rows="14" required placeholder="# Titre&#10;&#10;Détail du changement…"></textarea>
+          </label>
+          <label class="row gap" style="align-items:center">
+            <input type="checkbox" name="published" checked> Publier immédiatement
+          </label>
+          <div class="row gap">
+            <button type="submit">Enregistrer</button>
+            <button type="reset" class="ghost" id="article-form-reset">Réinitialiser</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Articles existants</h2>
+        <div class="table-wrap">
+          <table id="articles-table">
+            <thead>
+              <tr><th>Titre</th><th>Slug</th><th>Tag</th><th>État</th><th>Créé</th><th></th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="actions" class="panel">
+      <header class="panel-head">
+        <h1>Historique des actions</h1>
+        <p class="muted">50 dernières actions postées vers le poller world.</p>
+      </header>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table id="actions-table">
+            <thead>
+              <tr><th>ID</th><th>Type</th><th>Payload</th><th>Créé</th><th>Traité</th><th>Résultat</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="unhandled" class="panel">
+      <header class="panel-head">
+        <h1>Actions non gérées</h1>
+        <p class="muted">
+          Captures émises par <code>OneAirUnhandledLogger</code> côté world :
+          items sans effet, sorts sans handler, NPC muets, paddocks, messages
+          réseau orphelins. Utilise le bouton <strong>Copier pour Claude</strong>
+          pour générer un rapport Markdown auto-suffisant.
+        </p>
+      </header>
+
+      <div class="card">
+        <div class="row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+          <label>Catégorie
+            <select id="unhandled-cat-filter">
+              <option value="">— toutes —</option>
+            </select>
+          </label>
+          <label>Personnage
+            <input id="unhandled-char-filter" type="text" placeholder="character id (optionnel)" />
+          </label>
+          <label>Limite
+            <input id="unhandled-limit" type="number" value="200" min="10" max="1000" style="width:80px" />
+          </label>
+          <button id="unhandled-refresh">↻ Rafraîchir</button>
+          <button id="unhandled-copy" class="ghost">📋 Copier pour Claude</button>
+          <button id="unhandled-clear" class="danger">🗑 Effacer (filtré)</button>
+          <span class="muted" id="unhandled-count"></span>
+        </div>
+
+        <div class="table-wrap">
+          <table id="unhandled-table">
+            <thead>
+              <tr>
+                <th>Quand</th>
+                <th>Catégorie</th>
+                <th>Personnage</th>
+                <th>Détail</th>
+                <th>Payload</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="dbgate" class="panel">
+      <iframe id="dbgate-iframe" src="about:blank" frameborder="0"></iframe>
+    </section>
+  </main>
+
+  <div id="toast"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

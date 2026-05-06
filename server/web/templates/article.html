@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Article.Title}} — OneAir</title>
+<meta name="description" content="{{.Article.Excerpt}}">
+<meta property="og:title" content="{{.Article.Title}}">
+<meta property="og:description" content="{{.Article.Excerpt}}">
+<meta property="og:type" content="article">
+<meta property="og:image" content="{{if .Article.CoverImage}}{{.Article.CoverImage}}{{else}}/static/hero.jpg{{end}}">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/landing.css">
+</head>
+<body class="article-page">
+
+<!-- ==================== Topbar (réutilisée) ==================== -->
+<header class="topbar">
+  <a href="/" class="brand">
+    <span class="brand-mark"></span>
+    <span class="brand-text">
+      <span class="brand-name">OneAir</span>
+      <span class="brand-sub">Dofus · 2.68</span>
+    </span>
+  </a>
+  <nav class="nav">
+    <a href="/#hero">Accueil</a>
+    <a href="/#tribune" class="active">Journal</a>
+    <a href="/#client">Le Client</a>
+    <a href="/#compte">Mon Compte</a>
+    <a href="/#communaute">Communauté</a>
+  </nav>
+  <div class="topbar-side">
+    <a href="/#tribune" class="btn btn-outline btn-sm">← Retour au journal</a>
+  </div>
+</header>
+
+
+<article>
+
+  <!-- ==================== HERO de l'article ==================== -->
+  <header class="article-hero">
+    <div class="bg" aria-hidden="true" style="background-image:url('{{if .Article.CoverImage}}{{.Article.CoverImage}}{{else}}/static/hero.jpg{{end}}')"></div>
+    <div class="bg-overlay" aria-hidden="true"></div>
+
+    <div class="article-hero-inner">
+      <a href="/#tribune" class="article-back">
+        <span aria-hidden="true">←</span> Retour au journal
+      </a>
+
+      {{if .Article.Tag}}
+      <span class="article-tag-hero post-tag-{{.Article.Tag}}">{{.Article.Tag}}</span>
+      {{end}}
+
+      <h1 class="article-title">{{.Article.Title}}</h1>
+
+      {{if .Article.Excerpt}}
+      <p class="article-excerpt">{{.Article.Excerpt}}</p>
+      {{end}}
+
+      <div class="article-meta-line">
+        <span class="article-author">
+          <span class="article-author-avatar">{{initials .Article.Author}}</span>
+          <span>par <strong>{{.Article.Author}}</strong></span>
+        </span>
+        <span class="dot-sep" aria-hidden="true">·</span>
+        <time datetime="{{.Article.CreatedAt.Format "2006-01-02"}}">
+          {{.Article.CreatedAt.Format "02 janvier 2026"}}
+        </time>
+        <span class="dot-sep" aria-hidden="true">·</span>
+        <span class="article-readtime">≈ 3 min de lecture</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== Corps de l'article ==================== -->
+  <div class="article-body-wrap">
+    <div class="article-body">
+      <div class="article-prose">
+        {{.Body}}
+      </div>
+
+      <footer class="article-foot">
+        <a href="/#tribune" class="btn btn-outline btn-sm">
+          <span aria-hidden="true">←</span> Tous les articles
+        </a>
+        <a href="/#hero" class="btn btn-gold btn-sm">
+          Retour à OneAir <span aria-hidden="true">→</span>
+        </a>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ==================== Articles liés ==================== -->
+  {{if .Related}}
+  <section class="article-related">
+    <div class="bg" aria-hidden="true" style="background-image:url('/classes/bg_180.jpg')"></div>
+    <div class="bg-overlay" aria-hidden="true"></div>
+
+    <div class="section-inner">
+      <header class="section-head">
+        <span class="eyebrow">Continuer la lecture</span>
+        <h2 class="section-title">À lire aussi <em>dans le journal</em>.</h2>
+      </header>
+
+      <div class="tribune-grid">
+        {{range .Related}}
+        <a href="/article/{{.Slug}}" class="post">
+          <div class="post-cover" style="background-image:url('{{if .CoverImage}}{{.CoverImage}}{{else}}/static/hero.jpg{{end}}')">
+            {{if .Tag}}<span class="post-tag post-tag-{{.Tag}}">{{.Tag}}</span>{{end}}
+          </div>
+          <div class="post-body">
+            <time class="post-date">{{.CreatedAt.Format "02 janv. 2026"}}</time>
+            <h3>{{.Title}}</h3>
+            <p>{{.Excerpt}}</p>
+            <span class="post-arrow">Lire l'article →</span>
+          </div>
+        </a>
+        {{end}}
+      </div>
+    </div>
+  </section>
+  {{end}}
+
+</article>
+
+
+<!-- ==================== Footer ==================== -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <span class="brand-mark"></span>
+      <div>
+        <div class="brand-name">OneAir</div>
+        <div class="brand-sub">Serveur Dofus 2.68 communautaire</div>
+      </div>
+    </div>
+    <p class="footer-text">
+      Non affilié à Ankama. Tous les noms et concepts liés à Dofus appartiennent à
+      leurs propriétaires respectifs.
+    </p>
+    <nav class="footer-nav">
+      <a href="/#hero">Accueil</a>
+      <a href="/#tribune">Journal</a>
+      <a href="/#client">Le Client</a>
+      <a href="/#compte">Mon Compte</a>
+      <a href="/#communaute">Communauté</a>
+    </nav>
+  </div>
+</footer>
+
+</body>
+</html>
