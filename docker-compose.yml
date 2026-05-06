@@ -1,0 +1,213 @@
+name: dofus-giny
+
+# -----------------------------------------------------------------------------
+#  Giny.NETCore — émulateur Dofus 2.7x complet (.NET 6, arm64-natif)
+#  Stack : MySQL 8 + DBGate + Auth + World (tout dans Docker)
+# -----------------------------------------------------------------------------
+#  Démarrage : docker compose up -d --build
+
+services:
+
+  mysql:
+    image: mysql:8.0
+    container_name: giny-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD requis dans .env}
+      MYSQL_DATABASE: ${MYSQL_AUTH_DB:-giny_auth}
+      MYSQL_USER: ${MYSQL_USER:-giny}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD requis dans .env}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+      - --max_allowed_packet=512M
+      - --innodb_buffer_pool_size=512M
+      - --sql-mode=NO_ENGINE_SUBSTITUTION
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./server/init-sql:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+    networks: [giny-net]
+
+  # DBGate en mode interne uniquement : pas de port host, accessible uniquement
+  # via le reverse-proxy de l'admin sur /dbgate/. WEB_ROOT pour que les URLs
+  # générées soient préfixées correctement.
+  dbgate:
+    image: dbgate/dbgate:latest
+    container_name: giny-dbgate
+    restart: unless-stopped
+    depends_on:
+      mysql: { condition: service_healthy }
+    environment:
+      WEB_ROOT: /dbgate
+      CONNECTIONS: auth,world
+      LABEL_auth: "Giny Auth"
+      SERVER_auth: mysql
+      PORT_auth: "3306"
+      USER_auth: ${MYSQL_USER:-giny}
+      PASSWORD_auth: ${MYSQL_PASSWORD:?MYSQL_PASSWORD requis dans .env}
+      DATABASE_auth: ${MYSQL_AUTH_DB:-giny_auth}
+      ENGINE_auth: mysql@dbgate-plugin-mysql
+      LABEL_world: "Giny World"
+      SERVER_world: mysql
+      PORT_world: "3306"
+      USER_world: ${MYSQL_USER:-giny}
+      PASSWORD_world: ${MYSQL_PASSWORD:?MYSQL_PASSWORD requis dans .env}
+      DATABASE_world: ${MYSQL_WORLD_DB:-giny_world}
+      ENGINE_world: mysql@dbgate-plugin-mysql
+    volumes: [dbgate-data:/root/.dbgate]
+    networks: [giny-net]
+
+  # Site OneAir : landing publique, articles, login joueur, panel admin et
+  # reverse-proxy dbgate (sous /dbgate/, gated par session admin). Une seule
+  # binaire Go servant tout le HTTP du serveur. (Anciennement "admin".)
+  web:
+    build:
+      context: ./server/web
+    image: oneair/web:latest
+    container_name: giny-web
+    restart: unless-stopped
+    depends_on:
+      mysql: { condition: service_healthy }
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      WEB_LISTEN: ":3000"
+      WEB_SESSION_KEY: ${WEB_SESSION_KEY:?WEB_SESSION_KEY requis dans .env}
+      MYSQL_HOST: mysql
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD requis dans .env}
+      MYSQL_AUTH_DB: ${MYSQL_AUTH_DB:-giny_auth}
+      MYSQL_WORLD_DB: ${MYSQL_WORLD_DB:-giny_world}
+      AUTH_HOST: auth
+      WORLD_HOST: world
+      AUTH_INTERNAL_PORT: ${AUTH_PORT:-5555}
+      WORLD_INTERNAL_PORT: ${WORLD_PORT:-5556}
+      WELCOME_MESSAGE: ${WELCOME_MESSAGE:-}
+      DOWNLOAD_MACOS_URL: ${DOWNLOAD_MACOS_URL:-}
+      DOWNLOAD_WINDOWS_URL: ${DOWNLOAD_WINDOWS_URL:-}
+      XP_RATE: ${XP_RATE:-1}
+      DROP_RATE: ${DROP_RATE:-1}
+      JOB_RATE: ${JOB_RATE:-1}
+      BACKUP_DIR: /backups
+      DBGATE_URL: http://dbgate:3000
+    volumes:
+      - ./server/backups:/backups
+      - web-items-cache:/items-cache
+      # Bundle macOS du client : sert à la fois (1) source des assets
+      # (icônes items/heads/breeds, .d2p) et (2) fallback du download
+      # /download/macos si le zip statique est absent. Tous les paths Go
+      # default-pointent vers /app/OneAir.app/Contents/Resources/...
+      - ./OneAir.app:/app/OneAir.app:ro
+      # Bundle Windows du client : fallback du /download/windows.
+      - ./OneAir-Windows:/app/OneAir-Windows:ro
+      # Zips statiques produits par build-docker-{darwin,windows}.sh.
+      # Chemins par défaut : /app/dist/OneAir.app.zip + OneAir-Windows.zip
+      # → servis directement par http.ServeFile (Range supporté, instant).
+      # Override via env ONEAIR_APP_ZIP / ONEAIR_WIN_ZIP.
+      - ./dist:/app/dist:ro
+    networks: [giny-net]
+
+  auth:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    image: giny/server:latest
+    container_name: giny-auth
+    restart: unless-stopped
+    tty: true
+    stdin_open: true
+    depends_on:
+      mysql: { condition: service_healthy }
+    command: ["auth"]
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: ${MYSQL_USER:-giny}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD requis dans .env}
+      MYSQL_AUTH_DB: ${MYSQL_AUTH_DB:-giny_auth}
+      AUTH_PORT: ${AUTH_PORT:-5555}
+      IPC_PORT: ${IPC_PORT:-800}
+      AUTH_API_PORT: ${AUTH_API_PORT:-9001}
+    ports:
+      - "${PUBLIC_AUTH_PORT:-5555}:5555"
+      - "${IPC_PORT:-800}:800"
+      - "${AUTH_API_PORT:-9001}:9001"
+    networks: [giny-net]
+
+  world:
+    image: giny/server:latest
+    container_name: giny-world
+    restart: unless-stopped
+    tty: true
+    stdin_open: true
+    depends_on:
+      mysql: { condition: service_healthy }
+      auth:  { condition: service_started }
+    command: ["world"]
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: ${MYSQL_USER:-giny}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD requis dans .env}
+      MYSQL_WORLD_DB: ${MYSQL_WORLD_DB:-giny_world}
+      WORLD_PORT: ${WORLD_PORT:-5556}
+      WORLD_API_PORT: ${WORLD_API_PORT:-9000}
+      WORLD_ID: ${WORLD_ID:-291}
+      WORLD_NAME: ${WORLD_NAME:-One Air}
+      WELCOME_MESSAGE: ${WELCOME_MESSAGE:-Bienvenue sur <b>OneAir</b> !}
+      IPC_HOST: auth
+      IPC_PORT: ${IPC_PORT:-800}
+      JOB_RATE: ${JOB_RATE:-1}
+      DROP_RATE: ${DROP_RATE:-1}
+      XP_RATE: ${XP_RATE:-1}
+    ports:
+      - "${PUBLIC_WORLD_PORT:-5556}:5556"
+      - "${WORLD_API_PORT:-9000}:9000"
+    networks: [giny-net]
+
+  db:
+    image: mysql:8.0
+    profiles: ["db"]
+    depends_on:
+      mysql: { condition: service_healthy }
+    environment:
+      MYSQL_PWD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD requis dans .env}
+    entrypoint: ["mysql", "-hmysql", "-u${MYSQL_USER:-giny}"]
+    networks: [giny-net]
+
+  # Dump périodique des bases auth + world dans ./server/backups/
+  # (intervalle ${BACKUP_INTERVAL_SECONDS}, garde ${BACKUP_KEEP_COUNT} fichiers).
+  # Démarrage : `docker compose up -d backup`
+  backup:
+    image: mysql:8.0
+    container_name: giny-backup
+    restart: unless-stopped
+    depends_on:
+      mysql: { condition: service_healthy }
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: ${MYSQL_USER:-giny}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD requis dans .env}
+      MYSQL_AUTH_DB: ${MYSQL_AUTH_DB:-giny_auth}
+      MYSQL_WORLD_DB: ${MYSQL_WORLD_DB:-giny_world}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-300}
+      BACKUP_KEEP_COUNT: ${BACKUP_KEEP_COUNT:-20}
+    entrypoint: ["/bin/sh", "/usr/local/bin/backup-db.sh"]
+    volumes:
+      - ./server/backup-db.sh:/usr/local/bin/backup-db.sh:ro
+      - ./server/backups:/backups
+    networks: [giny-net]
+
+volumes:
+  mysql-data:
+  dbgate-data:
+  web-items-cache:
+
+networks:
+  giny-net:
+    driver: bridge

@@ -1,0 +1,5 @@
+# SwiftPM build artifacts
+.build/
+# Sources/main.swift est un symlink généré, le source canonique est OneAirLauncher.swift
+Sources/
+*.xcodeproj/

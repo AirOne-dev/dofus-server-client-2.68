@@ -1,0 +1,29 @@
+# =============================================================================
+#  OneAir Windows builder — image Docker 100 % Linux
+#  ----------------------------------------------------------------------------
+#  Produit le bundle OneAir-Windows/ depuis n'importe quelle machine Linux,
+#  sans aucune toolchain installée sur l'hôte. Cross-compile :
+#    - OneAirLauncher.exe : .NET 8 WPF self-contained single-file (Microsoft SDK)
+#    - zaap-server.exe    : Go GOOS=windows GOARCH=amd64
+#  Le SWF DofusInvoker patché et les binaires Adobe AIR captive viennent du
+#  bundle cytrus déjà téléchargé dans client/dofus-windows-2.68/.
+# =============================================================================
+
+FROM mcr.microsoft.com/dotnet/sdk:8.0
+
+ARG GO_VERSION=1.22.6
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl ca-certificates xz-utils rsync python3 zip unzip git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Go officiel (l'apt bookworm est trop daté pour certains modules récents)
+RUN curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" \
+        | tar -C /usr/local -xz
+ENV PATH=/usr/local/go/bin:${PATH}
+ENV GOPATH=/go GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod
+RUN mkdir -p "$GOPATH" "$GOCACHE" "$GOMODCACHE"
+
+ENV DOTNET_NOLOGO=1 DOTNET_CLI_TELEMETRY_OPTOUT=1
+
+WORKDIR /work

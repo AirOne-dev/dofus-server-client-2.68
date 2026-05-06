@@ -1,0 +1,54 @@
+# =============================================================================
+#  OneAir macOS builder — image Docker 100 % Linux pour assembler OneAir.app
+#  ----------------------------------------------------------------------------
+#  Ce que l'image fait :
+#    - Cross-compile zaap-server pour darwin/arm64 (Apple Silicon) ET
+#      darwin/amd64 (Intel) via Go (`GOOS=darwin GOARCH=arm64|amd64`).
+#    - Assemble le bundle OneAir.app : copie main/, lang_fr/, frameworks AIR,
+#      patch config.xml + Info.plist, dépose DofusInvoker-patched.swf,
+#      credentials.json, swap binaire Dofus → launcher.
+#    - Signe le bundle ad-hoc via rcodesign (impl. Rust open-source d'Apple
+#      codesign), depuis Linux, sans Mac.
+#
+#  Ce que l'image NE fait PAS (limitation upstream Swift) :
+#    - Recompiler client/OneAirLauncher/OneAirLauncher (binaire Swift macOS).
+#      Le compilo Swift Linux ne sait pas cibler Mach-O Darwin sans un
+#      "Swift SDK Darwin" qui contient les frameworks Apple (AppKit, Cocoa…).
+#      Le SDK communautaire de référence (kabiroberai/swift-sdk-darwin) est
+#      archivé depuis mai 2025 et n'a jamais publié de release. Le seul moyen
+#      de produire ce SDK aujourd'hui est de partir d'un Xcode.xip (~10 GB,
+#      login Apple Developer requis), ce qui sort du périmètre "tout Docker".
+#      → On réutilise donc le binaire OneAirLauncher déjà committed.
+# =============================================================================
+
+FROM swift:6.0-jammy
+
+ARG GO_VERSION=1.22.6
+ARG RCODESIGN_VERSION=0.29.0
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl ca-certificates xz-utils rsync python3 zip unzip git build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Go pour zaap-server (Mach-O darwin)
+RUN curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" \
+        | tar -C /usr/local -xz
+ENV PATH=/usr/local/go/bin:${PATH}
+ENV GOPATH=/go GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod
+RUN mkdir -p "$GOPATH" "$GOCACHE" "$GOMODCACHE"
+
+# rcodesign : implementation Rust open-source d'`apple codesign`. Tourne sur
+# Linux x86_64. Utilisé en signature ad-hoc (équivalent de `codesign -s -`).
+RUN curl -fsSL "https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F${RCODESIGN_VERSION}/apple-codesign-${RCODESIGN_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
+        | tar -xz -C /tmp \
+    && mv /tmp/apple-codesign-${RCODESIGN_VERSION}-x86_64-unknown-linux-musl/rcodesign /usr/local/bin/ \
+    && rm -rf /tmp/apple-codesign-${RCODESIGN_VERSION}-x86_64-unknown-linux-musl \
+    && rcodesign --version
+
+# Hook pour SDK Darwin externe : si l'utilisateur monte un .artifactbundle
+# Darwin dans /sdk-darwin, le build-app-darwin-linux.sh le détectera et
+# tentera `swift build --swift-sdk darwin-...`. Sinon il copie le binaire
+# OneAirLauncher pré-compilé.
+ENV ONEAIR_SWIFT_SDK_DIR=/sdk-darwin
+
+WORKDIR /work

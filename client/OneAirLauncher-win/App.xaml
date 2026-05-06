@@ -1,0 +1,24 @@
+<Application x:Class="OneAirLauncher.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <!-- Palette OneAir (cf. Swift Palette) -->
+        <SolidColorBrush x:Key="BgBrush"          Color="#1a140b"/>
+        <SolidColorBrush x:Key="Bg2Brush"         Color="#110c06"/>
+        <SolidColorBrush x:Key="BorderBrush"      Color="#3a2c19"/>
+        <SolidColorBrush x:Key="BorderStrongBrush" Color="#5a4424"/>
+        <SolidColorBrush x:Key="GoldBrush"        Color="#e5b455"/>
+        <SolidColorBrush x:Key="GoldHoverBrush"   Color="#efc36a"/>
+        <SolidColorBrush x:Key="GoldPressBrush"   Color="#c89a3f"/>
+        <SolidColorBrush x:Key="TextBrush"        Color="#efe6d0"/>
+        <SolidColorBrush x:Key="TextDimBrush"     Color="#a89878"/>
+        <SolidColorBrush x:Key="TextSoftBrush"    Color="#6e6244"/>
+        <SolidColorBrush x:Key="GreenBrush"       Color="#8fbf4f"/>
+        <SolidColorBrush x:Key="RedBrush"         Color="#d97757"/>
+        <SolidColorBrush x:Key="AmberBrush"       Color="#f4b942"/>
+        <SolidColorBrush x:Key="DarkOnGoldBrush"  Color="#1a1208"/>
+        <SolidColorBrush x:Key="InputBgBrush"     Color="#590f0a05"/>
+        <SolidColorBrush x:Key="InputBorderBrush" Color="#b35a4424"/>
+    </Application.Resources>
+</Application>
