@@ -79,13 +79,13 @@ if not re.match(r"^[a-z0-9-]+$", slug):
 def esc(s): return s.replace("'", "''")
 
 print(f"""SET NAMES utf8mb4;
-INSERT INTO oneair_articles (Slug, Title, Excerpt, Content, Author, Tag, Published)
+INSERT INTO articles (Slug, Title, Excerpt, Content, Author, Tag, Published)
 VALUES ('{esc(slug)}', '{esc(title)}', '{esc(exc)}', '{esc(body)}', '{esc(author)}', '{esc(tag)}', 1)
 ON DUPLICATE KEY UPDATE
     Title = VALUES(Title), Excerpt = VALUES(Excerpt), Content = VALUES(Content),
     Author = VALUES(Author), Tag = VALUES(Tag), Published = 1, UpdatedAt = NOW();
 SELECT CONCAT('  → article id=', Id, ' slug=', Slug, ' published=', Published) AS result
-  FROM oneair_articles WHERE Slug = '{esc(slug)}';""")
+  FROM articles WHERE Slug = '{esc(slug)}';""")
 
 # Sortie ANSI bonus pour le wrapper bash (stderr donc séparé du SQL).
 sys.stderr.write(f"==> Article : {title}\n")

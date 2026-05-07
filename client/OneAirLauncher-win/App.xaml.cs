@@ -29,10 +29,9 @@ public partial class App : Application
         TaskScheduler.UnobservedTaskException += (_, args) =>
             LogCrash("Task", args.Exception);
 
-        // L'accélération hardware WPF (D3D9 + d3dcompiler_47) crash sur Wine/CrossOver
-        // et sur certains Windows mal configurés (RDP, VMs, drivers GPU vieux).
-        // Tier 0 = "pas d'accélération dispo", sur ces machines on force le software.
-        // Override possible via env var pour debug.
+        // L'accélération hardware WPF (D3D9 + d3dcompiler_47) crash sur Wine/
+        // CrossOver et certaines configs Windows (RDP, VM, drivers vieux).
+        // Tier 0 == pas d'accélération dispo → on force software.
         try
         {
             var force = Environment.GetEnvironmentVariable("ONEAIR_FORCE_SOFTWARE_RENDER");

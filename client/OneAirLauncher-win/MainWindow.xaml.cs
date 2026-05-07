@@ -1,11 +1,3 @@
-// MainWindow — équivalent LauncherVC du Swift.
-// Gère :
-//  - drag de la fenêtre (titlebar custom)
-//  - account selector + popup avec liste des comptes sauvegardés
-//  - toggle visibilité mot de passe
-//  - lecture/écriture des comptes via Settings
-//  - JOUER : ping TCP → patch config.xml + credentials.json + spawn zaap → exec dofus-real
-
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -25,7 +17,7 @@ public partial class MainWindow : Window
     private string? _selectedAccountLogin;
     private bool _passwordVisible;
 
-    // Cosmétique côté SWF — clé d'index dans config.xml/_allHostsInfos
+    /// <summary>Clé d'index dans `<connection.host>` (`AuthentificationFrame._allHostsInfos`).</summary>
     private const string ServerHostKey = "OneAir";
 
     public MainWindow()
@@ -42,7 +34,6 @@ public partial class MainWindow : Window
         var data = Settings.Data;
         RememberCheck.IsChecked = data.SaveLogin;
 
-        // Restaure dernier compte ou le 1er, sinon mode "Nouveau compte".
         var last = data.LastAccount;
         var acc = data.Accounts.FirstOrDefault(a => a.Login == last)
                ?? data.Accounts.FirstOrDefault();
@@ -50,20 +41,12 @@ public partial class MainWindow : Window
         else SelectNewAccountMode();
     }
 
-    // ----------------------------------------------------------------------
-    // Title bar
-    // ----------------------------------------------------------------------
-
     private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
     {
         if (e.LeftButton == MouseButtonState.Pressed) DragMove();
     }
 
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
-
-    // ----------------------------------------------------------------------
-    // Account selector + popup
-    // ----------------------------------------------------------------------
 
     private void AccountSelector_MouseDown(object sender, MouseButtonEventArgs e)
     {
@@ -260,10 +243,6 @@ public partial class MainWindow : Window
         UserField.Focus();
     }
 
-    // ----------------------------------------------------------------------
-    // Password handling (toggle visible/hidden)
-    // ----------------------------------------------------------------------
-
     private string GetPasswordValue() =>
         _passwordVisible ? PassFieldVisible.Text : PassField.Password;
 
@@ -276,7 +255,6 @@ public partial class MainWindow : Window
 
     private void PassField_Changed(object sender, RoutedEventArgs e)
     {
-        // Le sécurisé est source de vérité tant qu'on n'est pas en mode visible.
         if (!_passwordVisible) PassFieldVisible.Text = PassField.Password;
         UpdatePassPlaceholder();
     }
@@ -289,7 +267,6 @@ public partial class MainWindow : Window
     {
         if (_passwordVisible)
         {
-            // visible → caché : copie text → password
             PassField.Password = PassFieldVisible.Text;
             PassField.Visibility = Visibility.Visible;
             PassFieldVisible.Visibility = Visibility.Collapsed;
@@ -298,7 +275,6 @@ public partial class MainWindow : Window
         }
         else
         {
-            // caché → visible : copie password → text
             PassFieldVisible.Text = PassField.Password;
             PassField.Visibility = Visibility.Collapsed;
             PassFieldVisible.Visibility = Visibility.Visible;
@@ -314,10 +290,6 @@ public partial class MainWindow : Window
         if (e.Key == Key.Enter) PlayButton_Click(this, new RoutedEventArgs());
     }
 
-    // ----------------------------------------------------------------------
-    // Status pill
-    // ----------------------------------------------------------------------
-
     private enum StatusKind { Ok, Warn, Err }
 
     private void SetStatus(string text, StatusKind kind)
@@ -330,7 +302,6 @@ public partial class MainWindow : Window
             _ => (Brush)Application.Current.Resources["RedBrush"],
         };
 
-        // Auto-reset après 3.5s si erreur/warn
         if (kind != StatusKind.Ok)
         {
             var sw = new System.Windows.Threading.DispatcherTimer
@@ -347,16 +318,10 @@ public partial class MainWindow : Window
         }
     }
 
-    // ----------------------------------------------------------------------
-    // PLAY
-    // ----------------------------------------------------------------------
-
     private void SavePrefs()
     {
         Settings.Data.SaveLogin = RememberCheck.IsChecked == true;
 
-        // Si on est en mode Nouveau compte ET que se-souvenir est coché, on upsert.
-        // Si on a sélectionné un compte existant, rien à faire.
         if (_selectedAccountLogin == null && RememberCheck.IsChecked == true)
         {
             var login = UserField.Text.Trim();
@@ -404,8 +369,8 @@ public partial class MainWindow : Window
 
         try
         {
+            // DofusLaunch.Launch quitte le process via Environment.Exit.
             DofusLaunch.Launch(host, port, ServerHostKey, user, pass);
-            // DofusLaunch.Launch quitte le process — on ne revient pas ici.
         }
         catch (Exception ex)
         {

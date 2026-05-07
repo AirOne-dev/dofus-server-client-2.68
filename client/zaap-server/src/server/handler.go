@@ -54,7 +54,6 @@ func (p *ZaapHandler) Connect(ctx context.Context, gameName string, releaseName 
 		return hash, nil
 	}
 	log.Printf("Client not found with hash: %s", hash)
-	// TODO: Understand how to return errors in Zaap format?
 	return "", nil
 }
 
@@ -65,8 +64,6 @@ func (p *ZaapHandler) AuthGetGameToken(ctx context.Context, gameSession string, 
 	if client, ok := p.clients[gameSession]; ok {
 		return client.gameToken, nil
 	}
-
-	// TODO: Understand how to return errors in Zaap format?
 	return "", nil
 }
 
@@ -109,21 +106,15 @@ func (p *ZaapHandler) UserInfoGet(ctx context.Context, gameSession string) (stri
 			NicknameWithTag: login + "#0000",
 		}
 
-		// Convert struct to JSON
 		jsonData, err := json.Marshal(user)
 		if err != nil {
 			fmt.Println("Error marshalling JSON:", err)
 			return "", nil
 		}
-
-		// Convert JSON bytes to string
-		jsonString := string(jsonData)
-		return jsonString, nil
+		return string(jsonData), nil
 	}
 
-	// TODO: Understand how to return errors in Zaap format?
 	return "", nil
-
 }
 
 func (p *ZaapHandler) ReleaseRestartOnExit(ctx context.Context, gameSession string) error {

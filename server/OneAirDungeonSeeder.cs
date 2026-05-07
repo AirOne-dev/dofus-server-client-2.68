@@ -1,22 +1,7 @@
-// OneAir — peuplement automatique des salles de donjons.
-//
-// Vanilla Giny laisse les Rooms vides (MonsterIds = []) pour la plupart des
-// donjons → les salles s'ouvrent sans combat. Ce manager fait deux choses
-// au boot :
-//
-// 1) Dataset scrapé manuellement depuis dofus.jeuxonline.info (Crypte de
-//    Kardorim, Donjon des Bworks, etc.) : pour chaque donjon connu, applique
-//    la composition exacte des monstres pour chaque salle dans l'ordre.
-//
-// 2) Pour tous les autres donjons, génère un fallback automatique :
-//    - Cherche par mot-clé du nom du donjon dans la table monsters
-//      (ex "Donjon des Bworks" → monstres dont le nom contient "Bwork")
-//    - Filtre par niveau (proche de OptimalPlayerLevel ± 30)
-//    - Sélectionne 6-8 monstres par salle
-//
-// Les deux fonctionnent ensemble : si le dataset couvre, c'est canonique ;
-// sinon, le fallback garantit qu'aucune salle n'est vide.
-
+// Vanilla Giny laisse Rooms.MonsterIds vide pour la plupart des donjons,
+// donc les salles s'ouvrent sans combat. SeedAll() applique d'abord les
+// plans canoniques (DungeonPlans), puis un fallback heuristique par
+// mot-clé du nom du donjon pour ceux non couverts.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -33,11 +18,9 @@ namespace Giny.World.Managers.Chat
 {
     public static class OneAirDungeonSeeder
     {
-        // Plans canoniques scrapés de jeuxonline.info. Chaque entrée :
-        //   dungeonId → tableau de salles, chaque salle = liste de monstres.
-        // Les salles "no combat" sont représentées par un tableau vide (skip).
-        // Si l'entrée a moins de salles que dungeon.Rooms.Count, on répète
-        // la dernière (boss). Si plus, on tronque.
+        // dungeonId → tableau de salles (chaque salle = liste de noms de monstres).
+        // Salle vide = no-combat (skip). Si plan plus court que dungeon.Rooms.Count,
+        // la dernière entrée (boss) est répétée ; si plus long, troncage.
         public static readonly Dictionary<long, string[][]> DungeonPlans = new Dictionary<long, string[][]>
         {
             // Crypte de Kardorim (lvl 10)
@@ -381,15 +364,13 @@ namespace Giny.World.Managers.Chat
 
                         if (DungeonPlans.TryGetValue(dungeon.Id, out var plan))
                         {
-                            // Plans canoniques : on REMPLACE toujours pour
-                            // permettre l'extension du dataset au fil du temps.
+                            // Force-replace : permet d'étendre le dataset au fil du temps.
                             foreach (var r in dungeon.Rooms) r.MonsterIds = new List<short>();
                             ApplyPlan(dungeon, plan, monstersByName);
                             canonical++;
                         }
                         else
                         {
-                            // Autofill : seulement si au moins une salle est vide.
                             bool anyEmpty = dungeon.Rooms.Any(r => r.MonsterIds == null || r.MonsterIds.Count == 0);
                             if (!anyEmpty) { skipped++; continue; }
                             ApplyAutofill(dungeon, monstersByName);
@@ -426,7 +407,6 @@ namespace Giny.World.Managers.Chat
 
         private static void ApplyAutofill(DungeonRecord dungeon, Dictionary<string, short> monsters)
         {
-            // Mots-clés extraits du nom du donjon (ex "Donjon des Bworks" → "Bwork")
             var keywords = ExtractKeywords(dungeon.Name).ToList();
             int targetLvl = dungeon.OptimalPlayerLevel > 0 ? dungeon.OptimalPlayerLevel : 50;
             var pool = new List<short>();
@@ -441,7 +421,6 @@ namespace Giny.World.Managers.Chat
                 }
                 if (pool.Count >= 6) break;
             }
-            // Fallback : pool générique random si pas de keyword match
             if (pool.Count == 0)
             {
                 var rnd = new Random((int)dungeon.Id);
@@ -495,7 +474,6 @@ namespace Giny.World.Managers.Chat
                     break;
                 }
             }
-            // Strip "Royal/Royale" trailing
             if (stripped.EndsWith(" Royal", StringComparison.OrdinalIgnoreCase) || stripped.EndsWith(" Royale", StringComparison.OrdinalIgnoreCase))
             {
                 int sp = stripped.LastIndexOf(' ');
@@ -512,15 +490,14 @@ namespace Giny.World.Managers.Chat
         private static short ResolveMonsterId(string name, Dictionary<string, short> monsters)
         {
             if (string.IsNullOrEmpty(name)) return 0;
-            // Match exact (insensitive aux accents et casse)
             var key = Normalize(name);
             if (monsters.TryGetValue(key, out var id)) return id;
-            // Match contient (le nom DB contient le nom donné, ex "Bwork Mage" → "Bwork Mage de niv X")
+            // DB-contains (ex "Bwork Mage" → "Bwork Mage de niv X")
             foreach (var kv in monsters)
             {
                 if (kv.Key.Contains(key)) return kv.Value;
             }
-            // Match partiel inversé (le nom donné contient le nom DB)
+            // Inverse contains (key contient un nom DB plus court)
             foreach (var kv in monsters)
             {
                 if (kv.Key.Length > 4 && key.Contains(kv.Key)) return kv.Value;

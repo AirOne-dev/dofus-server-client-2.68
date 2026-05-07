@@ -1,8 +1,3 @@
-// OneAir — exécuteur des actions admin postées via la table oneair_actions.
-//
-// Démarré par WorldServer.OnServerStarted (patché via Dockerfile sed).
-// Boucle async, lit les actions ProcessedAt IS NULL, les dispatch sur le
-// thread world, marque ProcessedAt=NOW().
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -52,8 +47,6 @@ namespace Giny.World.Managers.Chat
             }
         }
 
-        // -------- DB helpers ------------------------------------------------
-
         private static MySqlConnection OpenConnection()
         {
             var cfg = ConfigManager<WorldConfig>.Instance;
@@ -69,7 +62,7 @@ namespace Giny.World.Managers.Chat
             using var c = OpenConnection();
             using var cmd = c.CreateCommand();
             cmd.CommandText = @"
-CREATE TABLE IF NOT EXISTS oneair_actions (
+CREATE TABLE IF NOT EXISTS actions (
     Id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     Type VARCHAR(48) NOT NULL,
     Payload TEXT,
@@ -78,7 +71,7 @@ CREATE TABLE IF NOT EXISTS oneair_actions (
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     KEY ix_unprocessed (ProcessedAt, Id)
 ) ENGINE=InnoDB;
-CREATE TABLE IF NOT EXISTS oneair_online_clients (
+CREATE TABLE IF NOT EXISTS online_clients (
     CharacterId BIGINT NOT NULL PRIMARY KEY,
     AccountId INT NULL,
     Name VARCHAR(255) NULL,
@@ -93,32 +86,50 @@ CREATE TABLE IF NOT EXISTS oneair_online_clients (
         {
             var clients = WorldServer.Instance.GetOnlineClients().ToArray();
 
-            using var truncate = conn.CreateCommand();
-            truncate.CommandText = "TRUNCATE oneair_online_clients";
-            truncate.ExecuteNonQuery();
-
-            if (clients.Length == 0) return;
-
-            using var ins = conn.CreateCommand();
-            ins.CommandText = "INSERT INTO oneair_online_clients (CharacterId, AccountId, Name, Level, MapId) VALUES (@cid, @aid, @n, @lvl, @m)";
-            var pCid = ins.Parameters.Add("@cid", MySqlDbType.Int64);
-            var pAid = ins.Parameters.Add("@aid", MySqlDbType.Int32);
-            var pName = ins.Parameters.Add("@n", MySqlDbType.VarChar);
-            var pLvl = ins.Parameters.Add("@lvl", MySqlDbType.Int32);
-            var pMap = ins.Parameters.Add("@m", MySqlDbType.Int64);
-
-            foreach (var c in clients)
+            // DELETE + INSERT dans une transaction : TRUNCATE est DDL et
+            // committerait implicitement, exposant la table vide.
+            using var tx = conn.BeginTransaction();
+            try
             {
-                try
+                using (var del = conn.CreateCommand())
                 {
-                    pCid.Value = c.Character.Id;
-                    pAid.Value = c.Character.Record.AccountId;
-                    pName.Value = c.Character.Name;
-                    pLvl.Value = ExperienceManager.Instance.GetCharacterLevel(c.Character.Record.Experience);
-                    pMap.Value = c.Character.Map?.Id ?? 0;
-                    ins.ExecuteNonQuery();
+                    del.Transaction = tx;
+                    del.CommandText = "DELETE FROM online_clients";
+                    del.ExecuteNonQuery();
                 }
-                catch { }
+
+                if (clients.Length > 0)
+                {
+                    using var ins = conn.CreateCommand();
+                    ins.Transaction = tx;
+                    ins.CommandText = "INSERT INTO online_clients (CharacterId, AccountId, Name, Level, MapId) VALUES (@cid, @aid, @n, @lvl, @m)";
+                    var pCid = ins.Parameters.Add("@cid", MySqlDbType.Int64);
+                    var pAid = ins.Parameters.Add("@aid", MySqlDbType.Int32);
+                    var pName = ins.Parameters.Add("@n", MySqlDbType.VarChar);
+                    var pLvl = ins.Parameters.Add("@lvl", MySqlDbType.Int32);
+                    var pMap = ins.Parameters.Add("@m", MySqlDbType.Int64);
+
+                    foreach (var c in clients)
+                    {
+                        try
+                        {
+                            pCid.Value = c.Character.Id;
+                            pAid.Value = c.Character.Record.AccountId;
+                            pName.Value = c.Character.Name;
+                            pLvl.Value = ExperienceManager.Instance.GetCharacterLevel(c.Character.Record.Experience);
+                            pMap.Value = c.Character.Map?.Id ?? 0;
+                            ins.ExecuteNonQuery();
+                        }
+                        catch { }
+                    }
+                }
+
+                tx.Commit();
+            }
+            catch
+            {
+                try { tx.Rollback(); } catch { }
+                throw;
             }
         }
 
@@ -126,16 +137,13 @@ CREATE TABLE IF NOT EXISTS oneair_online_clients (
         {
             using var conn = OpenConnection();
 
-            // Online tracking : refresh oneair_online_clients table
             try { RefreshOnlineTable(conn); } catch { }
-
-            // Events : nettoie les multiplicateurs expirés
             try { OneAirEventManager.CheckExpired(); } catch { }
 
             var pending = new List<(long Id, string Type, string Payload)>();
             using (var cmd = conn.CreateCommand())
             {
-                cmd.CommandText = "SELECT Id, Type, COALESCE(Payload,'') FROM oneair_actions " +
+                cmd.CommandText = "SELECT Id, Type, COALESCE(Payload,'') FROM actions " +
                                   "WHERE ProcessedAt IS NULL ORDER BY Id LIMIT 50";
                 using var r = cmd.ExecuteReader();
                 while (r.Read())
@@ -152,14 +160,12 @@ CREATE TABLE IF NOT EXISTS oneair_online_clients (
                     Logger.Write($"[OneAir] action {type}#{id} failed: {e.Message}", Channels.Warning);
                 }
                 using var cmd = conn.CreateCommand();
-                cmd.CommandText = "UPDATE oneair_actions SET ProcessedAt = NOW(), Result = @r WHERE Id = @id";
+                cmd.CommandText = "UPDATE actions SET ProcessedAt = NOW(), Result = @r WHERE Id = @id";
                 cmd.Parameters.AddWithValue("@r", result.Length > 250 ? result.Substring(0, 250) : result);
                 cmd.Parameters.AddWithValue("@id", id);
                 cmd.ExecuteNonQuery();
             }
         }
-
-        // -------- Dispatch --------------------------------------------------
 
         private static void Dispatch(string type, string payload)
         {
@@ -209,14 +215,12 @@ CREATE TABLE IF NOT EXISTS oneair_online_clients (
             }
         }
 
-        // -------- Inventory dump & edit ----------------------------------
-
         private static void EnsureInventoryTable()
         {
             using var c = OpenConnection();
             using var cmd = c.CreateCommand();
             cmd.CommandText = @"
-CREATE TABLE IF NOT EXISTS oneair_inventory_dumps (
+CREATE TABLE IF NOT EXISTS inventory_dumps (
     CharacterId BIGINT NOT NULL PRIMARY KEY,
     Json LONGTEXT,
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -271,7 +275,7 @@ CREATE TABLE IF NOT EXISTS oneair_inventory_dumps (
 
             using var conn = OpenConnection();
             using var up = conn.CreateCommand();
-            up.CommandText = "REPLACE INTO oneair_inventory_dumps (CharacterId, Json) VALUES (@cid, @json)";
+            up.CommandText = "REPLACE INTO inventory_dumps (CharacterId, Json) VALUES (@cid, @json)";
             up.Parameters.AddWithValue("@cid", cid);
             up.Parameters.AddWithValue("@json", sb.ToString());
             up.ExecuteNonQuery();
@@ -367,8 +371,6 @@ CREATE TABLE IF NOT EXISTS oneair_inventory_dumps (
             DumpInventory(cid.ToString());
         }
 
-        // -------- Spells -------------------------------------------------
-
         // payload: <charId>|<spellId>[|<level>]
         private static void LearnSpell(string payload)
         {
@@ -394,12 +396,10 @@ CREATE TABLE IF NOT EXISTS oneair_inventory_dumps (
             DumpSpells(cid.ToString());
         }
 
-        // SetSpellLevel : Giny dérive le grade du sort depuis Character.Level via
-        // SpellLevels[].MinPlayerLevel. Pour "set le niveau", on level-up le perso.
-        // On laisse cette action en no-op (le niveau est implicite).
+        // No-op : Giny dérive le grade depuis Character.Level via SpellLevels[].MinPlayerLevel
+        // (pas de grade indépendant à set).
         private static void SetSpellLevel(string payload)
         {
-            // no-op : le niveau de sort est dérivé du niveau perso côté Giny
             DumpSpells(payload.Split('|')[0]);
         }
 
@@ -422,7 +422,7 @@ CREATE TABLE IF NOT EXISTS oneair_inventory_dumps (
             using var c = OpenConnection();
             using var cmd = c.CreateCommand();
             cmd.CommandText = @"
-CREATE TABLE IF NOT EXISTS oneair_spell_dumps (
+CREATE TABLE IF NOT EXISTS spell_dumps (
     CharacterId BIGINT NOT NULL PRIMARY KEY,
     Json LONGTEXT,
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -452,13 +452,11 @@ CREATE TABLE IF NOT EXISTS oneair_spell_dumps (
 
             using var conn = OpenConnection();
             using var up = conn.CreateCommand();
-            up.CommandText = "REPLACE INTO oneair_spell_dumps (CharacterId, Json) VALUES (@cid, @json)";
+            up.CommandText = "REPLACE INTO spell_dumps (CharacterId, Json) VALUES (@cid, @json)";
             up.Parameters.AddWithValue("@cid", cid);
             up.Parameters.AddWithValue("@json", sb.ToString());
             up.ExecuteNonQuery();
         }
-
-        // -------- Apparence ---------------------------------------------
 
         // payload: <charId>|<lookString>  (look brut Dofus, ex: {200|0|24,1,2,3,4})
         private static void SetLook(string payload)
@@ -508,16 +506,12 @@ CREATE TABLE IF NOT EXISTS oneair_spell_dumps (
             c.Character.RefreshLookOnMap();
         }
 
-        // -------- Suppression / reset --------------------------------------
-
-        // Supprime un personnage : kicke s'il est online puis DELETE en SQL.
         private static void DeleteCharacter(string payload)
         {
             if (!long.TryParse(payload, out var cid)) throw new Exception("charId");
-            // Kick si online
             var c = ClientByCharId(cid);
             if (c != null) { try { c.Disconnect(); } catch { } }
-            // SQL direct (cascade ON DELETE pas garanti côté Giny → on nettoie à la main)
+            // Pas de cascade ON DELETE côté Giny → cleanup manuel.
             using var conn = OpenConnection();
             using var t = conn.BeginTransaction();
             try
@@ -529,20 +523,20 @@ CREATE TABLE IF NOT EXISTS oneair_spell_dumps (
                     cmd.Parameters.AddWithValue("@c", cid);
                     cmd.ExecuteNonQuery();
                 }
-                // Auth DB : world_characters (table de mapping account ↔ character)
+                // world_characters vit dans la DB auth (mapping account ↔ character).
                 using (var cmd = conn.CreateCommand()) {
                     cmd.Transaction = t;
                     var auth = ConfigManager<WorldConfig>.Instance.SQLDBName.Replace("world", "auth");
                     cmd.CommandText = $"DELETE FROM {auth}.world_characters WHERE CharacterId = @c";
                     cmd.Parameters.AddWithValue("@c", cid);
-                    try { cmd.ExecuteNonQuery(); } catch { /* peut-être pas même DB */ }
+                    try { cmd.ExecuteNonQuery(); } catch { }
                 }
                 t.Commit();
             }
             catch { t.Rollback(); throw; }
         }
 
-        // Reset un perso : niveau 1, kamas 0, sorts vidés. Garde l'inventaire.
+        // Reset partiel : niveau 1, kamas 0, sorts vidés. Inventaire préservé.
         private static void ResetCharacter(string payload)
         {
             if (!long.TryParse(payload, out var cid)) throw new Exception("charId");
@@ -560,8 +554,6 @@ CREATE TABLE IF NOT EXISTS oneair_spell_dumps (
             }
             catch (Exception e) { Logger.Write("[OneAir] reset_character: " + e.Message, Channels.Warning); }
         }
-
-        // -------- Bulk (sur tous les online) -------------------------------
 
         private static void BulkGiveKamas(string payload)
         {
@@ -607,8 +599,6 @@ CREATE TABLE IF NOT EXISTS oneair_spell_dumps (
             Broadcast($"🎁 « {itemName} » × {qty} donné à tout le monde ({n} joueurs).");
         }
 
-        // -------- Events (multiplicateurs XP/Kamas/Drop) -------------------
-
         // payload: <type>|<multiplier>|<durationSeconds>
         // type ∈ {"xp","kamas","drop"} ; durationSeconds = 0 → permanent
         private static void EventSet(string payload)
@@ -622,7 +612,6 @@ CREATE TABLE IF NOT EXISTS oneair_spell_dumps (
             if (!int.TryParse(p[2], out var dur)) throw new Exception("duration");
             OneAirEventManager.SetEvent(type, mul, dur);
 
-            // Annonce in-game
             string label = type == "xp" ? "XP" : type == "kamas" ? "Kamas" : "Drop";
             string until = dur > 0 ? $" pendant {FormatDuration(dur)}" : " (permanent)";
             Broadcast($"🎉 Événement actif : <b>{label} × {mul}</b>{until} !");
@@ -685,8 +674,6 @@ CREATE TABLE IF NOT EXISTS oneair_spell_dumps (
             DumpInventory(cid.ToString());
         }
 
-        // -------- Helpers ---------------------------------------------------
-
         private static WorldClient ClientByCharId(long id)
             => WorldServer.Instance.GetOnlineClients().FirstOrDefault(c => c.Character.Id == id);
 
@@ -694,7 +681,7 @@ CREATE TABLE IF NOT EXISTS oneair_spell_dumps (
             => WorldServer.Instance.GetOnlineClients().FirstOrDefault(
                 c => string.Equals(c.Character.Name, name, StringComparison.OrdinalIgnoreCase));
 
-        // payload parsing : "key1=val1|key2=val2" or just a long for ids
+        // "key1=val1|key2=val2"
         private static Dictionary<string, string> ParseKv(string payload)
         {
             var d = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -708,8 +695,6 @@ CREATE TABLE IF NOT EXISTS oneair_spell_dumps (
             return d;
         }
 
-        // -------- Action handlers ------------------------------------------
-
         private static void Broadcast(string message)
         {
             if (string.IsNullOrWhiteSpace(message)) return;
@@ -717,9 +702,9 @@ CREATE TABLE IF NOT EXISTS oneair_spell_dumps (
                 target.Character.DisplayNotification("Serveur : " + message);
         }
 
+        // payload: "<id>" ou "<id>|reason"
         private static void Kick(string payload)
         {
-            // Accepte "<id>" ou "<id>|reason"
             var parts = payload.Split('|');
             if (!long.TryParse(parts[0], out var cid)) return;
             var c = ClientByCharId(cid);
@@ -776,7 +761,7 @@ CREATE TABLE IF NOT EXISTS oneair_spell_dumps (
             var current = c.Character.Record.Kamas;
             var delta = amount - current;
             if (delta > 0) c.Character.AddKamas(delta);
-            else if (delta < 0) c.Character.AddKamas(delta); // accepte négatif
+            else if (delta < 0) c.Character.AddKamas(delta);
             c.Character.OnKamasGained(delta);
         }
 

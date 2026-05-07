@@ -1,18 +1,3 @@
-// OneAir custom chat commands
-//   .gocell <cellId>            (admin)  → teleport sur la map courante à une cellule
-//   .who                        (joueur) → liste tous les joueurs connectés
-//   .invlist                    (admin)  → liste les items inventaire avec UID
-//   .iteminfo <uid>             (admin)  → liste les effets d'un item
-//   .iteffadd <uid> <id> <val>  (admin)  → ajoute un effet entier sur l'item
-//   .iteffset <uid> <idx> <val> (admin)  → modifie la valeur de l'effet à l'index
-//   .iteffdel <uid> <idx>       (admin)  → supprime l'effet à l'index
-//   .dj                          (joueur) → tp sur le hub donjons (4 PNJs par plage de niveau)
-//   .djgo <id>                   (joueur) → tp sur l'entrée du donjon donné
-//   .hbnpc <chest|lotery> <cellId>  (admin) → [LEGACY NPC] repositionne le NPC coffre/loterie sur la map havre-sac courante
-//   .hbhere <chest|lotery>      (admin)  → [LEGACY NPC] place le NPC coffre/loterie sur la cellule courante du joueur
-//   .cell                       (admin)  → affiche mapId et cellId actuels (pour utiliser avec .hbnpc / .gocell)
-//   .elems                      (admin)  → liste les éléments interactifs (Identifier, CellId, BonesId, GfxId) de la map courante
-//   .hbset <chest|lotery|zaap> <elemId>  (admin) → bind l'élément interactif au type donné, propagé à tous les havre-sacs
 using Giny.Protocol.Custom.Enums;
 using Giny.Protocol.Messages;
 using Giny.World.Managers.Effects;
@@ -48,9 +33,8 @@ namespace Giny.World.Managers.Chat
             client.Character.Reply(sb.ToString());
         }
 
-        // Variante silencieuse de .who utilisée par le panneau .online :
-        // n'envoie QUE le payload structuré (intercepté par le SWF), pas de
-        // dump chat (le panneau l'affiche déjà à l'écran).
+        // Variante silencieuse de .who : n'envoie que le payload structuré
+        // intercepté par le SWF (le panneau .online affiche, pas de dump chat).
         [ChatCommand("online_data", ServerRoleEnum.Player)]
         public static void OnlineDataCommand(WorldClient client)
         {
@@ -141,8 +125,8 @@ namespace Giny.World.Managers.Chat
             DumpInventory(client);
         }
 
-        // Notifie le client + recalcule les stats si l'objet est équipé.
-        // Sans ça, modifier un item équipé désynchronise tooltip ↔ stats actives.
+        // Recalcule les stats si l'objet est équipé : sans ça, modifier un
+        // item équipé désynchronise tooltip ↔ stats actives.
         private static void RefreshAfterChange(WorldClient client, Giny.World.Records.Items.CharacterItemRecord item)
         {
             client.Send(new ObjectModifiedMessage(item.GetObjectItem()));
@@ -152,17 +136,14 @@ namespace Giny.World.Managers.Chat
             }
         }
 
-        // .itemdump → envoie un payload structuré JSON-like avec tout
-        // l'inventaire (UID, GID, name, effects). Marker __ONEAIR_INV__
-        // intercepté par le SWF custom pour peupler le panneau .itemui.
+        // Marker __ONEAIR_INV__ intercepté par le SWF (panneau .itemui).
         [ChatCommand("itemdump", ServerRoleEnum.Administrator)]
         public static void ItemDumpCommand(WorldClient client)
         {
             DumpInventory(client);
         }
 
-        // Item types qu'on considère équipables ou utilisables (pas une ressource).
-        // Liste basée sur Giny.Protocol.Custom.Enums.ItemTypeEnum.
+        // Types depuis Giny.Protocol.Custom.Enums.ItemTypeEnum (équipables/usables).
         private static readonly HashSet<int> EquipableOrUsableTypes = new HashSet<int>
         {
             // Armes / outils
@@ -187,8 +168,6 @@ namespace Giny.World.Managers.Chat
 
         private static void DumpInventory(WorldClient client)
         {
-            // Filtre : on n'inclut pas les ressources / runes / fragments / items quête.
-            // Tri : équipés en premier, puis par position, puis par UID.
             var items = client.Character.Inventory.GetItems()
                 .Where(IsEquipableOrUsable)
                 .OrderBy(x => x.IsEquiped() ? 0 : 1)
@@ -203,7 +182,6 @@ namespace Giny.World.Managers.Chat
                 if (i > 0) sb.Append(",");
                 var it = items[i];
                 var name = it.Record == null ? "?" : it.Record.Name;
-                // Échappe les caractères JSON dangereux + caractères de contrôle
                 name = JsonEscape(name);
                 sb.Append("{\"uid\":").Append(it.UId)
                   .Append(",\"gid\":").Append(it.GId)
@@ -239,18 +217,6 @@ namespace Giny.World.Managers.Chat
         public static void DjGoCommand(WorldClient client, long dungeonId)
         {
             OneAirDungeons.TpToDungeon(client.Character, dungeonId);
-        }
-
-        [ChatCommand("hbnpc", ServerRoleEnum.Administrator)]
-        public static void HavenBagNpcMoveCommand(WorldClient client, string type, short cellId)
-        {
-            OneAirHavenBagPatch.MoveHavenBagNpc(client.Character, type, cellId);
-        }
-
-        [ChatCommand("hbhere", ServerRoleEnum.Administrator)]
-        public static void HavenBagNpcHereCommand(WorldClient client, string type)
-        {
-            OneAirHavenBagPatch.MoveHavenBagNpc(client.Character, type, client.Character.CellId);
         }
 
         [ChatCommand("cell", ServerRoleEnum.Administrator)]

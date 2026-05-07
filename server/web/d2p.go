@@ -1,18 +1,9 @@
-// d2p.go — extracteur d'archives Ankama .d2p (Dofus 2.x).
-//
-// Format vérifié contre les bitmap*.d2p locaux (Dofus 2.68) :
-//   - 2 bytes magic en début (0x02 0x01)
-//   - 24 bytes en fin de fichier : 6 × uint32 BE
-//        baseOffset, baseLength, indexOffset, indexLength,
-//        propertiesOffset, propertiesCount
-//   - À indexOffset, sur indexLength octets :
-//        Pour chaque entrée :
-//          int16 BE nameLen
-//          name (UTF-8)
-//          int32 BE fileOffset (relatif à baseOffset)
-//          int32 BE fileLength
-//
-// On extrait tous les fichiers .png/.jpg dans ItemsCacheDir.
+// Extracteur d'archives Ankama .d2p (Dofus 2.68). Format :
+//   - magic 2 bytes (0x02 0x01) en tête
+//   - footer 24 bytes : 6 × uint32 BE = baseOffset, baseLength, indexOffset,
+//     indexLength, propertiesOffset, propertiesCount
+//   - section index : pour chaque entrée, int16 BE nameLen, name UTF-8,
+//     int32 BE fileOffset (relatif à baseOffset), int32 BE fileLength
 package main
 
 import (
@@ -33,7 +24,6 @@ func extractD2P(path, outDir string) (int, error) {
 	}
 	defer f.Close()
 
-	// Magic
 	magic := make([]byte, 2)
 	if _, err := io.ReadFull(f, magic); err != nil {
 		return 0, fmt.Errorf("read magic: %w", err)
@@ -42,7 +32,6 @@ func extractD2P(path, outDir string) (int, error) {
 		return 0, fmt.Errorf("d2p invalide (magic %x)", magic)
 	}
 
-	// Footer (24 derniers octets) — 6 × uint32 BE
 	if _, err := f.Seek(-24, io.SeekEnd); err != nil {
 		return 0, err
 	}
@@ -55,7 +44,6 @@ func extractD2P(path, outDir string) (int, error) {
 	_ = propsOffset
 	_ = propsCount
 
-	// Lit la section index dans son intégralité (taille connue)
 	if _, err := f.Seek(int64(indexOffset), io.SeekStart); err != nil {
 		return 0, err
 	}
@@ -85,12 +73,10 @@ func extractD2P(path, outDir string) (int, error) {
 		fileLength := binary.BigEndian.Uint32(indexBuf[pos+4:])
 		pos += 8
 
-		// Filtre : on ne sort que les images
 		if !strings.HasSuffix(name, ".png") && !strings.HasSuffix(name, ".jpg") {
 			continue
 		}
 
-		// Lit le contenu
 		if _, err := f.Seek(int64(baseOffset)+int64(fileOffset), io.SeekStart); err != nil {
 			return count, err
 		}
@@ -109,7 +95,6 @@ func extractD2P(path, outDir string) (int, error) {
 	return count, nil
 }
 
-// extractAssets : extrait des archives d2p (préfixe configurable) dans cacheDir.
 func extractAssets(label, d2pDir, prefix, cacheDir string) {
 	entries, err := os.ReadDir(d2pDir)
 	if err != nil {
@@ -144,5 +129,4 @@ func extractAssets(label, d2pDir, prefix, cacheDir string) {
 	}
 }
 
-func extractItemAssets(d2pDir, cacheDir string)     { extractAssets("items", d2pDir, "bitmap", cacheDir) }
-func extractWorldmapAssets(d2pDir, cacheDir string) { extractAssets("worldmap", d2pDir, "worldmap", cacheDir) }
+func extractItemAssets(d2pDir, cacheDir string) { extractAssets("items", d2pDir, "bitmap", cacheDir) }

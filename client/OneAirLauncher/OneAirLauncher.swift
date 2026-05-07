@@ -1,19 +1,7 @@
-// =============================================================================
-//  OneAir Launcher — version Swift / Cocoa du design web "Édition du voyageur"
-//  Fenêtre 540×620, fond portail flouté, form-card avec logo + champs avec
-//  icônes, bouton « Jouer » doré + flèche, footer avec popover Options avancées.
-//
-//  Compile : swiftc -O -o OneAirLauncher OneAirLauncher.swift \
-//      -framework AppKit -framework Network -framework CoreImage
-// =============================================================================
-
 import Cocoa
 import Foundation
 import Network
 import CoreImage
-import Darwin
-
-// MARK: - Palette (cf. CSS :root)
 
 enum Palette {
     static let bg          = NSColor(srgbHex: 0x1a140b)
@@ -43,8 +31,6 @@ extension NSColor {
     }
 }
 
-// MARK: - Typo
-
 enum Typo {
     static func ui(_ size: CGFloat, weight: NSFont.Weight = .regular) -> NSFont {
         if let f = NSFont(name: "Avenir Next", size: size) {
@@ -61,28 +47,19 @@ enum Typo {
     }
 }
 
-// MARK: - Storage
-
 enum Prefs {
     static let host = "host", port = "port"
-    static let login = "login", password = "password", saveLogin = "saveLogin"
-    static let accounts = "accounts" // [{login,password}] JSON
+    static let saveLogin = "saveLogin"
+    static let accounts = "accounts"
     static let lastAccount = "lastAccount"
 }
 
-/// Préfixe arbitraire dans `config.xml` (`<connection.host>` = "OneAir:ip:port").
-/// Cosmétique côté SWF, jamais affiché à l'utilisateur — c'est juste la clé
-/// qu'`AuthentificationFrame.pushed` utilise pour indexer `_allHostsInfos`.
+/// Clé d'index dans `<connection.host>` (`AuthentificationFrame._allHostsInfos`).
 let kServerHostKey = "OneAir"
 
-// MARK: - Patch config.xml + lancement Dofus
-
 enum ConfigPatcher {
-    /// Réécrit `<entry key="connection.host">name:host:port</entry>` dans le
-    /// config.xml du bundle. On met aussi la signature à vide : le SWF Giny
-    /// patché tourne en BUILD_TYPE=DEBUG (5) > INTERNAL (4), donc
-    /// Signature.verify() est shortcircuité — la valeur de la signature n'est
-    /// jamais lue.
+    /// Le SWF Giny patché tourne en BUILD_TYPE=DEBUG, donc `Signature.verify()`
+    /// est shortcircuité — on peut laisser la signature à vide.
     static func patch(configPath: String, name: String, host: String, port: Int) throws {
         let url = URL(fileURLWithPath: configPath)
         let data = try Data(contentsOf: url)
@@ -106,8 +83,6 @@ extension String {
                                           withTemplate: template)
     }
 }
-
-// MARK: - TCP probe
 
 enum TCPProbe {
     static func test(host: String, port: Int, timeout: TimeInterval = 3,
@@ -146,8 +121,6 @@ enum TCPProbe {
     }
 }
 
-// MARK: - Lancement Dofus
-
 enum DofusLaunch {
     static let zaapPort = 4242, zaapHttpPort = 4243
 
@@ -163,16 +136,12 @@ enum DofusLaunch {
 
     static func launch(host: String, port: Int, serverName: String,
                        login: String?, password: String?) throws -> Never {
-        // Patche config.xml avec les valeurs des Options avancées du launcher.
-        // BUILD_TYPE=DEBUG dans le SWF Giny patché → Signature.verify() est
-        // shortcircuité, on peut mettre n'importe quel host:port.
         let cfg = configXML().path
         if FileManager.default.fileExists(atPath: cfg) {
             try? ConfigPatcher.patch(configPath: cfg, name: serverName,
                                      host: host, port: port)
         }
 
-        // Log explicite pour debug
         let logDir = NSHomeDirectory() + "/Library/Logs/OneAir"
         try? FileManager.default.createDirectory(atPath: logDir, withIntermediateDirectories: true)
         let logURL = URL(fileURLWithPath: logDir).appendingPathComponent("launcher.log")
@@ -180,9 +149,8 @@ enum DofusLaunch {
 
         var logLines: [String] = ["[\(date)] launch host=\(host) port=\(port)"]
 
-        // On écrit les credentials sous PLUSIEURS chemins pour que le SWF
-        // AuthPatch les trouve quel que soit le applicationStorageDirectory
-        // résolu par AIR.
+        // Écriture sous plusieurs chemins : `applicationStorageDirectory` côté
+        // AIR varie selon comment l'app a été lancée.
         if let login = login, !login.isEmpty,
            let password = password, !password.isEmpty {
             let creds = "\(login)\n\(password)"
@@ -209,7 +177,6 @@ enum DofusLaunch {
             logLines.append("  SKIP credentials (login=\(login ?? "nil") pass=\(password == nil ? "nil" : "***"))")
         }
 
-        // Append au log
         if let h = try? FileHandle(forWritingTo: logURL) {
             try? h.seekToEnd()
             h.write((logLines.joined(separator: "\n") + "\n").data(using: .utf8)!)
@@ -219,11 +186,10 @@ enum DofusLaunch {
                 .data(using: .utf8)?.write(to: logURL)
         }
 
-        // Mode Giny DEBUG : on écrit credentials.json dans Contents/Resources
-        // (== File.applicationDirectory côté AS3 sur macOS), et le SWF Giny
-        // patché lit cet objet à la place de NativeApplication.arguments.
-        // Plus besoin de passer des args CLI à Adobe AIR — qui de toutes
-        // façons les ignore quand l'app n'est pas démarrée via deep-link.
+        // credentials.json est lu par le SWF Giny en BUILD_TYPE=DEBUG via
+        // `File.applicationDirectory.resolvePath("credentials.json")` (=
+        // Contents/Resources sur macOS). Adobe AIR ignore les args CLI quand
+        // l'app n'est pas lancée via deep-link.
         let instanceId = Int.random(in: 1...1_000_000)
         let hash = UUID().uuidString.lowercased()
         let credsURL = Bundle.main.bundleURL
@@ -236,7 +202,6 @@ enum DofusLaunch {
             try? blob.write(to: credsURL)
         }
 
-        // zaap-server avec login + password (= ticket Giny en clair)
         try? startZaap(port: zaapPort, httpPort: zaapHttpPort, hash: hash,
                        instanceId: instanceId, authAddr: "\(host):\(port)",
                        login: login ?? "", password: password ?? "")
@@ -245,7 +210,6 @@ enum DofusLaunch {
         let cwd = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS").path
         FileManager.default.changeCurrentDirectoryPath(cwd)
 
-        // Pas d'args : le SWF DEBUG-patché Giny lit credentials.json.
         let argv: [String] = ["Dofus"]
         let cArgs = argv.map { strdup($0) } + [UnsafeMutablePointer<CChar>?.none]
         let buf = UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>
@@ -261,8 +225,8 @@ enum DofusLaunch {
         let zaap = zaapServerBinary()
         guard FileManager.default.isExecutableFile(atPath: zaap.path) else { return }
 
-        // Tue les zaap-server zombies (orphans des lancements précédents)
-        // pour libérer les ports 4242 + 4243 avant de re-spawn.
+        // pkill ciblé sur le chemin du bundle (et pas juste "zaap-server")
+        // pour ne pas tuer un zaap-server lancé par un autre OneAir.app.
         let pkill = Process()
         pkill.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
         pkill.arguments = ["-f", "Contents/MacOS/zaap-server"]
@@ -279,9 +243,8 @@ enum DofusLaunch {
         let h = try FileHandle(forWritingTo: logURL); try h.seekToEnd()
         let p = Process()
         p.executableURL = zaap
-        // Giny.Zaap.HandleAuthGetGameToken renvoie account.Password en clair :
-        // c'est ce que le SWF reçoit comme ticket et envoie en
-        // IdentificationMessage. game-token == password.
+        // game-token == password : Giny renvoie le password en clair comme
+        // ticket, le SWF le ré-envoie en IdentificationMessage.
         p.arguments = [
             "--port=\(port)", "--http-port=\(httpPort)", "--hash=\(hash)",
             "--instance-id=\(instanceId)",
@@ -292,8 +255,6 @@ enum DofusLaunch {
         try p.run()
     }
 }
-
-// MARK: - Background image floutée + dim
 
 final class PortalBackgroundView: NSView {
     private let imageLayer = CALayer()
@@ -335,12 +296,8 @@ final class PortalBackgroundView: NSView {
     }
 }
 
-// MARK: - Champ texte stylé avec icône SF Symbol + toggle de visibilité
-//
-// Implémentation propre : deux NSTextField (un sécurisé, un plain) superposés.
-// Seul un est visible à la fois. Le toggle synchronise le contenu et inverse
-// la visibilité — pas de swap d'instance hacky.
-
+/// Deux NSTextField (sécurisé + plain) superposés. Le toggle synchronise le
+/// contenu et inverse la visibilité.
 final class IconTextField: NSView, NSTextFieldDelegate {
 
     private let secureField = NSSecureTextField()
@@ -350,7 +307,6 @@ final class IconTextField: NSView, NSTextFieldDelegate {
     private var passwordVisible = false
     let isSecureMode: Bool
 
-    /// Renvoie la valeur tapée par l'utilisateur (peu importe quel champ est visible).
     var stringValue: String {
         get {
             isSecureMode
@@ -372,7 +328,6 @@ final class IconTextField: NSView, NSTextFieldDelegate {
         layer?.borderWidth = 1
         layer?.cornerRadius = 4
 
-        // Icône
         let iconCfg = NSImage.SymbolConfiguration(pointSize: 12, weight: .regular)
         if let img = NSImage(systemSymbolName: icon, accessibilityDescription: nil) {
             iconView.image = img
@@ -382,7 +337,6 @@ final class IconTextField: NSView, NSTextFieldDelegate {
         iconView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(iconView)
 
-        // Configure les deux fields
         configureField(secureField, placeholder: placeholder)
         configureField(plainField,  placeholder: placeholder)
         secureField.delegate = self
@@ -390,7 +344,6 @@ final class IconTextField: NSView, NSTextFieldDelegate {
 
         addSubview(secureField)
         addSubview(plainField)
-        // Visibilité initiale : si secure, on montre le sécurisé ; sinon le plain
         secureField.isHidden = !secure
         plainField.isHidden  = secure
 
@@ -452,13 +405,9 @@ final class IconTextField: NSView, NSTextFieldDelegate {
     }
 
     @objc private func togglePw() {
-        // Synchronise le contenu : la valeur saisie sur le champ visible est
-        // copiée vers l'autre, puis on swap la visibilité.
         if passwordVisible {
-            // visible → caché : copie plain → secure
             secureField.stringValue = plainField.stringValue
         } else {
-            // caché → visible : copie secure → plain
             plainField.stringValue = secureField.stringValue
         }
         passwordVisible.toggle()
@@ -470,20 +419,16 @@ final class IconTextField: NSView, NSTextFieldDelegate {
             .font: Typo.mono(9, weight: .medium),
             .foregroundColor: Palette.textSoft, .kern: 0.7,
         ])
-        // Donne le focus au champ maintenant visible
         let focused = passwordVisible ? plainField : secureField
         window?.makeFirstResponder(focused)
     }
 
-    // Garde les deux fields synchronisés en temps réel pendant que l'utilisateur tape
     func controlTextDidChange(_ obj: Notification) {
         guard let src = obj.object as? NSTextField else { return }
         if src === secureField { plainField.stringValue = src.stringValue }
         else if src === plainField { secureField.stringValue = src.stringValue }
     }
 }
-
-// MARK: - Bouton « JOUER » plat doré
 
 final class PlayButton: NSButton {
     private var hovering = false { didSet { needsDisplay = true } }
@@ -550,8 +495,6 @@ final class PlayButton: NSButton {
     }
 }
 
-// MARK: - Status pill
-
 final class StatusPill: NSView {
     let dot = NSView()
     let label = NSTextField(labelWithString: "En ligne")
@@ -594,8 +537,6 @@ final class StatusPill: NSView {
     required init?(coder: NSCoder) { fatalError() }
 }
 
-// MARK: - Popover Options avancées
-
 final class AdvancedVC: NSViewController {
 
     var onSave: ((String, Int) -> Void)?
@@ -616,7 +557,6 @@ final class AdvancedVC: NSViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Header
         let title = NSTextField(labelWithString: "OPTIONS AVANCÉES")
         title.attributedStringValue = NSAttributedString(
             string: "OPTIONS AVANCÉES", attributes: [
@@ -624,7 +564,6 @@ final class AdvancedVC: NSViewController {
                 .foregroundColor: Palette.textDim, .kern: 1.8,
             ])
 
-        // IP / Port
         ipField.stringValue =
             UserDefaults.standard.string(forKey: Prefs.host) ?? "127.0.0.1"
         portField.stringValue =
@@ -636,7 +575,6 @@ final class AdvancedVC: NSViewController {
         row.orientation = .horizontal
         row.spacing = 8
 
-        // Test button
         testButton.bezelStyle = .rounded
         testButton.isBordered = false
         testButton.attributedTitle = NSAttributedString(
@@ -775,8 +713,6 @@ final class AdvancedVC: NSViewController {
     }
 }
 
-// MARK: - Multi-account store
-
 struct OneAirAccount: Codable, Equatable {
     var login: String
     var password: String
@@ -784,15 +720,9 @@ struct OneAirAccount: Codable, Equatable {
 
 enum AccountsStore {
     static func load() -> [OneAirAccount] {
-        let d = UserDefaults.standard
-        if let data = d.data(forKey: Prefs.accounts),
+        if let data = UserDefaults.standard.data(forKey: Prefs.accounts),
            let arr = try? JSONDecoder().decode([OneAirAccount].self, from: data) {
             return arr
-        }
-        // Migration depuis l'ancien Prefs.login/password (single-account)
-        if let l = d.string(forKey: Prefs.login), !l.isEmpty,
-           let p = d.string(forKey: Prefs.password), !p.isEmpty {
-            return [OneAirAccount(login: l, password: p)]
         }
         return []
     }
@@ -821,8 +751,6 @@ enum AccountsStore {
         }
     }
 }
-
-// MARK: - Account selector (custom dropdown styled like IconTextField)
 
 final class AccountSelectorButton: NSView {
     private let iconView = NSImageView()
@@ -891,7 +819,6 @@ final class AccountSelectorButton: NSView {
             chevron.heightAnchor.constraint(equalToConstant: 12),
         ])
 
-        // placeholder by default
         displayedLogin = ""
     }
     required init?(coder: NSCoder) { fatalError() }
@@ -945,7 +872,6 @@ final class AccountListRow: NSView {
         super.init(frame: .zero)
         wantsLayer = true
 
-        // Avatar circle
         avatarView.wantsLayer = true
         avatarView.layer?.cornerRadius = 14
         avatarView.layer?.backgroundColor = isAddNew
@@ -1023,6 +949,7 @@ final class AccountListRow: NSView {
 
 final class LauncherVC: NSViewController, NSPopoverDelegate {
 
+
     private let bg = PortalBackgroundView(frame: .zero)
     private let logoView = NSImageView()
     private let tagLabel = NSTextField(labelWithString: "")
@@ -1039,9 +966,6 @@ final class LauncherVC: NSViewController, NSPopoverDelegate {
     /// nil = mode "+ Nouveau compte" (inputs visibles), sinon login du compte sélectionné (inputs cachés)
     private var selectedAccountLogin: String? = nil
 
-    // Refs pour show/hide les inputs
-    private var userLabelView: NSView!
-    private var passLabelView: NSView!
     private var inputsContainer: NSStackView!
 
     private let advancedButton = NSButton(title: "", target: nil, action: nil)
@@ -1076,7 +1000,6 @@ final class LauncherVC: NSViewController, NSPopoverDelegate {
         logoView.imageScaling = .scaleProportionallyUpOrDown
         logoView.translatesAutoresizingMaskIntoConstraints = false
 
-        // Tagline
         tagLabel.attributedStringValue = NSAttributedString(
             string: "ÉDITION DU VOYAGEUR", attributes: [
                 .font: Typo.ui(9, weight: .medium),
@@ -1084,18 +1007,15 @@ final class LauncherVC: NSViewController, NSPopoverDelegate {
             ])
         tagLabel.alignment = .center
 
-        // Labels
         let accountsLabel = makeFieldLabel("COMPTE")
         let userLabel = makeFieldLabel("IDENTIFIANT")
         let passLabel = makeFieldLabel("MOT DE PASSE")
         userField.translatesAutoresizingMaskIntoConstraints = false
         passField.translatesAutoresizingMaskIntoConstraints = false
 
-        // Custom account selector (Dofus-like, mêmes codes visuels que IconTextField)
         accountSelector.translatesAutoresizingMaskIntoConstraints = false
         accountSelector.onClick = { [weak self] in self?.toggleAccountsPopover() }
 
-        // Remember
         rememberCheckbox.attributedTitle = NSAttributedString(
             string: "Se souvenir de moi", attributes: [
                 .font: Typo.ui(12),
@@ -1104,14 +1024,12 @@ final class LauncherVC: NSViewController, NSPopoverDelegate {
         rememberCheckbox.contentTintColor = Palette.gold
         rememberCheckbox.state = .on
 
-        // Play
         playButton.target = self
         playButton.action = #selector(playTapped)
         playButton.keyEquivalent = "\r"
         playButton.translatesAutoresizingMaskIntoConstraints = false
         playButton.heightAnchor.constraint(equalToConstant: 44).isActive = true
 
-        // Footer
         advancedButton.bezelStyle = .rounded
         advancedButton.isBordered = false
         advancedButton.attributedTitle = NSAttributedString(
@@ -1135,10 +1053,7 @@ final class LauncherVC: NSViewController, NSPopoverDelegate {
         separator.heightAnchor.constraint(equalToConstant: 1).isActive = true
 
         let cardWidth: CGFloat = 360
-        userLabelView = userLabel
-        passLabelView = passLabel
-        // Container "inputs" (label/champ login + label/champ password + remember)
-        // → masquable d'un coup quand on sélectionne un compte existant.
+        // Container masquable en bloc quand un compte existant est sélectionné.
         inputsContainer = NSStackView(views: [
             userLabel, userField,
             spacer(2),
@@ -1209,7 +1124,6 @@ final class LauncherVC: NSViewController, NSPopoverDelegate {
     private func loadPrefs() {
         let d = UserDefaults.standard
         rememberCheckbox.state = d.bool(forKey: Prefs.saveLogin) ? .on : .off
-        // Restaure le dernier compte sélectionné (ou le 1er si aucun) ; sinon mode "Nouveau compte"
         let last = d.string(forKey: Prefs.lastAccount) ?? ""
         if let acc = AccountsStore.load().first(where: { $0.login == last }) ??
                      AccountsStore.load().first {
@@ -1219,7 +1133,6 @@ final class LauncherVC: NSViewController, NSPopoverDelegate {
         }
     }
 
-    /// Sélectionne un compte sauvegardé : cache les inputs.
     private func selectAccount(_ login: String) {
         guard let acc = AccountsStore.load().first(where: { $0.login == login }) else {
             selectNewAccountMode(); return
@@ -1232,7 +1145,6 @@ final class LauncherVC: NSViewController, NSPopoverDelegate {
         inputsContainer.isHidden = true
     }
 
-    /// Mode "+ Nouveau compte" : affiche les inputs vides.
     private func selectNewAccountMode() {
         selectedAccountLogin = nil
         accountSelector.displayedLogin = ""
@@ -1254,7 +1166,6 @@ final class LauncherVC: NSViewController, NSPopoverDelegate {
         p.show(relativeTo: accountSelector.bounds,
                of: accountSelector,
                preferredEdge: .maxY)
-        // Réinitialise l'état du chevron à la fermeture
         DispatchQueue.main.async {
             NotificationCenter.default.addObserver(forName: NSPopover.didCloseNotification,
                 object: p, queue: .main) { [weak self] _ in
@@ -1345,8 +1256,6 @@ final class LauncherVC: NSViewController, NSPopoverDelegate {
     private func savePrefs() {
         let d = UserDefaults.standard
         d.set(rememberCheckbox.state == .on, forKey: Prefs.saveLogin)
-        // Sauvegarde le compte si on est en mode "Nouveau compte" ET que se-souvenir est coché.
-        // Si on a sélectionné un compte existant, on ne réécrit pas (rien à upsert).
         if selectedAccountLogin == nil, rememberCheckbox.state == .on {
             AccountsStore.upsert(login: userField.stringValue,
                                  password: passField.stringValue)
@@ -1429,8 +1338,6 @@ final class LauncherVC: NSViewController, NSPopoverDelegate {
 
     func popoverDidClose(_ note: Notification) { advPopover = nil }
 }
-
-// MARK: - App delegate
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     var window: NSWindow!

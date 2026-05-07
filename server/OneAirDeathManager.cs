@@ -1,18 +1,9 @@
-// OneAir — gestion de la mort d'un personnage à la fin d'un combat.
-//
-// Vanilla Giny ne fait aucun follow-up : à la fin du combat, le PV/MP/AP
-// retournent à leur valeur pré-combat (FighterStats est un clone éphémère
-// de Character.Stats, jamais répercuté en arrière). Résultat : le joueur
-// a toujours full PV après n'importe quel combat. On corrige uniquement
-// ce point — on persiste les PV de fin de combat sur le character (1 PV
-// minimum pour les KO). Pas de perte d'énergie, pas de tp Phoenix, pas
-// de transformation visuelle : ces mécaniques étaient câblées sur des
-// systèmes Dofus (PlayerLifeStatus, Phoenix actifs) que Giny ne supporte
-// pas correctement, et provoquaient des soft-locks.
-//
-// Hook installé via sed sur CharacterFighter.OnFightEnding (Patch 22) qui
-// appelle OneAirDeathManager.OnFightEnding(this).
-
+// Persiste les PV de fin de combat sur le character. Vanilla Giny clone
+// Character.Stats dans FighterStats au début du combat et ne le répercute
+// jamais en retour, donc le joueur a toujours full PV après combat.
+// On garde 1 PV minimum pour les KO (pas de Phoenix : les mécaniques
+// PlayerLifeStatus de Dofus ne sont pas implémentées côté Giny et
+// provoquaient des soft-locks).
 using System;
 using Giny.Core;
 using Giny.World.Managers.Entities.Characters;

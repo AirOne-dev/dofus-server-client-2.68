@@ -3,7 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-        <!-- Palette OneAir (cf. Swift Palette) -->
         <SolidColorBrush x:Key="BgBrush"          Color="#1a140b"/>
         <SolidColorBrush x:Key="Bg2Brush"         Color="#110c06"/>
         <SolidColorBrush x:Key="BorderBrush"      Color="#3a2c19"/>
