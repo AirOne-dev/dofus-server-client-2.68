@@ -1,5 +1,4 @@
-// Persistance des préférences (équivalent UserDefaults macOS).
-// Tout est sérialisé dans %APPDATA%\OneAir\settings.json.
+// Persistance dans %APPDATA%\OneAir\settings.json.
 
 using System;
 using System.Collections.Generic;
@@ -44,7 +43,7 @@ public static class Settings
                 if (data != null) return data;
             }
         }
-        catch { /* ignore corrupt file, fall through to defaults */ }
+        catch { }
         return new SettingsData();
     }
 
@@ -56,10 +55,8 @@ public static class Settings
             var opts = new JsonSerializerOptions { WriteIndented = true };
             File.WriteAllText(Path_, JsonSerializer.Serialize(_data, opts));
         }
-        catch { /* best-effort */ }
+        catch { }
     }
-
-    // --- Accounts API (mirror du AccountsStore Swift) ---
 
     public static void UpsertAccount(string login, string password)
     {

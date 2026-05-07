@@ -1,10 +1,7 @@
-// Lance le vrai Dofus.exe (renommé dofus-real.exe), après avoir :
-// 1. patché config.xml avec host/port saisis,
-// 2. écrit credentials.json (lu par le SWF Giny patché en BUILD_TYPE=DEBUG),
-// 3. spawné zaap-server.exe en arrière-plan.
-//
-// Sur Windows on n'a pas execv : on Process.Start le vrai exe puis on
-// quitte le launcher pour libérer le focus.
+// Le launcher remplace `Dofus.exe` dans le bundle ; le binaire AIR captive
+// original est renommé `dofus-real.exe`. AIR ne valide pas le nom de l'exe
+// au runtime tant qu'on a retiré META-INF/AIR/hash et signatures.xml du
+// bundle (cf. build-app-windows.sh).
 
 using System;
 using System.Collections.Generic;
@@ -44,7 +41,6 @@ public static class DofusLaunch
             $"  zaap-server  = {ZaapServerBinary} (exists={File.Exists(ZaapServerBinary)})",
         };
 
-        // 1. config.xml
         if (File.Exists(ConfigXml))
         {
             try { ConfigPatcher.Patch(ConfigXml, serverName, host, port); }
@@ -55,7 +51,7 @@ public static class DofusLaunch
             lines.Add("  config.xml introuvable — skip patch");
         }
 
-        // 2. credentials.json (lu par ZaapConnectionHelper.connect en DEBUG)
+        // credentials.json est lu par ZaapConnectionHelper.connect (BUILD_TYPE=DEBUG).
         var instanceId = Random.Shared.Next(1, 1_000_000);
         var hash = Guid.NewGuid().ToString().ToLowerInvariant();
         var creds = new Dictionary<string, object>
@@ -76,7 +72,6 @@ public static class DofusLaunch
             lines.Add($"  credentials.json FAIL: {ex.Message}");
         }
 
-        // 3. zaap-server.exe
         try
         {
             KillExistingZaap();
@@ -90,10 +85,9 @@ public static class DofusLaunch
 
         File.AppendAllLines(launcherLog, lines);
 
-        // Petite pause pour laisser zaap-server s'attacher au port
+        // Laisse à zaap-server le temps de s'attacher au port.
         System.Threading.Thread.Sleep(500);
 
-        // 4. exec (équivalent : on spawn et on quitte)
         if (!File.Exists(RealDofusBinary))
         {
             throw new FileNotFoundException(
@@ -106,23 +100,23 @@ public static class DofusLaunch
             WorkingDirectory = LauncherDir,
             UseShellExecute = false,
         };
-        Process.Start(psi);
+        using (Process.Start(psi)) { }
 
-        // On quitte le launcher pour libérer le focus.
+        // Pas d'execv sous Windows : on spawn dofus-real puis on quitte le
+        // launcher pour libérer le focus sur la nouvelle fenêtre.
         Environment.Exit(0);
     }
 
     private static void KillExistingZaap()
     {
-        // Tue les zaap-server zombies pour libérer 4242/4243 avant respawn.
         try
         {
             foreach (var p in Process.GetProcessesByName("zaap-server"))
             {
-                try { p.Kill(true); } catch { /* ignore */ }
+                try { p.Kill(true); } catch { }
             }
         }
-        catch { /* ignore */ }
+        catch { }
     }
 
     private static void StartZaap(string login, string password, string hash,
@@ -133,15 +127,16 @@ public static class DofusLaunch
         Directory.CreateDirectory(LogDir);
         var zaapLog = Path.Combine(LogDir, "zaap-server.log");
 
-        // game-token == password (cf. Giny.Zaap.HandleAuthGetGameToken).
+        // On ne redirige PAS stdout/stderr : Environment.Exit(0) sur le
+        // launcher ferme les pipes anonymes hérités → broken pipe côté zaap.
+        // D'où --log-file, qui fait gérer l'append au zaap-server lui-même.
+        // game-token == password (Giny renvoie le password en clair).
         var psi = new ProcessStartInfo
         {
             FileName = ZaapServerBinary,
             WorkingDirectory = LauncherDir,
             UseShellExecute = false,
             CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
         };
         psi.ArgumentList.Add($"--port={ZaapPort}");
         psi.ArgumentList.Add($"--http-port={ZaapHttpPort}");
@@ -150,16 +145,8 @@ public static class DofusLaunch
         psi.ArgumentList.Add($"--login={login}");
         psi.ArgumentList.Add($"--game-token={password}");
         psi.ArgumentList.Add($"--auth-addr={authAddr}");
+        psi.ArgumentList.Add($"--log-file={zaapLog}");
 
-        var p = Process.Start(psi);
-        if (p == null) return;
-
-        // Redirige stdout/err en append vers le log
-        var sw = new StreamWriter(new FileStream(zaapLog, FileMode.Append, FileAccess.Write, FileShare.ReadWrite));
-        sw.AutoFlush = true;
-        p.OutputDataReceived += (_, e) => { if (e.Data != null) sw.WriteLine(e.Data); };
-        p.ErrorDataReceived  += (_, e) => { if (e.Data != null) sw.WriteLine(e.Data); };
-        p.BeginOutputReadLine();
-        p.BeginErrorReadLine();
+        using var p = Process.Start(psi);
     }
 }

@@ -1,16 +1,3 @@
-// Articles : actualités/devblog du serveur OneAir.
-//
-// Stockage : table giny_world.oneair_articles (créée à la volée par
-// ensureArticlesSchema). Le contenu est en Markdown léger ; le rendu HTML
-// est fait par renderMarkdown() dans landing.go.
-//
-// Endpoints publics (no auth) :
-//   GET  /api/public/articles
-//   GET  /api/public/articles/{slug}
-//
-// Endpoints admin (auth) :
-//   GET  /api/articles            (toutes y compris brouillons)
-//   POST /api/articles            (action: create|update|delete)
 package main
 
 import (
@@ -41,7 +28,7 @@ type Article struct {
 var slugRe = regexp.MustCompile(`^[a-z0-9-]+$`)
 
 func ensureArticlesSchema() error {
-	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS ` + cfg.WorldDB + `.oneair_articles (
+	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS ` + cfg.WorldDB + `.articles (
 		Id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
 		Slug VARCHAR(160) NOT NULL UNIQUE,
 		Title VARCHAR(255) NOT NULL,
@@ -59,9 +46,9 @@ func ensureArticlesSchema() error {
 		return err
 	}
 	var n int
-	_ = db.QueryRow("SELECT COUNT(*) FROM " + cfg.WorldDB + ".oneair_articles").Scan(&n)
+	_ = db.QueryRow("SELECT COUNT(*) FROM " + cfg.WorldDB + ".articles").Scan(&n)
 	if n == 0 {
-		_, _ = db.Exec(`INSERT INTO `+cfg.WorldDB+`.oneair_articles
+		_, _ = db.Exec(`INSERT INTO `+cfg.WorldDB+`.articles
 			(Slug, Title, Excerpt, Content, Author, Tag) VALUES (?, ?, ?, ?, ?, ?)`,
 			"bienvenue-sur-oneair",
 			"Bienvenue dans les Douze",
@@ -100,7 +87,6 @@ Le forum, le Discord et les tournois inter-guildes arrivent. En attendant, crois
 
 — L'équipe OneAir`
 
-// GET /api/public/articles ou /api/public/articles/{slug}
 func handleArticleAPI(w http.ResponseWriter, r *http.Request) {
 	_ = ensureArticlesSchema()
 	slug := strings.TrimPrefix(r.URL.Path, "/api/public/articles")
@@ -137,7 +123,7 @@ func listPublicArticles(w http.ResponseWriter, r *http.Request) {
 	}
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 	rows, err := db.Query(`SELECT Id, Slug, Title, Excerpt, Author, CoverImage, Tag, CreatedAt, UpdatedAt
-		FROM `+cfg.WorldDB+`.oneair_articles WHERE Published = 1
+		FROM `+cfg.WorldDB+`.articles WHERE Published = 1
 		ORDER BY CreatedAt DESC LIMIT ? OFFSET ?`, limit, offset)
 	if err != nil {
 		httpErr(w, err)
@@ -161,7 +147,7 @@ func loadArticleBySlug(slug string) (*Article, error) {
 	var a Article
 	var pub int
 	err := db.QueryRow(`SELECT Id, Slug, Title, Excerpt, Content, Author, CoverImage, Tag, Published, CreatedAt, UpdatedAt
-		FROM `+cfg.WorldDB+`.oneair_articles WHERE Slug = ?`, slug).
+		FROM `+cfg.WorldDB+`.articles WHERE Slug = ?`, slug).
 		Scan(&a.ID, &a.Slug, &a.Title, &a.Excerpt, &a.Content, &a.Author,
 			&a.CoverImage, &a.Tag, &pub, &a.CreatedAt, &a.UpdatedAt)
 	if err != nil {
@@ -171,13 +157,12 @@ func loadArticleBySlug(slug string) (*Article, error) {
 	return &a, nil
 }
 
-// /api/articles (admin) — GET liste tout, POST {action: create|update|delete}.
 func apiAdminArticles(w http.ResponseWriter, r *http.Request) {
 	_ = ensureArticlesSchema()
 	switch r.Method {
 	case "GET":
 		rows, err := db.Query(`SELECT Id, Slug, Title, Excerpt, Content, Author, CoverImage, Tag, Published, CreatedAt, UpdatedAt
-			FROM `+cfg.WorldDB+`.oneair_articles ORDER BY CreatedAt DESC LIMIT 200`)
+			FROM ` + cfg.WorldDB + `.articles ORDER BY CreatedAt DESC LIMIT 200`)
 		if err != nil {
 			httpErr(w, err)
 			return
@@ -237,7 +222,7 @@ func apiAdminArticles(w http.ResponseWriter, r *http.Request) {
 			if !req.Published {
 				pub = 0
 			}
-			_, err := db.Exec(`INSERT INTO `+cfg.WorldDB+`.oneair_articles
+			_, err := db.Exec(`INSERT INTO `+cfg.WorldDB+`.articles
 				(Slug, Title, Excerpt, Content, Author, CoverImage, Tag, Published)
 				VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 				req.Slug, req.Title, req.Excerpt, req.Content, req.Author,
@@ -256,7 +241,7 @@ func apiAdminArticles(w http.ResponseWriter, r *http.Request) {
 			if !req.Published {
 				pub = 0
 			}
-			_, err := db.Exec(`UPDATE `+cfg.WorldDB+`.oneair_articles SET
+			_, err := db.Exec(`UPDATE `+cfg.WorldDB+`.articles SET
 				Slug = COALESCE(NULLIF(?,''), Slug),
 				Title = COALESCE(NULLIF(?,''), Title),
 				Excerpt = ?, Content = COALESCE(NULLIF(?,''), Content),
@@ -275,7 +260,7 @@ func apiAdminArticles(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "id requis", 400)
 				return
 			}
-			_, err := db.Exec(`DELETE FROM `+cfg.WorldDB+`.oneair_articles WHERE Id = ?`, req.ID)
+			_, err := db.Exec(`DELETE FROM `+cfg.WorldDB+`.articles WHERE Id = ?`, req.ID)
 			if err != nil {
 				httpErr(w, err)
 				return

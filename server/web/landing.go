@@ -1,6 +1,3 @@
-// Page d'accueil publique : présentation OneAir + articles + login joueur +
-// téléchargement client. Sert aussi /article/{slug} (SSR), /download/macos
-// et /download/windows.
 package main
 
 import (
@@ -34,11 +31,10 @@ type landingData struct {
 	JobRate  string
 }
 
-// effectiveRate retourne le multiplicateur effectif d'un type d'événement :
-// la valeur de oneair_events si une row non-expirée existe, sinon le
-// fallback (env). Format string formaté joliment ("1", "10", "1.5").
+// effectiveRate retourne le multiplicateur d'un événement actif (row events
+// non expirée), sinon le fallback. Format compact ("1", "10", "1.5").
 func effectiveRate(eventType, fallback string) string {
-	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS ` + cfg.WorldDB + `.oneair_events (
+	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS ` + cfg.WorldDB + `.events (
 		Type VARCHAR(32) NOT NULL PRIMARY KEY,
 		Multiplier DOUBLE NOT NULL DEFAULT 1.0,
 		ExpiresAt DATETIME NULL,
@@ -47,7 +43,7 @@ func effectiveRate(eventType, fallback string) string {
 	) ENGINE=InnoDB`)
 	var mul float64
 	var exp sql.NullTime
-	err := db.QueryRow(`SELECT Multiplier, ExpiresAt FROM `+cfg.WorldDB+`.oneair_events WHERE Type = ?`, eventType).
+	err := db.QueryRow(`SELECT Multiplier, ExpiresAt FROM `+cfg.WorldDB+`.events WHERE Type = ?`, eventType).
 		Scan(&mul, &exp)
 	if err != nil {
 		return fallback
@@ -61,7 +57,6 @@ func effectiveRate(eventType, fallback string) string {
 	return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", mul), "0"), ".")
 }
 
-// GET / — landing publique. Toute path autre que "/" → 404.
 func handleLanding(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
@@ -72,22 +67,18 @@ func handleLanding(w http.ResponseWriter, r *http.Request) {
 		Welcome:  os.Getenv("WELCOME_MESSAGE"),
 		AuthUp:   tcpUp(cfg.AuthHost, cfg.AuthPort),
 		WorldUp:  tcpUp(cfg.WorldHost, cfg.WorldPort),
-		// Toujours rempli quand le download est dispo : URL externe (s'il y
-		// en a une), sinon "/download/{macos,windows}" qui zippe le bundle local.
 		DLMacURL: macDownloadURL(),
 		DLWinURL: winDownloadURL(),
-		// Lit oneair_events (multiplicateurs live), retombe sur l'env si pas
-		// d'événement actif. C'est ce qu'affiche déjà l'admin → cohérence.
 		XPRate:   effectiveRate("xp", envOr("XP_RATE", "1")),
 		DropRate: effectiveRate("drop", envOr("DROP_RATE", "1")),
 		JobRate:  effectiveRate("job", envOr("JOB_RATE", "1")),
 	}
 	_ = db.QueryRow("SELECT COUNT(*) FROM " + cfg.AuthDB + ".accounts").Scan(&d.Accounts)
 	_ = db.QueryRow("SELECT COUNT(*) FROM " + cfg.WorldDB + ".characters").Scan(&d.Chars)
-	_ = db.QueryRow("SELECT COUNT(*) FROM " + cfg.WorldDB + ".oneair_online_clients").Scan(&d.Online)
+	_ = db.QueryRow("SELECT COUNT(*) FROM " + cfg.WorldDB + ".online_clients").Scan(&d.Online)
 
 	rows, err := db.Query(`SELECT Id, Slug, Title, Excerpt, Author, CoverImage, Tag, CreatedAt
-		FROM ` + cfg.WorldDB + `.oneair_articles WHERE Published = 1
+		FROM ` + cfg.WorldDB + `.articles WHERE Published = 1
 		ORDER BY CreatedAt DESC LIMIT 9`)
 	if err == nil {
 		defer rows.Close()
@@ -108,7 +99,6 @@ func handleLanding(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GET /article/{slug} — page article SSR.
 func handleArticle(w http.ResponseWriter, r *http.Request) {
 	slug := strings.TrimPrefix(r.URL.Path, "/article/")
 	slug = strings.TrimSuffix(slug, "/")
@@ -133,7 +123,7 @@ func handleArticle(w http.ResponseWriter, r *http.Request) {
 	body := renderMarkdown(a.Content)
 	related := []Article{}
 	rows, err := db.Query(`SELECT Slug, Title, Excerpt, CoverImage, Tag, CreatedAt
-		FROM `+cfg.WorldDB+`.oneair_articles WHERE Published = 1 AND Id <> ?
+		FROM `+cfg.WorldDB+`.articles WHERE Published = 1 AND Id <> ?
 		ORDER BY CreatedAt DESC LIMIT 3`, a.ID)
 	if err == nil {
 		defer rows.Close()
@@ -152,8 +142,6 @@ func handleArticle(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// macDownloadURL retourne l'URL à utiliser pour le bouton "télécharger" de la
-// landing. Vide si rien n'est dispo (ni mirror externe, ni bind local).
 func macDownloadURL() string {
 	if u := os.Getenv("DOWNLOAD_MACOS_URL"); u != "" && (strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://")) {
 		return u
@@ -165,8 +153,6 @@ func macDownloadURL() string {
 	return ""
 }
 
-// winDownloadURL : pendant Windows. Identique à macDownloadURL mais pointe
-// sur le dossier OneAir-Windows/ généré par client/build-app-windows.sh.
 func winDownloadURL() string {
 	if u := os.Getenv("DOWNLOAD_WINDOWS_URL"); u != "" && (strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://")) {
 		return u
@@ -178,16 +164,9 @@ func winDownloadURL() string {
 	return ""
 }
 
-// GET /download/macos — sert le client macOS.
-//
-// Quatre modes (par ordre de priorité) :
-//   1) DOWNLOAD_MACOS_URL pointe vers une URL externe (https://...) → 302.
-//   2) ONEAIR_APP_ZIP (par défaut /app/dist/OneAir-MacOS.zip) existe → on sert
-//      le fichier directement via http.ServeFile (Range supporté, instant).
-//      C'est ce que produisent client/build-docker-darwin.sh à chaque build.
-//   3) ONEAIR_APP_DIR (par défaut /app/OneAir.app) existe → on streame un .zip
-//      à la volée (legacy fallback, lent : walk de 4.7 GB à chaque download).
-//   4) Sinon → page "bientôt".
+// handleDownloadMac sert le client macOS, dans l'ordre de préférence :
+// (1) DOWNLOAD_MACOS_URL externe, (2) zip statique ONEAIR_APP_ZIP avec Range,
+// (3) zip on-the-fly du dossier ONEAIR_APP_DIR (~5 GB walk, lent), (4) page d'erreur.
 func handleDownloadMac(w http.ResponseWriter, r *http.Request) {
 	if u := os.Getenv("DOWNLOAD_MACOS_URL"); u != "" && (strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://")) {
 		http.Redirect(w, r, u, http.StatusFound)
@@ -218,10 +197,7 @@ func handleDownloadMac(w http.ResponseWriter, r *http.Request) {
 <p><a href="/" style="color:#f4c34c;border:1px solid #6b4a16;padding:8px 18px;border-radius:6px;text-decoration:none">Retour</a></p>`)
 }
 
-// GET /download/windows — sert le client Windows.
-//
-// Mêmes 4 modes que handleDownloadMac, mais sur OneAir-Windows/ (le dossier
-// généré par client/build-docker-windows.sh) et son zip statique.
+// handleDownloadWindows : pendant de handleDownloadMac sur OneAir-Windows/.
 func handleDownloadWindows(w http.ResponseWriter, r *http.Request) {
 	if u := os.Getenv("DOWNLOAD_WINDOWS_URL"); u != "" && (strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://")) {
 		http.Redirect(w, r, u, http.StatusFound)
@@ -252,10 +228,8 @@ func handleDownloadWindows(w http.ResponseWriter, r *http.Request) {
 <p><a href="/" style="color:#f4c34c;border:1px solid #6b4a16;padding:8px 18px;border-radius:6px;text-decoration:none">Retour</a></p>`)
 }
 
-// Streame un .zip d'un dossier (OneAir.app ou OneAir-Windows). Pas de
-// buffering disque, pas de compression (Store) : le bundle fait ~5 GB et
-// contient surtout du binaire/d2p déjà compressé. Le client reçoit donc
-// un download progressif.
+// streamOneAirAppZip streame un .zip Store (pas de compression : le bundle
+// fait ~5 GB d'assets déjà compressés) sans buffer disque.
 func streamOneAirAppZip(w http.ResponseWriter, r *http.Request, appDir, fileName string) {
 	w.Header().Set("Content-Type", "application/zip")
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, fileName))
@@ -264,13 +238,12 @@ func streamOneAirAppZip(w http.ResponseWriter, r *http.Request, appDir, fileName
 	zw := zip.NewWriter(w)
 	defer zw.Close()
 
-	rootName := filepath.Base(appDir) // "OneAir.app" / "OneAir-Windows" — entrée racine dans le .zip
+	rootName := filepath.Base(appDir)
 	walkErr := filepath.Walk(appDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			log.Printf("download zip: walk error on %s: %v", path, err)
-			return nil // skip
+			return nil
 		}
-		// chemin relatif sous "OneAir.app/..."
 		rel, err := filepath.Rel(appDir, path)
 		if err != nil {
 			return nil
@@ -281,8 +254,7 @@ func streamOneAirAppZip(w http.ResponseWriter, r *http.Request, appDir, fileName
 		}
 
 		if info.IsDir() {
-			// On crée explicitement les entrées de dossier pour préserver
-			// les permissions/exec du bundle.
+			// Entrées de dossier explicites pour préserver les permissions/exec.
 			if rel == "." {
 				return nil
 			}
@@ -293,8 +265,8 @@ func streamOneAirAppZip(w http.ResponseWriter, r *http.Request, appDir, fileName
 			return err
 		}
 
-		// Symlinks : on les écrit comme tels (le .app en contient quelques-uns
-		// dans Frameworks/. ZIP les supporte via le mode et le contenu = cible).
+		// Symlinks : on stocke la cible comme contenu et on conserve le mode
+		// (le .app en contient dans Frameworks/).
 		if info.Mode()&os.ModeSymlink != 0 {
 			target, err := os.Readlink(path)
 			if err != nil {
@@ -313,14 +285,14 @@ func streamOneAirAppZip(w http.ResponseWriter, r *http.Request, appDir, fileName
 
 		h, _ := zip.FileInfoHeader(info)
 		h.Name = entryName
-		h.Method = zip.Store // pas de compression : .app est déjà des binaires/d2p
+		h.Method = zip.Store
 		fw, err := zw.CreateHeader(h)
 		if err != nil {
 			return err
 		}
 		f, err := os.Open(path)
 		if err != nil {
-			return nil // skip ce fichier
+			return nil
 		}
 		defer f.Close()
 		_, err = io.Copy(fw, f)
@@ -331,9 +303,8 @@ func streamOneAirAppZip(w http.ResponseWriter, r *http.Request, appDir, fileName
 	}
 }
 
-// GET /api/public/status — status léger pour le polling de la landing.
 func apiPublicStatus(w http.ResponseWriter, r *http.Request) {
-	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS ` + cfg.WorldDB + `.oneair_online_clients (
+	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS ` + cfg.WorldDB + `.online_clients (
 		CharacterId BIGINT NOT NULL PRIMARY KEY,
 		AccountId INT NULL, Name VARCHAR(255) NULL, Level INT NULL, MapId BIGINT NULL,
 		UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -350,15 +321,13 @@ func apiPublicStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = db.QueryRow("SELECT COUNT(*) FROM " + cfg.AuthDB + ".accounts").Scan(&out.Accounts)
 	_ = db.QueryRow("SELECT COUNT(*) FROM " + cfg.WorldDB + ".characters").Scan(&out.Chars)
-	_ = db.QueryRow("SELECT COUNT(*) FROM " + cfg.WorldDB + ".oneair_online_clients").Scan(&out.Online)
+	_ = db.QueryRow("SELECT COUNT(*) FROM " + cfg.WorldDB + ".online_clients").Scan(&out.Online)
 	writeJSON(w, out)
 }
 
-// renderMarkdown : sous-ensemble Markdown sécurisé.
-//
-// Supporte : # / ## / ### titres, paragraphes, listes -, **gras**, *italique*,
-// `code`, [texte](url). Tout est HTML-escapé avant remplacement, les liens
-// sont http(s) ou relatifs uniquement.
+// renderMarkdown : Markdown minimal sécurisé (HTML-escape avant
+// remplacement, liens http(s) ou /-relatifs uniquement). Supporte titres
+// h1-h3, paragraphes, listes -, gras, italique, code inline, liens, images.
 func renderMarkdown(src string) template.HTML {
 	var out strings.Builder
 	lines := strings.Split(src, "\n")
@@ -431,7 +400,6 @@ var (
 
 func inlineMD(s string) string {
 	s = template.HTMLEscapeString(s)
-	// Images : ![alt](url) — uniquement http(s) ou /paths internes.
 	s = mdImgRe.ReplaceAllStringFunc(s, func(m string) string {
 		sub := mdImgRe.FindStringSubmatch(m)
 		if len(sub) < 3 {

@@ -226,7 +226,28 @@
       "Bash(xargs -I{} stat -c '%y %s {}' {})",
       "Bash(zcat server/backups/manual-pre-unhandledfix-20260506-133542.sql.gz)",
       "Bash(file server/backups/manual-pre-unhandledfix-*.sql.gz)",
-      "Bash(./scripts/publish-article.sh /tmp/article-fixes-mai-2026.md)"
+      "Bash(./scripts/publish-article.sh /tmp/article-fixes-mai-2026.md)",
+      "Bash(zcat server/backups/manual-pre-rename-*.sql.gz)",
+      "Bash(tee /tmp/files-to-edit.txt)",
+      "Bash(xargs -a /tmp/files-to-edit.txt sed -i -E 's/\\\\boneair_\\(actions|activity|articles|events|havenbag_furnitures|havenbag_interactives|havenbag_state|inventory_dumps|known_zaaps|online_clients|spell_dumps|unhandled_log\\)\\\\b/\\\\1/g')",
+      "Bash(git mv *)",
+      "Bash(awk 'NR==908' server/web/main.go)",
+      "Bash(go vet *)",
+      "Bash(echo \"BUILD STATUS: $?\")",
+      "Bash(docker cp *)",
+      "Bash(sed -i -E 's/\\\\boneair_\\(actions|activity|articles|events|havenbag_furnitures|havenbag_interactives|havenbag_state|inventory_dumps|known_zaaps|online_clients|spell_dumps|unhandled_log\\)\\\\b/\\\\1/g' README.md CLAUDE.md)",
+      "Bash(sed -i 's|init-sql/04_oneair_havenbag.sql|init-sql/04_havenbag.sql|g' README.md CLAUDE.md)",
+      "Bash(xxd)",
+      "Bash(gofmt -l .)",
+      "Bash(gofmt -d articles.go community.go d2p.go main.go unhandled.go)",
+      "Bash(gofmt -w articles.go community.go d2p.go main.go unhandled.go)",
+      "Bash(git -C \"/home/ubuntu/dofus server\" show HEAD:server/OneAirActionPoller.cs)",
+      "Bash(grep -E '\\\\\\\\{|\\\\\"\\\\\\\\{|\\\\\".*{[^}]*$')",
+      "Bash(grep -nE \"\\(\\\\\\\\{[^}]*$\\)\" \"/home/ubuntu/dofus server/server/OneAirActionPoller.cs\")",
+      "Bash(echo \"WEB: $?\")",
+      "Bash(rm -f /tmp/web-test)",
+      "Read(//home/client/**)",
+      "Bash(echo \"ZAAP: $?\")"
     ]
   }
 }

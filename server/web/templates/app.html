@@ -108,7 +108,7 @@
           <button id="act-reload-items" class="ghost">Reload items</button>
           <button id="act-shutdown" class="danger">Shutdown programmé…</button>
         </div>
-        <p class="muted small">Toutes ces actions passent par <code>oneair_actions</code> (poll côté world, intervalle 1.5s).</p>
+        <p class="muted small">Toutes ces actions passent par <code>actions</code> (poll côté world, intervalle 1.5s).</p>
       </div>
 
       <div class="card">
@@ -430,7 +430,7 @@
         <ul class="muted small" style="line-height: 1.8;">
           <li>Multiplicateur = <code>1</code> revient à désactiver l'événement (équivalent à "Arrêter").</li>
           <li>Durée = <code>0</code> = permanent jusqu'à arrêt manuel.</li>
-          <li>Les événements <strong>survivent au redémarrage</strong> — rechargés depuis <code>oneair_events</code> au boot world.</li>
+          <li>Les événements <strong>survivent au redémarrage</strong> — rechargés depuis <code>events</code> au boot world.</li>
           <li>Le multiplicateur Drop dépend de l'implémentation Giny du loot — non garanti à 100%.</li>
         </ul>
       </div>

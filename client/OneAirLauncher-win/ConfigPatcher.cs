@@ -1,5 +1,3 @@
-// Patch <connection.host> dans config.xml — même logique que ConfigPatcher Swift.
-
 using System.IO;
 using System.Text.RegularExpressions;
 
@@ -12,7 +10,7 @@ public static class ConfigPatcher
         if (!File.Exists(configPath)) return;
         var text = File.ReadAllText(configPath);
 
-        // Backup .orig si pas déjà fait (préserve la version Cytrus pristine).
+        // Backup .orig pour préserver la version Cytrus pristine.
         var orig = configPath + ".orig";
         if (!File.Exists(orig)) File.WriteAllText(orig, text);
 

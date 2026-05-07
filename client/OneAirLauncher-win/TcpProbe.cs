@@ -1,5 +1,3 @@
-// Sonde TCP non-bloquante (équivalent NWConnection macOS).
-
 using System;
 using System.Net.Sockets;
 using System.Threading;

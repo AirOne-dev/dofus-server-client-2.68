@@ -1,8 +1,6 @@
-// zaap-server : émulateur minimal du protocole Apache Thrift d'Ankama Zaap.
-// Réutilise les handlers Thrift de DivaZaap (jordanamr/DivaZaap) extraits sans
-// la GUI Wails. Démarre un serveur Thrift sur 127.0.0.1:<port>, attend que le
-// client Dofus s'y connecte avec les bons gameName/instanceId/hash, puis lui
-// répond OK pour qu'il passe au-delà du blocage "Ankama Launcher requis".
+// Émulateur minimal du protocole Apache Thrift Ankama Zaap.
+// Repris de https://github.com/jordanamr/DivaZaap (handlers extraits sans
+// la GUI Wails).
 package main
 
 import (
@@ -12,7 +10,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 
 	"divazaap/src/server"
@@ -21,21 +18,30 @@ import (
 )
 
 func main() {
-	zaapPort := flag.Int("port", 4242,
-		"Port TCP du serveur Zaap fake (correspond à --port= passé au client)")
-	httpPort := flag.Int("http-port", 4243,
-		"Port HTTP optionnel (sert /divazaap.json)")
-	hash := flag.String("hash", "stump",
-		"Hash partagé avec le client (--hash=)")
-	instanceID := flag.Int("instance-id", 1,
-		"Instance ID partagé avec le client")
+	zaapPort := flag.Int("port", 4242, "Port TCP du serveur Zaap")
+	httpPort := flag.Int("http-port", 4243, "Port HTTP (sert /divazaap.json)")
+	hash := flag.String("hash", "stump", "Hash partagé avec le client")
+	instanceID := flag.Int("instance-id", 1, "Instance ID partagé avec le client")
 	gameToken := flag.String("game-token", "stump",
-		"Game token retourné au client lors de auth_getGameToken (= mot de passe Giny en clair)")
+		"Game token (= mot de passe Giny en clair)")
 	login := flag.String("login", "",
-		"Username Giny (retourné par userInfo_get → authManager.loginValidationAction.username)")
+		"Username Giny (retourné par userInfo_get)")
 	authAddr := flag.String("auth-addr", "127.0.0.1:5555",
-		"Adresse du serveur d'auth (utilisée dans /divazaap.json)")
+		"Adresse du serveur d'auth (sert dans /divazaap.json)")
+	// --log-file plutôt que stdout : le launcher Windows fait Environment.Exit(0)
+	// après le spawn, ce qui ferme les pipes anonymes hérités → broken pipe ici.
+	logFile := flag.String("log-file", "",
+		"Si fourni, append les logs dans ce fichier au lieu de stderr.")
 	flag.Parse()
+
+	if *logFile != "" {
+		f, err := os.OpenFile(*logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+		if err == nil {
+			log.SetOutput(f)
+		} else {
+			log.Printf("could not open log file %s: %v (falling back to stderr)", *logFile, err)
+		}
+	}
 
 	transportFactory := thrift.NewTTransportFactory()
 	protocolFactory := thrift.NewTBinaryProtocolFactoryConf(&thrift.TConfiguration{})
@@ -54,7 +60,7 @@ func main() {
 		log.Fatalf("RunServer: %v", err)
 	}
 
-	// Pré-enregistre le client pour que le hash matche dès le 1er Connect().
+	// Pré-enregistrement : le hash matche dès le 1er Connect().
 	rs.Handler.Register(*gameToken, int32(*instanceID), *hash, *login)
 
 	log.Printf("zaap-server listening on 127.0.0.1:%d (http :%d)",
@@ -62,14 +68,6 @@ func main() {
 	log.Printf("hash=%s instanceID=%d login=%s gameToken=%s authAddr=%s",
 		*hash, *instanceID, *login, *gameToken, *authAddr)
 
-	// Sauve le PID dans un fichier si demandé via env (utile au launcher pour
-	// le killer après).
-	if pidFile := os.Getenv("ZAAP_PIDFILE"); pidFile != "" {
-		_ = os.WriteFile(pidFile,
-			[]byte(strconv.Itoa(os.Getpid())), 0o644)
-	}
-
-	// Bloque jusqu'à signal.
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	<-sig

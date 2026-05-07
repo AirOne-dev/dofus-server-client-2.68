@@ -1,29 +1,3 @@
-// OneAir — implémentation complète des havres-sacs (Giny ne fournit qu'un
-// teleport bête à l'entrée, pas de sortie, pas de zaap, pas de coffre, etc.).
-//
-// Couvert ici :
-//   * Entrée : sauvegarde la position (mapId+cellId) en DB, teleporte sur la
-//     map intérieure (162791424), envoie MapComplementaryInformationsDataInHavenBag
-//     pour que le client active la UI havre-sac.
-//   * Sortie (touche H ou bouton "Sortir") : lit la position sauvegardée et
-//     teleporte le joueur dessus. Fallback sur SpawnPointMapId.
-//   * Zaap intérieur : ouvre un OneAirHavenBagZaapDialog custom dont la liste
-//     de destinations = tous les zaaps connus du joueur (alimenté à chaque
-//     fois qu'il OUVRE un zaap normal hors havre-sac, via le hook
-//     HandleZaapInteraction sed-injecté dans GenericActions).
-//   * Coffre : ExchangeRequestMessage(HAVENBAG=24) ouvre la BankExchange
-//     standard.
-//   * Personnalisation : ack le cycle Edit/Save/Cancel + persiste meubles,
-//     thème, room en DB.
-//   * Loterie : répond une fois par jour (cooldown stocké dans la table state
-//     via le champ UpdatedAt).
-//
-// La table oneair_havenbag_state contient (CharacterId, PreviousMapId,
-// PreviousCellId, Theme, RoomId).
-// La table oneair_known_zaaps contient (CharacterId, MapId).
-// La table oneair_havenbag_furnitures contient (CharacterId, CellId,
-// FurnitureId, Orientation).
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -54,10 +28,8 @@ namespace Giny.World.Managers.Chat
 {
     public static class OneAirHavenBagPatch
     {
-        // Mapping thème → mapId (extrait de HavenbagThemes.d2o du client 2.68).
-        // Chaque thème de havre-sac est une map distincte ; le visuel
-        // (floor/walls/déco) provient du .dlm de cette map. Donc changer de
-        // thème = téléporter le joueur sur la map du nouveau thème.
+        // Extrait de HavenbagThemes.d2o (2.68). Chaque thème = map distincte,
+        // donc "changer de thème" = téléporter sur la map du nouveau thème.
         public static readonly Dictionary<byte, long> ThemeToMapId = new Dictionary<byte, long>
         {
             {  1, 162791424 }, {  2, 162793472 }, {  3, 162795520 }, {  4, 162791426 },
@@ -85,29 +57,15 @@ namespace Giny.World.Managers.Chat
             return ThemeToMapId.TryGetValue(theme, out var mapId) ? mapId : DefaultHavenBagMapId;
         }
 
-        // NPC templates (legacy — gardés pour compat, mais inutiles depuis
-        // qu'on intercepte directement les éléments interactifs visibles).
-        public const short ChestNpcTemplateId = 2000;
-        public const short LoteryNpcTemplateId = 1451;
-
-        // Cooldown loterie : 1 par 24h.
         private static readonly TimeSpan LoteryCooldown = TimeSpan.FromHours(24);
 
-        // Cache mémoire des bindings BonesId → type d'interactive havre-sac.
-        // Populé depuis oneair_havenbag_interactives au boot et après chaque
-        // .hbset. Chargé/lookup synchronisé.
+        // BonesId → type d'interactive havre-sac. Hydraté par LoadInteractiveBindings.
         private static readonly Dictionary<int, string> _interactiveBonesToType = new Dictionary<int, string>();
         private static readonly object _interactivesLock = new object();
-
-        private static volatile bool _npcsSpawned = false;
-        private static readonly object _npcsLock = new object();
 
         private static volatile bool _schemaReady = false;
         private static readonly object _schemaLock = new object();
 
-        // -------------------------------------------------------------------
-        // Schema bootstrap
-        // -------------------------------------------------------------------
         public static void EnsureSchema()
         {
             if (_schemaReady) return;
@@ -119,7 +77,7 @@ namespace Giny.World.Managers.Chat
                     using var c = OpenConn();
                     using var cmd = c.CreateCommand();
                     cmd.CommandText = @"
-CREATE TABLE IF NOT EXISTS oneair_havenbag_state (
+CREATE TABLE IF NOT EXISTS havenbag_state (
     CharacterId BIGINT NOT NULL PRIMARY KEY,
     PreviousMapId BIGINT NULL,
     PreviousCellId SMALLINT NULL,
@@ -128,14 +86,14 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_state (
     LastLoteryAt DATETIME NULL,
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
-CREATE TABLE IF NOT EXISTS oneair_known_zaaps (
+CREATE TABLE IF NOT EXISTS known_zaaps (
     CharacterId BIGINT NOT NULL,
     MapId BIGINT NOT NULL,
     DiscoveredAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (CharacterId, MapId),
     KEY ix_known_zaaps_char (CharacterId)
 ) ENGINE=InnoDB;
-CREATE TABLE IF NOT EXISTS oneair_havenbag_furnitures (
+CREATE TABLE IF NOT EXISTS havenbag_furnitures (
     CharacterId BIGINT NOT NULL,
     ThemeId TINYINT UNSIGNED NOT NULL DEFAULT 1,
     CellId SMALLINT NOT NULL,
@@ -143,19 +101,17 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_furnitures (
     Orientation TINYINT UNSIGNED NOT NULL DEFAULT 0,
     PRIMARY KEY (CharacterId, ThemeId, CellId)
 ) ENGINE=InnoDB;
-CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
+CREATE TABLE IF NOT EXISTS havenbag_interactives (
     BonesId INT NOT NULL PRIMARY KEY,
     Type VARCHAR(16) NOT NULL,
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;";
                     cmd.ExecuteNonQuery();
 
-                    // Migrations douces (idempotent — chaque ALTER est wrap
-                    // dans un try/catch, "duplicate column" si déjà appliqué).
-                    SafeAlter(c, "ALTER TABLE oneair_havenbag_state ADD COLUMN LastLoteryAt DATETIME NULL");
-                    SafeAlter(c, "ALTER TABLE oneair_havenbag_furnitures ADD COLUMN ThemeId TINYINT UNSIGNED NOT NULL DEFAULT 1 AFTER CharacterId");
-                    // Reconstruit la PK si elle est encore (CharacterId, CellId) sans ThemeId.
-                    SafeAlter(c, "ALTER TABLE oneair_havenbag_furnitures DROP PRIMARY KEY, ADD PRIMARY KEY (CharacterId, ThemeId, CellId)");
+                    // Migrations idempotentes (SafeAlter = try/catch silencieux).
+                    SafeAlter(c, "ALTER TABLE havenbag_state ADD COLUMN LastLoteryAt DATETIME NULL");
+                    SafeAlter(c, "ALTER TABLE havenbag_furnitures ADD COLUMN ThemeId TINYINT UNSIGNED NOT NULL DEFAULT 1 AFTER CharacterId");
+                    SafeAlter(c, "ALTER TABLE havenbag_furnitures DROP PRIMARY KEY, ADD PRIMARY KEY (CharacterId, ThemeId, CellId)");
 
                     _schemaReady = true;
                     Logger.Write("[OneAir] HavenBag schema ready", Channels.Info);
@@ -167,26 +123,8 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             }
         }
 
-        // -------------------------------------------------------------------
-        // NPCs (coffre + loterie) sur la map du havre-sac
-        // -------------------------------------------------------------------
-        /// <summary>
-        /// Spawn idempotent du coffre (NPC 2000) et de la loterie (NPC 1451)
-        /// sur la map du havre-sac. Appelé une fois au boot du world (depuis
-        /// EnsureSchema). Si les rows existent déjà en DB (boot suivant),
-        /// SpawnNpcs() les a déjà chargés en runtime, on skip.
-        /// </summary>
-        // -------------------------------------------------------------------
-        // Interactives (clic sur les éléments visibles du décor : zaap,
-        // coffre, loterie). On bypass le système interactive_skills vanilla
-        // en interceptant InteractiveUseRequestMessage côté handler.
-        // -------------------------------------------------------------------
-
-        /// <summary>
-        /// Charge les bindings BonesId → Type depuis la DB au boot. Auto-
-        /// register le zaap (BonesId trouvé via l'élément déjà skillé sur
-        /// la map Kerubim) si pas encore défini.
-        /// </summary>
+        // Interactives havre-sac : on bypass le système interactive_skills
+        // vanilla en interceptant InteractiveUseRequestMessage côté handler.
         public static void LoadInteractiveBindings()
         {
             lock (_interactivesLock)
@@ -196,7 +134,7 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                 {
                     using var c = OpenConn();
                     using var sel = c.CreateCommand();
-                    sel.CommandText = "SELECT BonesId, Type FROM oneair_havenbag_interactives";
+                    sel.CommandText = "SELECT BonesId, Type FROM havenbag_interactives";
                     using var r = sel.ExecuteReader();
                     while (r.Read())
                     {
@@ -205,9 +143,7 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                 }
                 catch (Exception e) { Logger.Write("[OneAir] LoadInteractiveBindings failed: " + e.Message, Channels.Warning); }
 
-                // Auto-register du zaap si pas encore là : on cherche sur la map
-                // Kerubim (162791424) l'élément 502556 (ID hardcodé dans
-                // l'init SQL, c'est le zaap du havre-sac Kerubim).
+                // Auto-register du zaap : élément 502556 sur la map Kerubim.
                 if (!_interactiveBonesToType.ContainsValue("zaap"))
                 {
                     try
@@ -215,16 +151,9 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                         var keruMap = MapRecord.GetMap(162791424);
                         if (keruMap != null)
                         {
-                            // Dump pour debug : on log tous les éléments du Kerubim
-                            // pour comprendre la structure (BonesId/GfxId).
-                            foreach (var e in keruMap.Elements)
-                            {
-                                Logger.Write($"[OneAir] Kerubim elem: Id={e.Identifier} cell={e.CellId} bones={e.BonesId} gfx={e.GfxId} skill={(e.Skill?.ActionIdentifier.ToString() ?? "null")}", Channels.Info);
-                            }
                             var zaapElem = keruMap.Elements.FirstOrDefault(e => e.Identifier == 502556)
                                          ?? keruMap.Elements.FirstOrDefault(e => e.Skill != null && e.Skill.ActionIdentifier == GenericActionEnum.Zaap);
-                            // Use GfxId si BonesId vaut 0 (certaines maps stockent
-                            // l'info dans GfxId au lieu de BonesId).
+                            // Certaines maps stockent la signature dans GfxId au lieu de BonesId.
                             int signature = 0;
                             if (zaapElem != null) signature = zaapElem.BonesId > 0 ? zaapElem.BonesId : zaapElem.GfxId;
                             if (zaapElem != null && signature > 0)
@@ -250,44 +179,23 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                 }
             }
 
-            // Une fois les bindings chargés (et le zaap auto-registré),
-            // s'assurer que chaque élément matchant a bien sa interactive_skills
-            // → cliquable côté client.
             EnsureInteractiveSkillsForBindings();
 
-            // Bindings de portée GLOBALE (hors havre-sac).
-            // bones=3507 = étoile au sol pour quitter un bâtiment.
+            // bones=3507 = étoile au sol "sortir d'un bâtiment" (binding global).
             EnsureGlobalBinding(3507, "exit");
 
-            // Installe un InteractiveSkillRecord(Action=Teleport) sur chaque
-            // étoile bones=3507. Pourquoi Teleport (et pas Zaap/Use) :
-            //  - Le client 2.68 affiche le curseur "porte / utiliser" au survol.
-            //  - Le client path SUR la cellule de l'élément (cell-trigger),
-            //    pas sur une cellule adjacente, pour les éléments Teleport.
-            //  - Quand le perso arrive sur la cellule, Character.EndMove()
-            //    appelle automatiquement UseInteractive sur l'élément
-            //    (cf. Character.cs lignes 1027-1032), ce qui déclenche
-            //    GenericActions.HandleTeleportAction → notre hook OneAir
-            //    (Patch 14bis) → TryExitBuilding.
-            // Param1/Param2 doivent être numériques (sinon GenericActions
-            // crashe sur int.Parse), donc on calcule en avance la map
-            // extérieure et la cellule d'entrée. Le hook OneAir ne s'en
-            // sert PAS (il appelle TryExitBuilding qui recalcule à chaud,
-            // au cas où la map extérieure changerait), mais ça reste un
-            // fallback propre si le hook ne fire pas.
             EnsureExitInteractiveSkillsAsync();
         }
 
-        /// <summary>
-        /// Scanne toutes les maps et installe un InteractiveSkillRecord sur
-        /// chaque élément bones=3507. ActionIdentifier=Teleport pour que :
-        /// (a) le curseur "porte" apparaisse au survol côté client,
-        /// (b) le client path SUR la cellule (cell-trigger),
-        /// (c) Character.EndMove auto-déclenche UseInteractive en arrivant.
-        /// Le clic est ensuite routé via Patch 14bis (HandleTeleportAction
-        /// hook) → TryExitBuilding. Idempotent : skip les éléments qui
-        /// ont déjà un Skill. Async pour ne pas bloquer le boot.
-        /// </summary>
+        // ActionIdentifier=Teleport (et non Zaap/Use) parce que :
+        //  - le client 2.68 affiche le curseur "porte" au survol,
+        //  - le client path sur la cellule de l'élément (cell-trigger), pas
+        //    une cellule adjacente,
+        //  - Character.EndMove auto-déclenche UseInteractive à l'arrivée
+        //    (Character.cs ~1027), → GenericActions.HandleTeleportAction →
+        //    notre hook OneAir → TryExitBuilding.
+        // Param1/Param2 doivent rester numériques sinon GenericActions crashe
+        // sur int.Parse. Async pour ne pas bloquer le boot.
         public static void EnsureExitInteractiveSkillsAsync()
         {
             System.Threading.Tasks.Task.Run(() =>
@@ -300,8 +208,6 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                         if (map?.Elements == null) continue;
                         if (map.Position == null) continue;
 
-                        // Trouve la map extérieure (sibling au même Point,
-                        // Outdoor=true, sinon n'importe quelle autre sibling).
                         MapRecord outdoor = null;
                         foreach (var sib in MapRecord.GetMaps(map.Position.Point))
                         {
@@ -316,11 +222,9 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                             seen++;
                             if (elem.Skill != null) continue;
 
-                            // Calcule la cellule d'entrée côté extérieur.
-                            // Si pas d'outdoor → on pose quand même le skill
-                            // (Param1=mapId courant, Param2=cellId courant)
-                            // pour que le curseur s'affiche ; le hook
-                            // TryExitBuilding gérera le fallback SpawnPoint.
+                            // Pas d'outdoor : on pose quand même le skill (le
+                            // curseur doit s'afficher) ; TryExitBuilding gère
+                            // le fallback SpawnPoint.
                             long destMap = outdoor?.Id ?? map.Id;
                             short destCell = outdoor != null
                                 ? FindEntranceCellOrRandom(outdoor, map.Id)
@@ -329,17 +233,15 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
 
                             try
                             {
-                                // Type/Skill spécifiques aux étoiles de sortie en Dofus 2.x.
-                                // Le client reconnaît la combinaison POINT_OUT_AN_EXIT282
-                                // + POINT_OUT_AN_EXIT339 et applique le bon comportement
-                                // de pathfind (sur la cellule, pas adjacent) et le bon
-                                // curseur "porte/utiliser".
+                                // POINT_OUT_AN_EXIT282 + POINT_OUT_AN_EXIT339 : le
+                                // client reconnaît la combinaison et applique le
+                                // pathfind cell-trigger + curseur "porte".
                                 bool ok = MapsManager.Instance.AddInteractiveSkill(
                                     map,
                                     elem.Identifier,
-                                    GenericActionEnum.Teleport,                  // routé via HandleTeleportAction (Patch 14bis)
-                                    InteractiveTypeEnum.POINT_OUT_AN_EXIT282,    // type "exit star"
-                                    SkillTypeEnum.POINT_OUT_AN_EXIT339,          // skill "exit star"
+                                    GenericActionEnum.Teleport,
+                                    InteractiveTypeEnum.POINT_OUT_AN_EXIT282,
+                                    SkillTypeEnum.POINT_OUT_AN_EXIT339,
                                     destMap.ToString(),
                                     destCell.ToString(),
                                     null);
@@ -362,15 +264,9 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             });
         }
 
-        /// <summary>
-        /// Hook injecté par sed (Patch 14bis) à la place de
-        /// `character.Teleport(int.Parse(parameter.Param1), cellId);` dans
-        /// GenericActions.HandleTeleportAction. Si l'élément cliqué est une
-        /// étoile de sortie (bones=3507 = binding "exit"), on délègue à
-        /// TryExitBuilding (qui recalcule la map extérieure à chaud +
-        /// trouve la cellule d'entrée). Sinon, comportement vanilla
-        /// (téléport selon Param1/Param2 du skill).
-        /// </summary>
+        // Hook qui remplace `character.Teleport(int.Parse(parameter.Param1), cellId);`
+        // dans GenericActions.HandleTeleportAction. Pour bones=3507 ("exit"),
+        // on délègue à TryExitBuilding (recalcul à chaud).
         public static void HandleTeleportInteraction(Character character, MapElement element, int targetMapId, short cellId, bool hasCell)
         {
             try
@@ -390,17 +286,12 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             {
                 Logger.Write("[OneAir] HandleTeleportInteraction failed: " + e.Message, Channels.Warning);
             }
-            // Comportement vanilla
             if (hasCell) character.Teleport((long)targetMapId, cellId);
             else character.Teleport((long)targetMapId);
         }
 
-        /// <summary>
-        /// Persiste un binding "global" (utilisé hors havre-sac, ex: sortie
-        /// de bâtiment). Idempotent : INSERT ... ON DUPLICATE KEY UPDATE
-        /// + cache mémoire. Ne déclenche PAS EnsureInteractiveSkills (on
-        /// n'irait pas modifier toutes les maps du jeu).
-        /// </summary>
+        // Binding global (hors havre-sac). Ne déclenche PAS EnsureInteractive
+        // Skills : on n'irait pas modifier toutes les maps du jeu.
         private static void EnsureGlobalBinding(int bonesId, string type)
         {
             lock (_interactivesLock)
@@ -412,7 +303,7 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             {
                 using var c = OpenConn();
                 using var ins = c.CreateCommand();
-                ins.CommandText = "INSERT INTO oneair_havenbag_interactives (BonesId, Type) VALUES (@b, @t) ON DUPLICATE KEY UPDATE Type=VALUES(Type)";
+                ins.CommandText = "INSERT INTO havenbag_interactives (BonesId, Type) VALUES (@b, @t) ON DUPLICATE KEY UPDATE Type=VALUES(Type)";
                 ins.Parameters.AddWithValue("@b", bonesId);
                 ins.Parameters.AddWithValue("@t", type);
                 ins.ExecuteNonQuery();
@@ -431,27 +322,16 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             {
                 using var c = OpenConn();
                 using var ins = c.CreateCommand();
-                ins.CommandText = "INSERT INTO oneair_havenbag_interactives (BonesId, Type) VALUES (@b, @t) ON DUPLICATE KEY UPDATE Type=VALUES(Type)";
+                ins.CommandText = "INSERT INTO havenbag_interactives (BonesId, Type) VALUES (@b, @t) ON DUPLICATE KEY UPDATE Type=VALUES(Type)";
                 ins.Parameters.AddWithValue("@b", bonesId);
                 ins.Parameters.AddWithValue("@t", type);
                 ins.ExecuteNonQuery();
             }
             catch (Exception e) { Logger.Write("[OneAir] SaveInteractiveBinding failed: " + e.Message, Channels.Warning); }
 
-            // Force la création des interactive_skills pour les éléments
-            // matchant ce binding sur toutes les maps havre-sac → ils
-            // deviennent cliquables côté client immédiatement.
             EnsureInteractiveSkillsForBindings();
         }
 
-        /// <summary>
-        /// Pour chaque map havre-sac, scanne ses éléments interactifs et
-        /// ajoute une interactive_skills row pour ceux qui matchent un
-        /// binding OneAir (par BonesId/GfxId). Sans ça le client ne reçoit
-        /// pas l'élément dans MapComplementaryInformations et ne le rend
-        /// pas cliquable. ActionIdentifier=Zaap → vanilla GenericActions.
-        /// HandleZaap → notre HandleZaapInteraction qui dispatche par signature.
-        /// </summary>
         private static bool IsExpectedTypeForBinding(string binding, InteractiveTypeEnum t)
         {
             return binding switch
@@ -463,6 +343,11 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             };
         }
 
+        // Scanne chaque map havre-sac et ajoute une interactive_skills row
+        // sur les éléments matchant un binding (par BonesId/GfxId). Sans ça
+        // le client ne reçoit pas l'élément dans MapComplementaryInformations
+        // et il n'est pas cliquable. ActionIdentifier=Zaap → routé via
+        // HandleZaapInteraction qui dispatche par signature.
         public static void EnsureInteractiveSkillsForBindings()
         {
             try
@@ -482,9 +367,6 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                             int sig = elem.BonesId > 0 ? elem.BonesId : elem.GfxId;
                             if (sig <= 0) continue;
                             if (!_interactiveBonesToType.ContainsKey(sig)) continue;
-                            // Si elem.Skill existe avec le BON Type/Action OneAir, on skip.
-                            // Sinon AddInteractiveSkill update les params (Type/Action) et
-                            // appelle map.Instance.Reload().
                             if (elem.Skill != null
                                 && elem.Skill.ActionIdentifier == GenericActionEnum.Zaap
                                 && IsExpectedTypeForBinding(_interactiveBonesToType[sig], elem.Skill.Type))
@@ -492,10 +374,7 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                                 continue;
                             }
 
-                            // Type d'interactive choisi selon le binding pour
-                            // que le tooltip côté client soit cohérent
-                            // ("Banque" / "Machine à sous" / "Zaap" au lieu
-                            // de "Zaap" partout).
+                            // Tooltip cohérent côté client (Banque/Machine à sous/Zaap).
                             var bindingType = _interactiveBonesToType[sig];
                             InteractiveTypeEnum interactiveType = bindingType switch
                             {
@@ -510,7 +389,7 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                                 bool ok = MapsManager.Instance.AddInteractiveSkill(
                                     map,
                                     elem.Identifier,
-                                    GenericActionEnum.Zaap,        // routé via HandleZaapInteraction (dispatch par signature)
+                                    GenericActionEnum.Zaap,
                                     interactiveType,
                                     SkillTypeEnum.USE114,
                                     "0", null, null);
@@ -529,12 +408,8 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             }
         }
 
-        /// <summary>
-        /// Intercepteur appelé depuis InteractivesHandler.HandleInteractiveUse
-        /// (via sed). Si l'élément cliqué est sur une map havre-sac et son
-        /// BonesId est registré comme zaap/chest/lotery, on déclenche
-        /// l'action OneAir et on retourne true (vanilla skip).
-        /// </summary>
+        // Intercepteur depuis InteractivesHandler.HandleInteractiveUse :
+        // retourne true si OneAir a géré (vanilla skip).
         public static bool TryHandleInteractive(Character character, int elemId)
         {
             try
@@ -551,14 +426,12 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                     if (!_interactiveBonesToType.TryGetValue(signature, out type)) return false;
                 }
 
-                // Bindings spécifiques havre-sac : on les gère uniquement quand
-                // le perso EST sur une map havre-sac (chest/lotery/zaap-haven).
                 bool inHavenBag = IsHavenBagMap(character.Map.Id);
 
                 switch (type)
                 {
                     case "zaap":
-                        if (!inHavenBag) return false; // zaap classique → laisse vanilla / GenericActions
+                        if (!inHavenBag) return false;
                         OpenHavenBagZaap(character);
                         return true;
                     case "chest":
@@ -572,13 +445,8 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                         HandleLoteryRequest(character);
                         return true;
 
-                    // Sortie de bâtiment : étoile au sol qui ramène à
-                    // l'extérieur. Fonctionne sur TOUTES les maps (pas que
-                    // havre-sac). On scanne les 4 voisins (Top/Bottom/Left/
-                    // Right) et on téléporte sur le premier non-zéro. Pour la
-                    // plupart des bâtiments Dofus, un seul des 4 est défini.
                     case "exit":
-                        if (inHavenBag) return false; // havre-sac a sa propre logique de sortie
+                        if (inHavenBag) return false;
                         if (character.Busy) return true;
                         return TryExitBuilding(character);
                 }
@@ -590,23 +458,14 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             return false;
         }
 
-        /// <summary>
-        /// Hook appelé à la fin de chaque déplacement RP (MovementConfirm).
-        /// Si la cellule où le joueur vient d'arriver porte un élément
-        /// interactif avec un binding "exit" (typiquement bones=3507),
-        /// on déclenche la sortie de bâtiment.
-        ///
-        /// Comme aucun InteractiveSkillRecord n'est posé sur les étoiles
-        /// (cf. LoadInteractiveBindings), le clic sur une étoile redevient
-        /// un déplacement standard qui pose le perso PILE sur la cellule
-        /// — donc une comparaison stricte CellId == cellId suffit.
-        /// </summary>
+        // Hook MovementConfirm : déclenche TryExitBuilding si le joueur
+        // arrive pile sur une étoile "exit" (bones=3507).
         public static void OnMovementConfirmed(Character character)
         {
             try
             {
                 if (character?.Map?.Elements == null) return;
-                if (IsHavenBagMap(character.Map.Id)) return; // havre-sac : sa propre logique
+                if (IsHavenBagMap(character.Map.Id)) return;
 
                 short cellId = character.Record.CellId;
                 foreach (var elem in character.Map.Elements)
@@ -634,24 +493,13 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             }
         }
 
-        /// <summary>
-        /// Sortie d'un bâtiment via l'étoile au sol (BonesId=3507). Le pattern
-        /// Dofus indoor→outdoor est : la map intérieure et la map extérieure
-        /// partagent le même Position.Point (mêmes coordonnées world x,y) mais
-        /// sont deux MapRecord distincts, l'extérieure ayant Position.Outdoor=true.
-        /// C'est ce que fait `.relative` côté admin — on réutilise la même
-        /// logique ici. Les champs TopMap/BottomMap/LeftMap/RightMap des
-        /// MapRecord sont les voisins worldmap (nord/sud/est/ouest) et ne
-        /// pointent PAS vers l'extérieur du bâtiment — d'où le "Map de sortie
-        /// introuvable" historique sur les ids du genre 58465797.
-        ///
-        /// Pour la cellule de destination, on cherche la PORTE D'ENTRÉE sur
-        /// la map extérieure : un élément interactif avec un Skill de type
-        /// Teleport dont Param1 pointe vers la map intérieure courante. La
-        /// cellule sud-ouest de cette porte (ou un voisin walkable) est le
-        /// "tapis d'entrée" naturel — au lieu de spawn aléatoire au milieu
-        /// de la map.
-        /// </summary>
+        // Pattern Dofus indoor→outdoor : intérieur et extérieur partagent le
+        // même Position.Point (mêmes coords world x,y) mais sont 2 MapRecord
+        // distincts, l'outdoor ayant Position.Outdoor=true. C'est ce que fait
+        // `.relative` côté admin. Les champs TopMap/BottomMap/etc. sont les
+        // voisins worldmap (nord/sud/est/ouest) et ne pointent PAS vers
+        // l'extérieur du bâtiment — d'où l'historique "Map de sortie
+        // introuvable" sur des ids type 58465797.
         private static bool TryExitBuilding(Character character)
         {
             try
@@ -665,17 +513,15 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
 
                 MapRecord targetMap = null;
 
-                // 1. Maps au même Point.world que la courante (sibling indoor/outdoor).
+                // 1. Sibling Outdoor au même Point.world.
                 var siblings = MapRecord.GetMaps(current.Position.Point)
                     .Where(m => m != null && m.Id != current.Id)
                     .ToList();
-                // Préférer une sibling Outdoor (extérieur du bâtiment).
                 targetMap = siblings.FirstOrDefault(m => m.Position != null && m.Position.Outdoor)
                             ?? siblings.FirstOrDefault();
 
-                // 2. Fallback : voisins worldmap, mais uniquement ceux qui
-                //    correspondent à une MapRecord effectivement chargée
-                //    (sinon on retombe sur l'erreur "introuvable").
+                // 2. Voisin worldmap (uniquement si MapRecord chargé, sinon
+                //    on retombe sur "introuvable").
                 if (targetMap == null)
                 {
                     foreach (long candidate in new long[] { current.TopMap, current.BottomMap, current.LeftMap, current.RightMap })
@@ -688,7 +534,6 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                     }
                 }
 
-                // 3. Fallback ultime : SpawnPoint (évite de laisser le joueur bloqué).
                 if (targetMap == null && character.Record.SpawnPointMapId > 0)
                 {
                     targetMap = MapRecord.GetMap(character.Record.SpawnPointMapId);
@@ -700,9 +545,6 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                     return true;
                 }
 
-                // Choix de la cellule : on cible la porte d'entrée du bâtiment
-                // sur la map extérieure (un élément Teleport pointant vers la
-                // map intérieure courante). À défaut, cellule walkable random.
                 short cellId = FindEntranceCellOrRandom(targetMap, current.Id);
                 character.Teleport((int)targetMap.Id, cellId);
                 return true;
@@ -714,13 +556,9 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             }
         }
 
-        /// <summary>
-        /// Sur <paramref name="outdoor"/>, trouve l'élément interactif dont le
-        /// Skill est un Teleport vers <paramref name="indoorMapId"/> — c'est la
-        /// "porte d'entrée" du bâtiment. Retourne une cellule walkable près
-        /// de la porte (sud-ouest comme `MapRecord.GetNearCell`, sinon voisin
-        /// walkable, sinon random).
-        /// </summary>
+        // Sur la map extérieure, trouve la "porte" (élément Teleport dont
+        // Param1=indoorMapId) et renvoie une cellule walkable adjacente
+        // (sud-ouest préféré, comme MapRecord.GetNearCell).
         private static short FindEntranceCellOrRandom(MapRecord outdoor, long indoorMapId)
         {
             try
@@ -733,10 +571,9 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
 
                 if (doorElem != null)
                 {
-                    // Param2 = cellId de destination *sur la map intérieure*
-                    // (utilisé quand on rentre). Pour SORTIR, on veut la cellule
-                    // près de la porte sur la map extérieure : Point sud-ouest
-                    // de l'élément, fallback voisin walkable.
+                    // Param2 = cellId d'arrivée *à l'intérieur* (cas entrée).
+                    // Pour la sortie on veut une cellule près de la porte
+                    // sur la map extérieure → sud-ouest puis voisin walkable.
                     var doorPoint = doorElem.Point;
                     if (doorPoint != null)
                     {
@@ -760,12 +597,8 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             return outdoor.RandomWalkableCell().Id;
         }
 
-        /// <summary>
-        /// Commande admin .hbset : associe l'élément interactif <elemId> de
-        /// la map courante (havre-sac) au type donné. La règle s'applique
-        /// ensuite à TOUS les havres-sacs (matching par BonesId), donc une
-        /// config sur Kerubim suffit pour les 38 autres thèmes.
-        /// </summary>
+        // Le binding s'applique ensuite à TOUS les havres-sacs (matching par
+        // BonesId), donc une config sur un seul thème propage aux 38 autres.
         public static void RegisterInteractive(Character character, string type, int elemId)
         {
             if (character?.Map == null || !IsHavenBagMap(character.Map.Id))
@@ -796,11 +629,6 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             character.Reply($"Binding enregistré : tous les éléments de signature {signature} (bones/gfx) → '{type}' sur les 39 maps havre-sac.");
         }
 
-        /// <summary>
-        /// Commande admin .elems : liste les éléments interactifs de la map
-        /// courante avec leurs identifiants, cellule, BonesId, GfxId, et
-        /// l'éventuel binding OneAir / skill vanilla déjà associé.
-        /// </summary>
         public static void ListElements(Character character)
         {
             if (character?.Map == null) return;
@@ -825,147 +653,11 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             character.Reply(sb.ToString());
         }
 
-        public static void EnsureHavenBagNpcs()
-        {
-            if (_npcsSpawned) return;
-            lock (_npcsLock)
-            {
-                if (_npcsSpawned) return;
-                try
-                {
-                    int spawned = 0, skipped = 0, failed = 0;
-
-                    foreach (var bagMapId in HavenBagMapIds)
-                    {
-                        var map = MapRecord.GetMap(bagMapId);
-                        if (map == null) { failed++; continue; }
-
-                        bool hasChest   = map.Instance.GetEntities<Npc>().Any(n => n.Template != null && n.Template.Id == ChestNpcTemplateId);
-                        bool hasLotery  = map.Instance.GetEntities<Npc>().Any(n => n.Template != null && n.Template.Id == LoteryNpcTemplateId);
-
-                        if (!hasChest)
-                        {
-                            try
-                            {
-                                short cell = SafeWalkableCell(map);
-                                NpcsManager.Instance.AddNpc((int)bagMapId, cell, DirectionsEnum.DIRECTION_SOUTH_WEST, ChestNpcTemplateId);
-                                ApplyInvisibleLook(map, ChestNpcTemplateId);
-                                spawned++;
-                            }
-                            catch (Exception e) { failed++; Logger.Write("[OneAir] chest spawn on " + bagMapId + " failed: " + e.Message, Channels.Warning); }
-                        }
-                        else { ApplyInvisibleLook(map, ChestNpcTemplateId); skipped++; }
-
-                        if (!hasLotery)
-                        {
-                            try
-                            {
-                                short cell = SafeWalkableCell(map);
-                                NpcsManager.Instance.AddNpc((int)bagMapId, cell, DirectionsEnum.DIRECTION_SOUTH_EAST, LoteryNpcTemplateId);
-                                ApplyInvisibleLook(map, LoteryNpcTemplateId);
-                                spawned++;
-                            }
-                            catch (Exception e) { failed++; Logger.Write("[OneAir] lotery spawn on " + bagMapId + " failed: " + e.Message, Channels.Warning); }
-                        }
-                        else { ApplyInvisibleLook(map, LoteryNpcTemplateId); skipped++; }
-                    }
-
-                    Logger.Write($"[OneAir] Haven bag NPCs : {spawned} spawned, {skipped} already present, {failed} failed", Channels.Info);
-                    _npcsSpawned = true;
-                }
-                catch (Exception e)
-                {
-                    Logger.Write("[OneAir] EnsureHavenBagNpcs failed: " + e.Message, Channels.Warning);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Override le look du NPC pour qu'il soit visuellement invisible
-        /// (scale=1 = 1% de taille, sub-pixel) tout en restant cliquable
-        /// (le hitbox du sprite est conservé minimal mais existant).
-        /// </summary>
-        private static void ApplyInvisibleLook(MapRecord map, short templateId)
-        {
-            try
-            {
-                var npc = map.Instance.GetEntities<Npc>().FirstOrDefault(n => n.Template != null && n.Template.Id == templateId);
-                if (npc == null) return;
-                var origLook = npc.Look;
-                var invisible = new Giny.World.Managers.Entities.Look.ServerEntityLook(
-                    origLook.BonesId,
-                    origLook.Skins,
-                    origLook.Colors,
-                    new short[] { 1 },              // scale 1% → invisible
-                    new Giny.World.Managers.Entities.Look.ServerSubentityLook[0]);
-                npc.Look = invisible;
-            }
-            catch (Exception e) { Logger.Write("[OneAir] ApplyInvisibleLook failed: " + e.Message, Channels.Warning); }
-        }
-
-        /// <summary>
-        /// Bouge le NPC du coffre/loterie de la map du havre-sac courante
-        /// vers la cellule indiquée. Persisté en DB via NpcSpawnRecord pour
-        /// survivre au redémarrage du world.
-        /// </summary>
-        public static void MoveHavenBagNpc(Character character, string type, short cellId)
-        {
-            if (character?.Map == null || !IsHavenBagMap(character.Map.Id))
-            {
-                character.ReplyError("Commande utilisable uniquement dans le havre-sac.");
-                return;
-            }
-            short templateId = type switch
-            {
-                "chest" or "coffre" => ChestNpcTemplateId,
-                "lotery" or "loterie" => LoteryNpcTemplateId,
-                _ => (short)0
-            };
-            if (templateId == 0)
-            {
-                character.ReplyError("Type inconnu. Utilise 'chest' ou 'lotery'.");
-                return;
-            }
-            try
-            {
-                var npc = character.Map.Instance.GetEntities<Npc>().FirstOrDefault(n => n.Template != null && n.Template.Id == templateId);
-                if (npc == null)
-                {
-                    character.ReplyError("NPC non trouvé sur cette map.");
-                    return;
-                }
-                var dir = npc.SpawnRecord.Direction;
-                long spawnId = npc.SpawnRecord.Id;
-                NpcsManager.Instance.MoveNpc(spawnId, (int)character.Map.Id, cellId, dir);
-                ApplyInvisibleLook(character.Map, templateId);
-                character.Reply($"NPC {type} déplacé sur la cellule {cellId} de la map {character.Map.Id}.");
-            }
-            catch (Exception e)
-            {
-                character.ReplyError("Échec déplacement : " + e.Message);
-            }
-        }
-
-        private static short SafeWalkableCell(MapRecord map)
-        {
-            try { return map.RandomWalkableCell().Id; }
-            catch { return 0; }
-        }
-
-        /// <summary>
-        /// Au login (ContextHandler.HandleGameContextCreateRequestMessage), si
-        /// le Record du joueur pointe sur une map havre-sac, on remplace la
-        /// position par la PreviousPosition stockée (ou le SpawnPoint en
-        /// fallback). Ça évite le bug "écran noir au reconnect" : le client
-        /// 2.68 a une fenêtre où il n'active pas correctement le contexte
-        /// havre-sac quand il y arrive directement sans avoir envoyé
-        /// EnterHavenBagRequestMessage.
-        ///
-        /// Retourne false (pas de prise en charge) pour que le Teleport
-        /// vanilla continue de s'exécuter avec les valeurs Record mises à
-        /// jour. PreviousPosition n'est pas effacée — sera écrasée au
-        /// prochain .H si le joueur rentre à nouveau dans son bag.
-        /// </summary>
+        // Évite l'écran noir au reconnect : le client 2.68 n'active pas
+        // correctement le contexte havre-sac quand il y arrive directement
+        // sans avoir envoyé EnterHavenBagRequestMessage. On rewrite Record.MapId
+        // sur la position pré-bag sauvegardée et on laisse le Teleport vanilla
+        // s'exécuter avec les valeurs mises à jour.
         public static bool RedirectIfHavenBagSpawn(Character character)
         {
             try
@@ -988,41 +680,6 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             return false;
         }
 
-        /// <summary>
-        /// Intercepteur appelé depuis NpcsHandler.HandleNpcGenericActionRequestMessage
-        /// (sed dans Dockerfile). Si le NPC cliqué est sur la map du havre-sac
-        /// et matche un de nos templates (coffre/loterie), on déclenche
-        /// l'action OneAir et on retourne true (vanilla skip). Sinon false
-        /// (dispatch vanilla).
-        /// </summary>
-        public static bool TryHandleNpcAction(Character character, double npcId, double npcMapId)
-        {
-            try
-            {
-                if (!IsHavenBagMap((long)npcMapId)) return false;
-                if (character?.Map == null || !IsHavenBagMap(character.Map.Id)) return false;
-
-                var npc = character.Map.Instance.GetEntity<Npc>((long)npcId);
-                if (npc == null || npc.Template == null) return false;
-
-                if (npc.Template.Id == ChestNpcTemplateId)
-                {
-                    character.OpenBank();
-                    return true;
-                }
-                if (npc.Template.Id == LoteryNpcTemplateId)
-                {
-                    HandleLoteryRequest(character);
-                    return true;
-                }
-            }
-            catch (Exception e)
-            {
-                Logger.Write("[OneAir] TryHandleNpcAction failed: " + e.Message, Channels.Warning);
-            }
-            return false;
-        }
-
         private static void SafeAlter(MySqlConnection c, string sql)
         {
             try
@@ -1031,7 +688,7 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                 alter.CommandText = sql;
                 alter.ExecuteNonQuery();
             }
-            catch { /* déjà appliqué */ }
+            catch { }
         }
 
         private static MySqlConnection OpenConn()
@@ -1044,9 +701,6 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             return c;
         }
 
-        // -------------------------------------------------------------------
-        // Entrée / sortie
-        // -------------------------------------------------------------------
         public static void EnterHavenBag(Character character, long havenBagOwner)
         {
             EnsureSchema();
@@ -1058,10 +712,8 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                     return;
                 }
 
-                // Le SWF (HavenbagEnterAction → RoleplayContextFrame case 58)
-                // envoie TOUJOURS EnterHavenBagRequestMessage quand H est pressée,
-                // même si on est déjà dans le bag (cf. décompil DofusInvoker
-                // 2.68). C'est au serveur de détecter "déjà dedans" et de
+                // Le SWF envoie EnterHavenBagRequestMessage à chaque pression H,
+                // même si on est déjà dans le bag : c'est au serveur de
                 // basculer en mode sortie.
                 if (IsHavenBagMap(character.Map.Id))
                 {
@@ -1069,10 +721,8 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                     return;
                 }
 
-                // Sauvegarde de la position de retour.
                 SavePreviousPosition(character.Id, character.Map.Id, character.CellId);
 
-                // Map du thème courant (chaque thème a sa propre map intérieure).
                 var (theme, _) = LoadThemeAndRoom(character.Id);
                 var targetMapId = GetMapIdForTheme(theme);
                 var targetMap = MapRecord.GetMap(targetMapId);
@@ -1082,10 +732,8 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                     return;
                 }
 
-                // L'upgrade en MapComplementaryInformationsDataInHavenBagMessage
-                // se fait automatiquement via le wrapper MaybeUpgradeToHavenBag.
-                // L'init (furniture, packs, zaaps, room update) part dans
-                // OnAfterEnterMap après SendMapComplementary.
+                // MapComplementary upgrade automatique via MaybeUpgradeToHavenBag.
+                // SendHavenBagInit part de OnAfterEnterMap.
                 character.Teleport(targetMap, GetSpawnCell(targetMap));
             }
             catch (Exception e)
@@ -1095,13 +743,9 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             }
         }
 
-        /// <summary>
-        /// Hook appelé depuis Character.OnEnterMap juste après
-        /// SendMapComplementary. Si le joueur vient d'entrer dans le havre-sac,
-        /// envoie la séquence d'init (furnitures, packs, zaaps, room update).
-        /// Sans ces messages la map reste noire et le binding 'H = exit' n'est
-        /// pas armé.
-        /// </summary>
+        // Hook depuis Character.OnEnterMap après SendMapComplementary.
+        // Sans la séquence d'init (furnitures/packs/zaaps/room) la map reste
+        // noire et le binding 'H = exit' n'est pas armé.
         public static void OnAfterEnterMap(Character character)
         {
             try
@@ -1115,10 +759,6 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             }
         }
 
-        /// <summary>
-        /// Séquence d'initialisation de la UI havre-sac : meubles, packs,
-        /// liste zaaps, room preview. Idempotent.
-        /// </summary>
         public static void SendHavenBagInit(Character character)
         {
             try
@@ -1126,25 +766,17 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                 byte theme = ResolveCurrentTheme(character);
                 var (_, roomId) = LoadThemeAndRoom(character.Id);
 
-                // Meubles persistés POUR CE THÈME (chaque thème a son propre
-                // setup pour que les meubles ne suivent pas quand on change).
+                // Meubles indexés PAR thème : ne suivent pas quand on change.
                 var furnitures = LoadFurnitures(character.Id, theme);
                 character.Client.Send(new HavenBagFurnituresMessage(furnitures));
 
-                // Packs/thèmes disponibles : tous les thèmes connus côté
-                // client (1..58 avec les trous d'origine).
                 var packIds = ThemeToMapId.Keys.ToArray();
                 character.Client.Send(new HavenBagPackListMessage(packIds));
 
-                // Room update : action=0 (set), preview = la room courante avec
-                // le thème courant.
                 character.Client.Send(new HavenBagRoomUpdateMessage(0,
                     new HavenBagRoomPreviewInformation[] { new HavenBagRoomPreviewInformation(roomId, theme) }));
 
-                // Liste de zaaps pour le zaap intérieur. Le zaap du havre-sac
-                // permet de retourner sur n'importe quel zaap utilisé +
-                // (en fallback) tous les zaaps du monde, de la même manière
-                // que SendKnownZaapList vanilla.
+                // Zaaps connus + tous les zaaps du monde en fallback (comme SendKnownZaapList vanilla).
                 var known = LoadKnownZaaps(character.Id);
                 var allZaaps = TeleportersManager.Instance.GetMaps(TeleporterTypeEnum.TELEPORTER_ZAAP);
                 foreach (var m in allZaaps)
@@ -1198,15 +830,9 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             }
         }
 
-        // -------------------------------------------------------------------
-        // Zaap intérieur (intercepté par le sed dans GenericActions.HandleZaap)
-        // -------------------------------------------------------------------
-        /// <summary>
-        /// Hook injecté à la place de character.OpenZaap(element).
-        /// Si on est dans le havre-sac, ouvre notre dialog custom avec la
-        /// liste de zaaps connus. Sinon, mémorise ce zaap comme connu et
-        /// dispatch sur le comportement vanilla.
-        /// </summary>
+        // Hook qui remplace character.OpenZaap(element) dans GenericActions.HandleZaap.
+        // Sur une map havre-sac : dispatch par signature (zaap/chest/lotery).
+        // Hors havre-sac : mémorise le zaap dans known_zaaps puis dialog vanilla.
         public static void HandleZaapInteraction(Character character, MapElement element)
         {
             bool handledOnHavenBag = false;
@@ -1218,9 +844,8 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                 if (IsHavenBagMap(mapId))
                 {
                     handledOnHavenBag = true;
-                    // Sur une map havre-sac, l'ActionIdentifier=Zaap est utilisé
-                    // pour TOUS nos éléments bound (zaap, coffre, loterie). On
-                    // dispatche selon la signature visuelle de l'élément.
+                    // Tous nos éléments bindés (zaap/chest/lotery) ont
+                    // ActionIdentifier=Zaap : dispatch selon signature.
                     int sig = element?.Record != null
                         ? (element.Record.BonesId > 0 ? element.Record.BonesId : element.Record.GfxId)
                         : 0;
@@ -1244,11 +869,8 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                     }
                 }
 
-                // Hors havre-sac : check les bindings globaux (ex: exit).
-                // Cas plus rare aujourd'hui (les étoiles bones=3507 n'ont plus
-                // d'InteractiveSkillRecord et passent par OnMovementConfirmed),
-                // mais on garde le routage si jamais un binding global
-                // se retrouve attaché à un élément Zaap-routed.
+                // Bindings globaux (rare : les étoiles bones=3507 passent par
+                // OnMovementConfirmed, mais on garde le routage de secours).
                 int sig2 = element?.Record != null
                     ? (element.Record.BonesId > 0 ? element.Record.BonesId : element.Record.GfxId)
                     : 0;
@@ -1260,7 +882,6 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                     return;
                 }
 
-                // Pas de binding → comportement vanilla zaap (mémorise + ouvre dialog)
                 if (mapId > 0)
                 {
                     AddKnownZaap(character.Id, mapId);
@@ -1272,11 +893,8 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             }
             finally
             {
-                // Sur les havre-sacs, on doit relâcher le verrou skill côté
-                // client (sinon SKILL_DURATION=35 deciseconds bloque les clics
-                // suivants, et la loterie en cooldown bloque tout puisqu'on
-                // ne send rien). InteractiveUseEndedMessage signale au SWF
-                // que l'utilisation du skill est terminée.
+                // Sans InteractiveUseEndedMessage le client maintient le verrou
+                // skill (SKILL_DURATION=35 deciseconds) et bloque les clics suivants.
                 if (handledOnHavenBag && element?.Record?.Skill != null)
                 {
                     try
@@ -1289,7 +907,6 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                 }
             }
 
-            // Hors havre-sac : comportement vanilla
             if (!handledOnHavenBag)
             {
                 character.OpenZaap(element);
@@ -1302,9 +919,6 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             character.OpenDialog(dialog);
         }
 
-        // -------------------------------------------------------------------
-        // Édition (perso) — cycle Start / Save / Cancel / Finish
-        // -------------------------------------------------------------------
         public static void StartEdit(Character character)
         {
             if (character.Map == null || !IsHavenBagMap(character.Map.Id))
@@ -1320,12 +934,8 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             character.Client.Send(new EditHavenBagFinishedMessage());
         }
 
-        /// <summary>
-        /// Début d'une séquence d'enregistrement de meubles (le client va
-        /// envoyer ensuite plusieurs HavenBagFurnituresRequest puis un
-        /// CloseHavenBagFurnitureSequenceRequest). On nettoie les meubles
-        /// existants pour le thème courant pour pouvoir tout réinsérer.
-        /// </summary>
+        // Début séquence Save : nettoie les meubles du thème courant pour
+        // pouvoir les réinsérer via les HavenBagFurnituresRequest qui suivent.
         public static void OpenFurnitureSequence(Character character)
         {
             EnsureSchema();
@@ -1336,7 +946,7 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
 
                 using var c = OpenConn();
                 using var del = c.CreateCommand();
-                del.CommandText = "DELETE FROM oneair_havenbag_furnitures WHERE CharacterId=@cid AND ThemeId=@t";
+                del.CommandText = "DELETE FROM havenbag_furnitures WHERE CharacterId=@cid AND ThemeId=@t";
                 del.Parameters.AddWithValue("@cid", character.Id);
                 del.Parameters.AddWithValue("@t", theme);
                 del.ExecuteNonQuery();
@@ -1344,12 +954,7 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             catch (Exception e) { Logger.Write("[OneAir] OpenFurnitureSequence failed: " + e.Message, Channels.Warning); }
         }
 
-        /// <summary>
-        /// Fin de la séquence (Close*). Renvoie au client la liste finale
-        /// + signal EditHavenBagFinishedMessage pour sortir le SWF du mode
-        /// édition. UN SEUL EditHavenBagFinishedMessage par save (le SWF
-        /// l'attend via HavenbagFrame).
-        /// </summary>
+        // UN SEUL EditHavenBagFinishedMessage par save (HavenbagFrame l'attend).
         public static void FinishEdit(Character character)
         {
             try
@@ -1366,12 +971,8 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             character.Client.Send(new EditHavenBagFinishedMessage());
         }
 
-        /// <summary>
-        /// Insertion incrémentale d'un paquet de meubles (le client peut
-        /// splitter en plusieurs paquets via MAX_FURNITURES_PER_PACKET). Ne
-        /// renvoie RIEN — le ECHO + EditHavenBagFinished sont envoyés
-        /// uniquement par FinishEdit (CloseSequence).
-        /// </summary>
+        // Insertion incrémentale (le client splitte via MAX_FURNITURES_PER_PACKET).
+        // Ne renvoie RIEN — l'echo + EditHavenBagFinished se font dans FinishEdit.
         public static void SaveFurnitures(Character character, short[] cellIds, int[] furnitureIds, byte[] orientations)
         {
             EnsureSchema();
@@ -1385,7 +986,7 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
 
                 using var c = OpenConn();
                 using var ins = c.CreateCommand();
-                ins.CommandText = "INSERT INTO oneair_havenbag_furnitures (CharacterId, ThemeId, CellId, FurnitureId, Orientation) VALUES (@cid, @t, @c, @f, @o) ON DUPLICATE KEY UPDATE FurnitureId=VALUES(FurnitureId), Orientation=VALUES(Orientation)";
+                ins.CommandText = "INSERT INTO havenbag_furnitures (CharacterId, ThemeId, CellId, FurnitureId, Orientation) VALUES (@cid, @t, @c, @f, @o) ON DUPLICATE KEY UPDATE FurnitureId=VALUES(FurnitureId), Orientation=VALUES(Orientation)";
                 var pCid = ins.Parameters.Add("@cid", MySqlDbType.Int64);
                 var pT = ins.Parameters.Add("@t", MySqlDbType.UByte);
                 var pC = ins.Parameters.Add("@c", MySqlDbType.Int16);
@@ -1406,8 +1007,7 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
 
         private static byte ResolveCurrentTheme(Character character)
         {
-            // Trouve le thème en se basant sur la map actuelle (chaque thème
-            // a sa propre map). Fallback sur la valeur DB / DefaultTheme.
+            // Theme = map actuelle (chaque thème a sa propre map).
             if (character?.Map != null)
             {
                 foreach (var kv in ThemeToMapId)
@@ -1418,17 +1018,17 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             return LoadThemeAndRoom(character.Id).theme;
         }
 
+        // V1 : une seule room (id 0).
         public static void ChangeRoom(Character character, byte roomId)
         {
-            // V1 : une seule room (id 0). On ack sans erreur.
             EnsureSchema();
             try
             {
                 using var c = OpenConn();
                 using var cmd = c.CreateCommand();
-                cmd.CommandText = "INSERT INTO oneair_havenbag_state (CharacterId, RoomId) VALUES (@cid, @r) ON DUPLICATE KEY UPDATE RoomId=VALUES(RoomId)";
+                cmd.CommandText = "INSERT INTO havenbag_state (CharacterId, RoomId) VALUES (@cid, @r) ON DUPLICATE KEY UPDATE RoomId=VALUES(RoomId)";
                 cmd.Parameters.AddWithValue("@cid", character.Id);
-                cmd.Parameters.AddWithValue("@r", (byte)0); // forcé à 0 V1
+                cmd.Parameters.AddWithValue("@r", (byte)0);
                 cmd.ExecuteNonQuery();
             }
             catch (Exception e) { Logger.Write("[OneAir] ChangeRoom failed: " + e.Message, Channels.Warning); }
@@ -1449,23 +1049,18 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                     return;
                 }
 
-                // Persist theme.
                 using (var c = OpenConn())
                 using (var cmd = c.CreateCommand())
                 {
-                    cmd.CommandText = "INSERT INTO oneair_havenbag_state (CharacterId, Theme) VALUES (@cid, @t) ON DUPLICATE KEY UPDATE Theme=VALUES(Theme)";
+                    cmd.CommandText = "INSERT INTO havenbag_state (CharacterId, Theme) VALUES (@cid, @t) ON DUPLICATE KEY UPDATE Theme=VALUES(Theme)";
                     cmd.Parameters.AddWithValue("@cid", character.Id);
                     cmd.Parameters.AddWithValue("@t", theme);
                     cmd.ExecuteNonQuery();
                 }
 
-                // Téléport vers la map du nouveau thème (chaque thème = sa propre
-                // map, le visuel vient du .dlm de cette map). On garde la
-                // PreviousPosition existante pour la sortie.
                 long newMapId = GetMapIdForTheme(theme);
                 if (character.Map != null && character.Map.Id == newMapId)
                 {
-                    // Déjà sur la bonne map : juste un refresh.
                     character.Map.Instance.SendMapComplementary(character.Client);
                     SendHavenBagInit(character);
                     return;
@@ -1483,9 +1078,6 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             catch (Exception e) { Logger.Write("[OneAir] ChangeTheme failed: " + e.Message, Channels.Warning); }
         }
 
-        // -------------------------------------------------------------------
-        // Coffre (ExchangeRequestMessage type=HAVENBAG=24)
-        // -------------------------------------------------------------------
         public static bool TryHandleExchangeRequest(Character character, byte exchangeType)
         {
             if ((ExchangeTypeEnum)exchangeType != ExchangeTypeEnum.HAVENBAG) return false;
@@ -1496,15 +1088,11 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                 return true;
             }
 
-            // Le coffre du havre-sac partage l'inventaire banque vanilla
-            // (suffisant pour notre serveur privé).
+            // V1 : coffre = inventaire banque vanilla.
             character.OpenBank();
             return true;
         }
 
-        // -------------------------------------------------------------------
-        // Loterie quotidienne
-        // -------------------------------------------------------------------
         public static void HandleLoteryRequest(Character character)
         {
             EnsureSchema();
@@ -1514,7 +1102,7 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                 DateTime? last = null;
                 using (var sel = c.CreateCommand())
                 {
-                    sel.CommandText = "SELECT LastLoteryAt FROM oneair_havenbag_state WHERE CharacterId=@cid";
+                    sel.CommandText = "SELECT LastLoteryAt FROM havenbag_state WHERE CharacterId=@cid";
                     sel.Parameters.AddWithValue("@cid", character.Id);
                     var r = sel.ExecuteScalar();
                     if (r != null && r != DBNull.Value) last = (DateTime)r;
@@ -1527,22 +1115,20 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                     return;
                 }
 
-                // Récompense V1 : 100 kamas (l'admin peut faire mieux via .ui).
                 long reward = 100;
                 character.AddKamas(reward);
                 character.OnKamasGained(reward);
 
                 using (var ins = c.CreateCommand())
                 {
-                    ins.CommandText = "INSERT INTO oneair_havenbag_state (CharacterId, LastLoteryAt) VALUES (@cid, UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE LastLoteryAt=UTC_TIMESTAMP()";
+                    ins.CommandText = "INSERT INTO havenbag_state (CharacterId, LastLoteryAt) VALUES (@cid, UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE LastLoteryAt=UTC_TIMESTAMP()";
                     ins.Parameters.AddWithValue("@cid", character.Id);
                     ins.ExecuteNonQuery();
                 }
 
-                // On NE renvoie PAS HavenBagDailyLoteryMessage : le SWF
-                // tenterait un appel HAAPI Ankama (cf. décompil HavenbagFrame
-                // ligne 391-398) pour consommer la récompense — qui échoue
-                // sur notre serveur privé. À la place, simple feedback chat.
+                // Pas de HavenBagDailyLoteryMessage : le SWF tenterait un
+                // appel HAAPI Ankama (HavenbagFrame ~391) qui échoue sur notre
+                // serveur privé. Feedback chat suffit.
                 character.Reply("Loterie : +" + reward + " kamas.");
             }
             catch (Exception e)
@@ -1552,15 +1138,12 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             }
         }
 
-        // -------------------------------------------------------------------
-        // DB helpers
-        // -------------------------------------------------------------------
         private static void SavePreviousPosition(long charId, long mapId, short cellId)
         {
             EnsureSchema();
             using var c = OpenConn();
             using var cmd = c.CreateCommand();
-            cmd.CommandText = "INSERT INTO oneair_havenbag_state (CharacterId, PreviousMapId, PreviousCellId) VALUES (@cid, @m, @ce) ON DUPLICATE KEY UPDATE PreviousMapId=VALUES(PreviousMapId), PreviousCellId=VALUES(PreviousCellId)";
+            cmd.CommandText = "INSERT INTO havenbag_state (CharacterId, PreviousMapId, PreviousCellId) VALUES (@cid, @m, @ce) ON DUPLICATE KEY UPDATE PreviousMapId=VALUES(PreviousMapId), PreviousCellId=VALUES(PreviousCellId)";
             cmd.Parameters.AddWithValue("@cid", charId);
             cmd.Parameters.AddWithValue("@m", mapId);
             cmd.Parameters.AddWithValue("@ce", cellId);
@@ -1571,7 +1154,7 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
         {
             using var c = OpenConn();
             using var cmd = c.CreateCommand();
-            cmd.CommandText = "SELECT PreviousMapId, PreviousCellId FROM oneair_havenbag_state WHERE CharacterId=@cid";
+            cmd.CommandText = "SELECT PreviousMapId, PreviousCellId FROM havenbag_state WHERE CharacterId=@cid";
             cmd.Parameters.AddWithValue("@cid", charId);
             using var r = cmd.ExecuteReader();
             if (r.Read())
@@ -1587,7 +1170,7 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
         {
             using var c = OpenConn();
             using var cmd = c.CreateCommand();
-            cmd.CommandText = "UPDATE oneair_havenbag_state SET PreviousMapId=NULL, PreviousCellId=NULL WHERE CharacterId=@cid";
+            cmd.CommandText = "UPDATE havenbag_state SET PreviousMapId=NULL, PreviousCellId=NULL WHERE CharacterId=@cid";
             cmd.Parameters.AddWithValue("@cid", charId);
             cmd.ExecuteNonQuery();
         }
@@ -1598,7 +1181,7 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             {
                 using var c = OpenConn();
                 using var cmd = c.CreateCommand();
-                cmd.CommandText = "SELECT Theme, RoomId FROM oneair_havenbag_state WHERE CharacterId=@cid";
+                cmd.CommandText = "SELECT Theme, RoomId FROM havenbag_state WHERE CharacterId=@cid";
                 cmd.Parameters.AddWithValue("@cid", charId);
                 using var r = cmd.ExecuteReader();
                 if (r.Read())
@@ -1614,7 +1197,6 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
         }
 
         private static byte GetTheme(long charId) => LoadThemeAndRoom(charId).theme;
-        private static byte GetRoom(long charId) => LoadThemeAndRoom(charId).roomId;
 
         public static void AddKnownZaap(long charId, long mapId)
         {
@@ -1623,7 +1205,7 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             {
                 using var c = OpenConn();
                 using var cmd = c.CreateCommand();
-                cmd.CommandText = "INSERT IGNORE INTO oneair_known_zaaps (CharacterId, MapId) VALUES (@cid, @m)";
+                cmd.CommandText = "INSERT IGNORE INTO known_zaaps (CharacterId, MapId) VALUES (@cid, @m)";
                 cmd.Parameters.AddWithValue("@cid", charId);
                 cmd.Parameters.AddWithValue("@m", mapId);
                 cmd.ExecuteNonQuery();
@@ -1641,7 +1223,7 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             {
                 using var c = OpenConn();
                 using var cmd = c.CreateCommand();
-                cmd.CommandText = "SELECT MapId FROM oneair_known_zaaps WHERE CharacterId=@cid ORDER BY DiscoveredAt";
+                cmd.CommandText = "SELECT MapId FROM known_zaaps WHERE CharacterId=@cid ORDER BY DiscoveredAt";
                 cmd.Parameters.AddWithValue("@cid", charId);
                 using var r = cmd.ExecuteReader();
                 while (r.Read()) result.Add(r.GetInt64(0));
@@ -1660,7 +1242,7 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             {
                 using var c = OpenConn();
                 using var cmd = c.CreateCommand();
-                cmd.CommandText = "SELECT CellId, FurnitureId, Orientation FROM oneair_havenbag_furnitures WHERE CharacterId=@cid AND ThemeId=@t";
+                cmd.CommandText = "SELECT CellId, FurnitureId, Orientation FROM havenbag_furnitures WHERE CharacterId=@cid AND ThemeId=@t";
                 cmd.Parameters.AddWithValue("@cid", charId);
                 cmd.Parameters.AddWithValue("@t", themeId);
                 using var r = cmd.ExecuteReader();
@@ -1673,12 +1255,8 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             return list.ToArray();
         }
 
-        // -------------------------------------------------------------------
-        // Map info havre-sac : appelé depuis ClassicMapInstance.GetMapComplementaryInformationsDataMessage
-        // (patché via sed dans le Dockerfile) pour transformer le message
-        // standard en variante "in haven bag" quand le joueur est sur la
-        // map du havre-sac.
-        // -------------------------------------------------------------------
+        // Hook depuis ClassicMapInstance.GetMapComplementaryInformationsDataMessage :
+        // transforme le message standard en variante "in haven bag".
         public static MapComplementaryInformationsDataMessage MaybeUpgradeToHavenBag(
             Character character, MapComplementaryInformationsDataMessage msg)
         {
@@ -1703,12 +1281,8 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
             }
         }
 
-        /// <summary>
-        /// Cell où on dépose le joueur quand il entre dans le havre-sac.
-        /// On vise la cellule adjacente (sud-ouest) du zaap si présent —
-        /// le joueur arrive devant le zaap, prêt à l'utiliser. Fallback
-        /// random walkable si pas de zaap registré.
-        /// </summary>
+        // Cellule sud-ouest du zaap si présent (joueur arrive devant le zaap),
+        // sinon random walkable.
         private static short GetSpawnCell(MapRecord map)
         {
             try
@@ -1724,20 +1298,14 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
         }
     }
 
-    // ----------------------------------------------------------------------
-    // Custom dialog : zaap havre-sac. Liste = zaaps connus du joueur.
-    // ----------------------------------------------------------------------
+    // Dialog zaap havre-sac : liste = known_zaaps (alimentée par
+    // HandleZaapInteraction). Fallback SpawnPointMapId si vide.
     public class OneAirHavenBagZaapDialog : TeleporterDialog
     {
         public override TeleporterTypeEnum TeleporterType => TeleporterTypeEnum.TELEPORTER_ZAAP;
 
         public OneAirHavenBagZaapDialog(Character character) : base(character)
         {
-            // Le zaap intérieur du havre-sac liste UNIQUEMENT les zaaps
-            // découverts par le joueur (table oneair_known_zaaps, alimentée
-            // à chaque OpenZaap via HandleZaapInteraction). Fallback sur
-            // SpawnPointMapId si aucun zaap découvert pour ne pas montrer
-            // une liste vide.
             var knownMapIds = OneAirHavenBagPatch.LoadKnownZaaps(character.Id);
 
             Destinations = new Dictionary<long, TeleportDestination>();
@@ -1748,7 +1316,7 @@ CREATE TABLE IF NOT EXISTS oneair_havenbag_interactives (
                 if (map == null) continue;
                 Destinations[map.Id] = new TeleportDestination()
                 {
-                    cost = 0, // gratuit depuis le havre-sac
+                    cost = 0,
                     level = 1,
                     type = (byte)TeleporterType,
                     mapId = map.Id,

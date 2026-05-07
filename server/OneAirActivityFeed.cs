@@ -1,10 +1,3 @@
-// OneAir — flux d'activité communautaire (level-ups majeurs, donjons,
-// événements remarquables). Insert non-bloquant dans la table
-// `oneair_activity` ; la landing publique lit ça via /api/public/community.
-//
-// On émet uniquement les events "intéressants côté joueur" — tranches de 25
-// niveaux, victoire de donjon (salle finale du Dungeon record), etc. Le but
-// est de remplir le feed sans le saturer.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,8 +14,6 @@ namespace Giny.World.Managers.Chat
 {
     public static class OneAirActivityFeed
     {
-        // Tranches de niveau qui déclenchent un event level_up (multiples de 25
-        // jusqu'à 200 — incluse).
         private static readonly int[] LevelMilestones = { 25, 50, 75, 100, 125, 150, 175, 200 };
 
         public static void EnsureSchema()
@@ -32,7 +23,7 @@ namespace Giny.World.Managers.Chat
                 using var c = OpenConn();
                 using var cmd = c.CreateCommand();
                 cmd.CommandText = @"
-CREATE TABLE IF NOT EXISTS oneair_activity (
+CREATE TABLE IF NOT EXISTS activity (
     Id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     Kind VARCHAR(32) NOT NULL,
     CharacterIds VARCHAR(255) NOT NULL,
@@ -49,12 +40,6 @@ CREATE TABLE IF NOT EXISTS oneair_activity (
             catch (Exception e) { Logger.Write("[OneAir/Activity] schema init failed: " + e.Message, Channels.Warning); }
         }
 
-        // ---- Hooks ---------------------------------------------------------
-
-        /// <summary>
-        /// Appelé après chaque AddExperience. Si le perso a franchi un palier
-        /// LevelMilestones, on émet un event "level_up".
-        /// </summary>
         public static void OnExperienceGained(Character character, long oldXp, long newXp)
         {
             if (character == null) return;
@@ -64,7 +49,6 @@ CREATE TABLE IF NOT EXISTS oneair_activity (
                 int newLvl = ExperienceManager.Instance.GetCharacterLevel(newXp);
                 if (newLvl <= oldLvl) return;
 
-                // Crossed un milestone ?
                 int reached = 0;
                 foreach (var m in LevelMilestones)
                 {
@@ -82,17 +66,14 @@ CREATE TABLE IF NOT EXISTS oneair_activity (
             catch (Exception e) { Logger.Write("[OneAir/Activity] OnExperienceGained: " + e.Message, Channels.Warning); }
         }
 
-        /// <summary>
-        /// Appelé sur OnFightEnding pour chaque CharacterFighter. On émet un
-        /// event "dungeon_win" UNE FOIS par fight (le premier fighter callé
-        /// pose un flag transactionnel via INSERT IGNORE par FightId).
-        /// </summary>
+        // Appelé pour chaque CharacterFighter ; dédup par FightId pour ne pas
+        // émettre N events pour le même donjon.
         public static void OnFightEnding(CharacterFighter fighter)
         {
             if (fighter == null) return;
             try
             {
-                if (fighter.Fight?.Winners != fighter.Team) return; // perdu / annulé
+                if (fighter.Fight?.Winners != fighter.Team) return;
                 var character = fighter.Character;
                 if (character == null) return;
                 var map = character.Map;
@@ -101,17 +82,13 @@ CREATE TABLE IF NOT EXISTS oneair_activity (
                 var dungeon = map.Dungeon;
                 if (dungeon == null || dungeon.Rooms == null || dungeon.Rooms.Count == 0) return;
 
-                // On veut UNIQUEMENT la dernière room (boss) — sinon on log
-                // chaque fight intermédiaire d'un donjon, trop bruyant.
+                // Filtrer la dernière room (boss) seulement, sinon on logue chaque
+                // fight intermédiaire d'un donjon.
                 var lastRoom = dungeon.Rooms[dungeon.Rooms.Count - 1];
                 if (lastRoom == null || lastRoom.MapId != map.Id) return;
 
-                // Dédup : un fight génère N appels (un par fighter perso). On
-                // utilise FightId comme clé d'unicité côté DB.
                 long fightId = fighter.Fight.Id;
 
-                // Liste des persos gagnants (fighter de la même Team, exclude
-                // monsters/summons).
                 var winners = fighter.Team.GetFighters<CharacterFighter>(false)
                     .Where(f => f != null && f.Character != null)
                     .Select(f => f.Character)
@@ -137,8 +114,6 @@ CREATE TABLE IF NOT EXISTS oneair_activity (
             catch (Exception e) { Logger.Write("[OneAir/Activity] OnFightEnding: " + e.Message, Channels.Warning); }
         }
 
-        // ---- DB inserts (async, non-bloquants) -----------------------------
-
         private static void Push(string kind, long[] charIds, string[] names, string title, string detail, string payload)
         {
             string idsCsv = string.Join(",", charIds);
@@ -149,7 +124,7 @@ CREATE TABLE IF NOT EXISTS oneair_activity (
                 {
                     using var c = OpenConn();
                     using var cmd = c.CreateCommand();
-                    cmd.CommandText = "INSERT INTO oneair_activity (Kind, CharacterIds, Names, Title, Detail, PayloadJson) " +
+                    cmd.CommandText = "INSERT INTO activity (Kind, CharacterIds, Names, Title, Detail, PayloadJson) " +
                                       "VALUES (@k, @cids, @n, @t, @d, @p)";
                     cmd.Parameters.AddWithValue("@k", Trunc(kind, 32));
                     cmd.Parameters.AddWithValue("@cids", Trunc(idsCsv, 255));
@@ -163,9 +138,8 @@ CREATE TABLE IF NOT EXISTS oneair_activity (
             });
         }
 
-        // PushOnce — guarantit qu'on n'insère qu'un seul event pour une clé
-        // de dédup donnée (ex: fight:12345 pour les donjons). Utilise une
-        // table de dédup en mémoire pour ne pas spammer la DB.
+        // Dédup en mémoire (intra-session) : utile pour fight:NNN où le hook
+        // est appelé une fois par fighter dans la même fight.
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> _dedup =
             new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
 
@@ -173,13 +147,9 @@ CREATE TABLE IF NOT EXISTS oneair_activity (
         {
             string fullKey = kind + "|" + dedupeKey;
             if (!_dedup.TryAdd(fullKey, 1)) return;
-            // GC périodique : dès qu'on dépasse 4096 entrées, on reset (les
-            // events de dédup ont une portée intra-session de toute façon).
             if (_dedup.Count > 4096) _dedup.Clear();
             Push(kind, charIds, names, title, detail, payload);
         }
-
-        // ---- Helpers -------------------------------------------------------
 
         private static MySqlConnection OpenConn()
         {

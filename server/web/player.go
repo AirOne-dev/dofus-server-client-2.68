@@ -1,7 +1,3 @@
-// Player-side authentication and APIs for the public landing page.
-// Réutilise la table accounts (mots de passe en clair, comme côté admin).
-// Cookie distinct de l'admin (oneair_player) et signature préfixée pour
-// éviter qu'un cookie de l'un soit accepté par l'autre.
 package main
 
 import (
@@ -83,7 +79,6 @@ func clearPlayerCookie(w http.ResponseWriter) {
 	})
 }
 
-// POST /api/public/login — body { username, password }
 func apiPublicLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "method", 405)
@@ -109,6 +104,8 @@ func apiPublicLogin(w http.ResponseWriter, r *http.Request) {
 		FROM `+cfg.AuthDB+`.accounts WHERE Username = ?`, req.Username).
 		Scan(&id, &pw, &nick, &banned)
 	if err == sql.ErrNoRows {
+		// Sleep arbitraire pour aplatir la latence "user existe vs pas"
+		// (mitigation timing attack sur l'énumération de comptes).
 		time.Sleep(700 * time.Millisecond)
 		http.Error(w, "identifiants invalides", 401)
 		return
@@ -130,13 +127,11 @@ func apiPublicLogin(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"ok": true, "username": req.Username, "nickname": nick})
 }
 
-// POST /api/public/logout
 func apiPublicLogout(w http.ResponseWriter, r *http.Request) {
 	clearPlayerCookie(w)
 	writeJSON(w, map[string]string{"ok": "1"})
 }
 
-// GET /api/public/me — { loggedIn, username, nickname, characters[] }
 func apiPublicMe(w http.ResponseWriter, r *http.Request) {
 	s := currentPlayer(r)
 	if s == nil {
@@ -190,7 +185,7 @@ func loadPlayerCharacters(accountID int) []publicCharacter {
 	defer rows.Close()
 
 	online := map[int64]int{}
-	if r2, err := db.Query("SELECT CharacterId, COALESCE(Level,0) FROM " + cfg.WorldDB + ".oneair_online_clients"); err == nil {
+	if r2, err := db.Query("SELECT CharacterId, COALESCE(Level,0) FROM " + cfg.WorldDB + ".online_clients"); err == nil {
 		defer r2.Close()
 		for r2.Next() {
 			var id int64
@@ -231,8 +226,8 @@ func breedNameByID(id int) string {
 	return "Inconnu"
 }
 
-// Table cumulative XP des niveaux 1..200 (Dofus 2.x). Approximative au-delà
-// du 100 mais cohérente avec ce qui est utilisé en jeu pour afficher un niveau.
+// xpByLevel — XP cumulée requise pour atteindre un niveau (Dofus 2.x).
+// Approximative au-delà du 100 mais cohérente avec l'affichage en jeu.
 var xpByLevel = [...]int64{
 	0,
 	0, 110, 330, 660, 1100, 1683, 2447, 3431, 4683, 6256,
@@ -270,7 +265,6 @@ func levelFromXP(xp int64) int {
 	return lo
 }
 
-// xpProgress retourne (xpDansNiveau, xpRequisNiveauSuivant, ratio[0..1]).
 func xpProgress(xp int64, lvl int) (int64, int64, float64) {
 	if lvl >= len(xpByLevel)-1 {
 		return 0, 0, 1
@@ -288,7 +282,6 @@ func xpProgress(xp int64, lvl int) (int64, int64, float64) {
 	return delta, span, float64(delta) / float64(span)
 }
 
-// GET /api/public/character?id=N — détails d'un personnage du joueur connecté.
 func apiPublicCharacter(w http.ResponseWriter, r *http.Request) {
 	s := currentPlayer(r)
 	if s == nil {
@@ -321,7 +314,7 @@ func apiPublicCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 	var lvl int
 	online := false
-	if err := db.QueryRow("SELECT COALESCE(Level,0) FROM "+cfg.WorldDB+".oneair_online_clients WHERE CharacterId = ?", cid).Scan(&lvl); err == nil && lvl > 0 {
+	if err := db.QueryRow("SELECT COALESCE(Level,0) FROM "+cfg.WorldDB+".online_clients WHERE CharacterId = ?", cid).Scan(&lvl); err == nil && lvl > 0 {
 		online = true
 	} else {
 		lvl = levelFromXP(experience)

@@ -13,7 +13,6 @@
         TextOptions.TextRenderingMode="ClearType">
 
     <Window.Resources>
-        <!-- ===================== Style: bouton ghost (footer) ===================== -->
         <Style x:Key="GhostButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{StaticResource TextDimBrush}"/>
@@ -41,7 +40,6 @@
             </Setter>
         </Style>
 
-        <!-- ===================== Style: bouton fermeture titlebar ===================== -->
         <Style x:Key="CloseButton" TargetType="Button" BasedOn="{StaticResource GhostButton}">
             <Setter Property="Width" Value="38"/>
             <Setter Property="Height" Value="28"/>
@@ -64,7 +62,6 @@
             </Setter>
         </Style>
 
-        <!-- ===================== Style: champ texte stylé (équivalent IconTextField) ===================== -->
         <Style x:Key="GoldTextBox" TargetType="TextBox">
             <Setter Property="Background" Value="{StaticResource InputBgBrush}"/>
             <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
@@ -141,7 +138,6 @@
             </Setter>
         </Style>
 
-        <!-- ===================== Style: bouton JOUER (gold) ===================== -->
         <Style x:Key="GoldPlayButton" TargetType="Button">
             <Setter Property="Background" Value="{StaticResource GoldBrush}"/>
             <Setter Property="Foreground" Value="{StaticResource DarkOnGoldBrush}"/>
@@ -177,7 +173,6 @@
             </Setter>
         </Style>
 
-        <!-- ===================== Style: bouton outline (Cancel/Save dans Advanced) ===================== -->
         <Style x:Key="GoldOutlineButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{StaticResource TextDimBrush}"/>
@@ -208,7 +203,6 @@
             </Setter>
         </Style>
 
-        <!-- ===================== Toggle VOIR/CACHER mot de passe ===================== -->
         <Style x:Key="PasswordToggleButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{StaticResource TextSoftBrush}"/>
@@ -236,7 +230,6 @@
     </Window.Resources>
 
     <Grid>
-        <!-- =============== Background : portail flouté + dim =============== -->
         <Image x:Name="BgImage"
                Source="Assets/portal-bg.jpg"
                Stretch="UniformToFill"
@@ -247,7 +240,6 @@
         </Image>
         <Rectangle Fill="#8c0a0703"/>
 
-        <!-- =============== Title bar custom (drag + close) =============== -->
         <Grid VerticalAlignment="Top" Height="28" Background="Transparent"
               MouseLeftButtonDown="TitleBar_MouseDown">
             <Grid.ColumnDefinitions>
@@ -259,13 +251,10 @@
             <Button Grid.Column="1" Style="{StaticResource CloseButton}" Content="✕" Click="Close_Click"/>
         </Grid>
 
-        <!-- =============== Carte centrée =============== -->
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="360">
-            <!-- Logo -->
             <Image Source="Assets/logo.png" Width="200" Height="100"
                    Stretch="Uniform" Margin="0,0,0,4"/>
 
-            <!-- Tagline -->
             <TextBlock Text="ÉDITION DU VOYAGEUR"
                        Foreground="{StaticResource TextDimBrush}"
                        FontSize="9" FontWeight="Medium"
@@ -279,11 +268,9 @@
                 </TextBlock.LayoutTransform>
             </TextBlock>
 
-            <!-- COMPTE -->
             <TextBlock Text="COMPTE" Foreground="{StaticResource TextDimBrush}"
                        FontSize="10" FontWeight="Medium" Margin="0,0,0,4"/>
 
-            <!-- Account selector custom -->
             <Border x:Name="AccountSelector" Height="38"
                     Background="{StaticResource InputBgBrush}"
                     BorderBrush="{StaticResource InputBorderBrush}"
@@ -320,7 +307,6 @@
                 </Grid>
             </Border>
 
-            <!-- Popup dropdown comptes -->
             <Popup x:Name="AccountPopup" PlacementTarget="{Binding ElementName=AccountSelector}"
                    Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
                 <Border Background="{StaticResource Bg2Brush}"
@@ -331,7 +317,6 @@
                 </Border>
             </Popup>
 
-            <!-- Container login/password (cachable quand un compte est sélectionné) -->
             <StackPanel x:Name="InputsContainer" Margin="0,16,0,0">
                 <TextBlock Text="IDENTIFIANT" Foreground="{StaticResource TextDimBrush}"
                            FontSize="10" FontWeight="Medium" Margin="0,0,0,4"/>
@@ -383,7 +368,6 @@
                 </CheckBox>
             </StackPanel>
 
-            <!-- Play -->
             <Button x:Name="PlayButton" Style="{StaticResource GoldPlayButton}"
                     Margin="0,16,0,0" Click="PlayButton_Click">
                 <StackPanel Orientation="Horizontal">
@@ -400,10 +384,8 @@
                 </StackPanel>
             </Button>
 
-            <!-- Separator -->
             <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,12,0,8"/>
 
-            <!-- Footer (Options avancées + status) -->
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>

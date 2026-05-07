@@ -9,22 +9,11 @@ import (
 	"time"
 )
 
-// /api/unhandled — captures émises par OneAirUnhandledLogger côté world.
-//
-// GET    /api/unhandled?category=&characterId=&limit=&since=
-//        Liste les events (les plus récents en premier).
-// GET    /api/unhandled?format=md&...
-//        Renvoie un text/markdown formaté pour copier-coller à Claude.
-// DELETE /api/unhandled?category=&characterId=&id=
-//        Efface tout / une catégorie / un personnage / un id précis.
-// GET    /api/unhandled/categories
-//        Renvoie la liste des catégories distinctes (avec compte).
-//
-// La table est créée par le world (OneAirUnhandledLogger.EnsureSchema). Le
-// CREATE IF NOT EXISTS local est juste un filet de sécurité au cas où l'admin
-// boote avant le world.
+// ensureUnhandledSchema : la table est normalement créée par le world
+// (OneAirUnhandledLogger.EnsureSchema). Ce CREATE IF NOT EXISTS est un
+// filet pour le cas où le web boote avant le world.
 func ensureUnhandledSchema() error {
-	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS ` + cfg.WorldDB + `.oneair_unhandled_log (
+	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS ` + cfg.WorldDB + `.unhandled_log (
 		Id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
 		AtUtc DATETIME NOT NULL,
 		CharacterId BIGINT NULL,
@@ -97,7 +86,7 @@ func apiUnhandledList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sqlQ := `SELECT Id, AtUtc, CharacterId, COALESCE(CharacterName,''), Category, Detail, COALESCE(PayloadJson,'')
-		FROM ` + cfg.WorldDB + `.oneair_unhandled_log
+		FROM ` + cfg.WorldDB + `.unhandled_log
 		WHERE ` + strings.Join(where, " AND ") + `
 		ORDER BY Id DESC LIMIT ?`
 	args = append(args, limit)
@@ -129,13 +118,12 @@ func apiUnhandledList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Compte par catégorie pour le badge UI
 	cats := map[string]int{}
-	totalRow := db.QueryRow(`SELECT COUNT(*) FROM ` + cfg.WorldDB + `.oneair_unhandled_log`)
+	totalRow := db.QueryRow(`SELECT COUNT(*) FROM ` + cfg.WorldDB + `.unhandled_log`)
 	var total int
 	_ = totalRow.Scan(&total)
 
-	if catRows, err := db.Query(`SELECT Category, COUNT(*) FROM ` + cfg.WorldDB + `.oneair_unhandled_log GROUP BY Category`); err == nil {
+	if catRows, err := db.Query(`SELECT Category, COUNT(*) FROM ` + cfg.WorldDB + `.unhandled_log GROUP BY Category`); err == nil {
 		defer catRows.Close()
 		for catRows.Next() {
 			var c string
@@ -177,7 +165,7 @@ func apiUnhandledDelete(w http.ResponseWriter, r *http.Request) {
 		where = []string{"1=1"}
 		args = nil
 	}
-	res, err := db.Exec(`DELETE FROM `+cfg.WorldDB+`.oneair_unhandled_log WHERE `+strings.Join(where, " AND "), args...)
+	res, err := db.Exec(`DELETE FROM `+cfg.WorldDB+`.unhandled_log WHERE `+strings.Join(where, " AND "), args...)
 	if err != nil {
 		httpErr(w, err)
 		return
@@ -186,9 +174,8 @@ func apiUnhandledDelete(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"deleted": n})
 }
 
-// formatUnhandledMarkdown — produit un bloc Markdown copy-paste pour Claude.
-// Format pensé pour être self-contained : Claude n'a pas accès à la DB ni au
-// reste du contexte donc on inclut TOUT le payload de chaque event.
+// formatUnhandledMarkdown produit un bloc Markdown self-contained pour
+// copier-coller à Claude (chaque event inclut son payload complet).
 func formatUnhandledMarkdown(events []unhandledEntry, filterCategory, filterCharacterId string) string {
 	var sb strings.Builder
 	sb.WriteString("# OneAir — actions non gérées capturées\n\n")
@@ -199,7 +186,7 @@ func formatUnhandledMarkdown(events []unhandledEntry, filterCategory, filterChar
 		sb.WriteString("Personnage filtré : `" + filterCharacterId + "`\n")
 	}
 	sb.WriteString(fmt.Sprintf("Total : %d events\n\n", len(events)))
-	sb.WriteString("Tu trouveras ci-dessous les events captés par `OneAirUnhandledLogger.cs` (table `oneair_unhandled_log`). " +
+	sb.WriteString("Tu trouveras ci-dessous les events captés par `OneAirUnhandledLogger.cs` (table `unhandled_log`). " +
 		"Chaque event correspond à une action que le client a tenté d'exécuter mais que le serveur Giny.NETCore (branche 2.68) " +
 		"ne sait pas gérer aujourd'hui — soit faute de handler, soit faute d'effet implémenté.\n\n")
 	sb.WriteString("**Ce que je voudrais que tu fasses :** identifie les patterns dans cette liste et propose les fixes côté serveur " +
@@ -207,7 +194,6 @@ func formatUnhandledMarkdown(events []unhandledEntry, filterCategory, filterChar
 		"hook custom OneAir). Pour chaque fix, donne le path du fichier à créer/modifier, le code complet, et le sed Dockerfile " +
 		"associé si nécessaire (cf. CLAUDE.md `Workflow patch serveur`).\n\n")
 
-	// Group by category
 	grouped := map[string][]unhandledEntry{}
 	order := []string{}
 	for _, e := range events {
@@ -219,7 +205,6 @@ func formatUnhandledMarkdown(events []unhandledEntry, filterCategory, filterChar
 	for _, cat := range order {
 		evs := grouped[cat]
 		sb.WriteString(fmt.Sprintf("## Catégorie `%s` (%d events)\n\n", cat, len(evs)))
-		// Dédupe les details identiques pour ne pas spammer
 		seenDetails := map[string]int{}
 		var first []unhandledEntry
 		for _, e := range evs {
@@ -263,4 +248,3 @@ func formatUnhandledMarkdown(events []unhandledEntry, filterCategory, filterChar
 
 	return sb.String()
 }
-

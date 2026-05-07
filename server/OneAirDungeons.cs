@@ -1,17 +1,3 @@
-// OneAir — hub donjons.
-//
-// Commande .dj : téléporte le joueur sur la map hub (224920584, partagée
-// avec .shop) où 4 NPCs sont spawnés au boot, un par plage de niveau :
-//   - Niveau 1-50    (template 23 - Charlotte)
-//   - Niveau 50-100  (template 37 - Amine)
-//   - Niveau 100-150 (template 38 - Rish Claymore)
-//   - Niveau 150-200 (template 40 - Filgar Feel)
-//
-// Au clic sur l'un des NPCs (intercepté par TryHandleNpcAction, branché dans
-// le sed Patch 18 du Dockerfile aux côtés du dispatcher havre-sac), le
-// serveur envoie en chat la liste des donjons de cette plage avec leur ID
-// et un suffixe ".djgo <id>" que le joueur peut taper pour se téléporter
-// sur l'entrée du donjon.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,15 +17,12 @@ namespace Giny.World.Managers.Chat
 {
     public static class OneAirDungeons
     {
-        public const long HubMapId = 224921608; // Plan Astral - Imaginarium (sub 1032), distinct du .shop (224920584)
+        public const long HubMapId = 224921608; // Plan Astral - Imaginarium (sub 1032)
 
-        // Template du Gardien fallback spawné sur les maps d'entrée de donjons
-        // pour lesquels on n'a pas trouvé de NPC matching par nom.
+        // Spawné comme fallback sur les maps d'entrée pour lesquelles
+        // ResolveGuardianTemplateId ne trouve pas de match par nom.
         public const short GardienTemplateId = 78; // Gardien du Kanojedo
 
-        // Templates de Maîtres pour les 4 plages — distincts visuellement et
-        // thématiques. Cellules alignées en ligne sur la map hub
-        // (224921608) — confirmées walkables par l'admin.
         // (templateId, minLvl, maxLvl, label, defaultCell)
         public static readonly Tuple<short, short, short, string, short>[] NpcRanges = new[]
         {
@@ -49,13 +32,8 @@ namespace Giny.World.Managers.Chat
             Tuple.Create((short)2655, (short)151, (short)200, "Donjons niveau 151-200",(short)331),  // Maître des zaaps
         };
 
-        // Templates utilisés historiquement comme hub NPCs — on les nettoie
-        // aux boots pour permettre le swap vers les nouveaux templates.
+        // Anciens templates hub à nettoyer au boot (pour permettre le swap).
         private static readonly short[] LegacyHubTemplates = { 23, 37, 38, 40 };
-
-        // MessageId réutilisé pour la question d'ouverture du dialog. Existe
-        // dans NpcMessages.d2o (utilisé par d'autres NPCs vanilla).
-        private const int HubDialogMessageId = 470;
 
         private static volatile bool _spawned;
         private static readonly object _lock = new object();
@@ -68,8 +46,6 @@ namespace Giny.World.Managers.Chat
                 if (_spawned) return;
                 try
                 {
-                    // Cleanup : supprime les anciens NPCs donjons placés sur
-                    // d'autres maps (rebases, changement de HubMapId, etc.)
                     CleanupStrayNpcs();
 
                     var map = MapRecord.GetMap(HubMapId);
@@ -86,7 +62,6 @@ namespace Giny.World.Managers.Chat
                         var existingNpc = map.Instance.GetEntities<Npc>().FirstOrDefault(n => n.Template != null && n.Template.Id == tpl);
                         if (existingNpc != null)
                         {
-                            // Relocalise/réoriente si cellule ou direction divergent.
                             bool needsRelocate = (existingNpc.SpawnRecord.CellId != defCell || existingNpc.SpawnRecord.Direction != DirectionsEnum.DIRECTION_SOUTH_WEST)
                                                  && map.IsCellWalkable(defCell);
                             if (needsRelocate)
@@ -119,11 +94,8 @@ namespace Giny.World.Managers.Chat
             }
         }
 
-        /// <summary>
-        /// Supprime via SQL :
-        ///  - les NpcSpawnRecord du hub des templates LEGACY (23/37/38/40) à n'importe quel emplacement
-        ///  - les NpcSpawnRecord des templates COURANTS sur des maps != hub
-        /// </summary>
+        // Supprime les spawns legacy (templates 23/37/38/40, n'importe quelle map)
+        // et les spawns des templates courants placés ailleurs que le hub.
         private static void CleanupStrayNpcs()
         {
             try
@@ -147,12 +119,9 @@ namespace Giny.World.Managers.Chat
                 if (character?.Map == null) return false;
                 long mapId = (long)npcMapId;
 
-                // 1) Hub donjons : panneau custom (les dialogs natifs de Dofus
-                //    sont per-template via d2o.dialogMessages, donc inutilisables
-                //    pour ce qu'on veut faire — les replyIds ne s'affichent que
-                //    pour des templates spécifiques. On envoie un payload
-                //    __ONEAIR_DJ__ que le SWF intercepte et qui ouvre notre
-                //    panneau cliquable (cohérent avec .ui/.itemui/.online).
+                // Hub donjons : panel SWF custom. Les dialogs Dofus natifs sont
+                // per-template via d2o.dialogMessages, inutilisables ici car les
+                // replyIds ne s'affichent que pour des templates spécifiques.
                 if (mapId == HubMapId && character.Map.Id == HubMapId)
                 {
                     var npc = character.Map.Instance.GetEntity<Npc>((long)npcId);
@@ -169,10 +138,8 @@ namespace Giny.World.Managers.Chat
                     }
                 }
 
-                // 2) Gardien d'entrée d'un donjon : tp dans la 1ère salle.
-                //    On override vanilla pour TOUS les NPCs sur une map d'entrée
-                //    SAUF si le NPC a déjà un npc_replies de Teleport vers la
-                //    1ère salle (auquel cas vanilla gère un vrai dialog).
+                // Gardien d'entrée : tp 1ère salle pour TOUS les NPCs sauf si un
+                // npc_replies Teleport vers cette salle existe déjà (vanilla OK).
                 var dungeon = DungeonRecord.GetDungeonRecords().FirstOrDefault(d => d.EntranceMapId == mapId);
                 if (dungeon != null && character.Map.Id == mapId)
                 {
@@ -214,13 +181,8 @@ namespace Giny.World.Managers.Chat
             return false;
         }
 
-        /// <summary>
-        /// Nettoie les npc_actions/npc_replies qu'on aurait pu insérer dans
-        /// une tentative précédente d'utiliser les dialogs natifs. Notre flow
-        /// actuel utilise un panel SWF custom (TryHandleNpcAction → payload
-        /// __ONEAIR_DJ__ intercepté côté client). Les rows DB pour les hub
-        /// NPCs sont donc inutiles et empêcheraient l'interception.
-        /// </summary>
+        // Supprime npc_replies/npc_actions des hub NPCs : leur présence ferait
+        // déclencher le dialog vanilla et bloquerait l'interception payload.
         public static void CleanupHubDialogs()
         {
             try
@@ -243,11 +205,8 @@ namespace Giny.World.Managers.Chat
             catch (Exception e) { Logger.Write("[OneAir] CleanupHubDialogs failed: " + e.Message, Channels.Warning); }
         }
 
-        /// <summary>
-        /// Pour chaque donjon ayant une EntranceMapId valide mais SANS aucun
-        /// NPC déjà spawné, ajoute un Gardien (template 78). Idempotent :
-        /// les boots suivants détectent le Gardien existant et skippent.
-        /// </summary>
+        // Idempotent : ajoute un Gardien sur les maps d'entrée qui n'ont aucun
+        // NPC, skip celles qui en ont déjà.
         public static void EnsureDungeonGardiens()
         {
             try
@@ -259,7 +218,6 @@ namespace Giny.World.Managers.Chat
                     var map = MapRecord.GetMap(dungeon.EntranceMapId);
                     if (map == null) continue;
 
-                    // Détermine le template idéal pour ce donjon (matching nom).
                     short desired = ResolveGuardianTemplateId(dungeon.Name);
                     bool isFallback = desired == GardienTemplateId;
 
@@ -270,8 +228,7 @@ namespace Giny.World.Managers.Chat
                         continue;
                     }
 
-                    // Si la map a un NPC vanilla DIFFERENT de notre fallback,
-                    // on respecte (probablement le bon gardien officiel).
+                    // NPC vanilla autre que notre fallback : c'est probablement le bon gardien officiel.
                     bool hasVanilla = existing.Any(n => n.Template != null && n.Template.Id != GardienTemplateId);
                     if (hasVanilla)
                     {
@@ -279,7 +236,6 @@ namespace Giny.World.Managers.Chat
                         continue;
                     }
 
-                    // Sinon, supprime l'ancien fallback (template 78) si présent
                     var stale = existing.FirstOrDefault(n => n.Template != null && n.Template.Id == GardienTemplateId);
                     if (stale != null)
                     {
@@ -301,13 +257,8 @@ namespace Giny.World.Managers.Chat
             catch (Exception e) { Logger.Write("[OneAir] EnsureDungeonGardiens failed: " + e.Message, Channels.Warning); }
         }
 
-        /// <summary>
-        /// Cherche un templateId NPC matchant le nom du donjon. Ex :
-        /// "Crypte de Kardorim" → cherche "Kardorim" → trouve l'NPC id=2936.
-        /// Strip d'abord les préfixes type "Donjon de(s)", "Crypte de", etc.
-        /// puis essaie le nom complet, puis chaque mot >3 chars.
-        /// Fallback sur GardienTemplateId si rien ne matche.
-        /// </summary>
+        // "Crypte de Kardorim" → strip préfixe → cherche "Kardorim" en LIKE,
+        // puis chaque mot >3 chars. Fallback GardienTemplateId.
         public static short ResolveGuardianTemplateId(string dungeonName)
         {
             if (string.IsNullOrEmpty(dungeonName)) return GardienTemplateId;
@@ -378,7 +329,6 @@ namespace Giny.World.Managers.Chat
                 "Croquanterie",
                 "Fabrique de ",
                 "Potager d'",
-                "Ch", // Échappe Château etc déjà couvert
             };
             foreach (var p in prefixes)
             {
@@ -388,21 +338,19 @@ namespace Giny.World.Managers.Chat
                     break;
                 }
             }
-            // Strip un suffixe "Royal" / "Royale" qui reste générique
             if (stripped.EndsWith(" Royal", StringComparison.OrdinalIgnoreCase) || stripped.EndsWith(" Royale", StringComparison.OrdinalIgnoreCase))
             {
                 stripped = stripped.Substring(0, stripped.LastIndexOf(' ')).Trim();
             }
 
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            // Tente le nom complet réduit (ex "Wa Wabbit", "Bouftou Royal")
             if (stripped.Length > 3)
             {
                 seen.Add(stripped);
                 yield return stripped;
             }
             var words = stripped.Split(new[] { ' ', '\'', '-', ',' }, StringSplitOptions.RemoveEmptyEntries);
-            // Tente le dernier mot (souvent le plus distinctif: "Kardorim", "Bworks")
+            // Le dernier mot est souvent le plus distinctif ("Kardorim", "Bworks").
             for (int i = words.Length - 1; i >= 0; i--)
             {
                 var w = words[i];
@@ -413,13 +361,8 @@ namespace Giny.World.Managers.Chat
             }
         }
 
-        /// <summary>
-        /// Envoie au client un payload structuré que le SWF intercepte (marker
-        /// __ONEAIR_DJ__) pour ouvrir un panel cliquable. Format :
-        ///   __ONEAIR_DJ__<label>|<id>:<name>:<lvl>|<id>:<name>:<lvl>|...
-        /// Les `:` et `|` dans les noms de donjons sont remplacés pour ne pas
-        /// casser le parsing côté SWF.
-        /// </summary>
+        // Format intercepté par SWF : __ONEAIR_DJ__<label>|<id>:<name>:<lvl>|...
+        // `:` et `|` strippés des noms pour ne pas casser le parser SWF.
         public static void SendDungeonPanelPayload(Character character, short minLvl, short maxLvl, string label)
         {
             try

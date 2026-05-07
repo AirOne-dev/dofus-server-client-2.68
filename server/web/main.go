@@ -1,11 +1,3 @@
-// OneAir web — interface unifiée du serveur OneAir : landing publique,
-// articles, login joueur, panel admin, reverse-proxy dbgate.
-// (Anciennement nommé "admin" — renommé après l'ajout de la landing publique.)
-//
-// Authentification HMAC cookie + mots de passe via env. Lit/écrit
-// directement les bases giny_auth et giny_world. Mutations qui ont besoin
-// d'un effet "live" (broadcast, kick) écrivent dans une table
-// oneair_actions polled par le world (ajoutée à part).
 package main
 
 import (
@@ -49,7 +41,7 @@ var (
 type Config struct {
 	Listen        string
 	SessionKey    []byte
-	DSN           string // root user, can hit both DBs
+	DSN           string
 	AuthDB        string
 	WorldDB       string
 	AuthHost      string
@@ -57,27 +49,24 @@ type Config struct {
 	AuthPort      string
 	WorldPort     string
 	BackupDir     string
-	BackupTrigg   string // chemin d'un fichier-flag à toucher pour réveiller le backup
 	ItemsD2PDir   string
 	ItemsCacheDir string
 }
 
 func main() {
 	cfg = Config{
-		Listen:      envOr("WEB_LISTEN", ":3000"),
-		AuthDB:      envOr("MYSQL_AUTH_DB", "giny_auth"),
-		WorldDB:     envOr("MYSQL_WORLD_DB", "giny_world"),
-		AuthHost:    envOr("AUTH_HOST", "auth"),
-		WorldHost:   envOr("WORLD_HOST", "world"),
-		AuthPort:    envOr("AUTH_INTERNAL_PORT", "5555"),
-		WorldPort:   envOr("WORLD_INTERNAL_PORT", "5556"),
+		Listen:        envOr("WEB_LISTEN", ":3000"),
+		AuthDB:        envOr("MYSQL_AUTH_DB", "giny_auth"),
+		WorldDB:       envOr("MYSQL_WORLD_DB", "giny_world"),
+		AuthHost:      envOr("AUTH_HOST", "auth"),
+		WorldHost:     envOr("WORLD_HOST", "world"),
+		AuthPort:      envOr("AUTH_INTERNAL_PORT", "5555"),
+		WorldPort:     envOr("WORLD_INTERNAL_PORT", "5556"),
 		BackupDir:     envOr("BACKUP_DIR", "/backups"),
-		BackupTrigg:   envOr("BACKUP_TRIGGER_PATH", "/backups/.trigger"),
 		ItemsD2PDir:   envOr("ITEMS_D2P_DIR", "/app/OneAir.app/Contents/Resources/content/gfx/items"),
 		ItemsCacheDir: envOr("ITEMS_CACHE_DIR", "/items-cache"),
 	}
 
-	// Background : extrait les icônes d'items depuis les .d2p.
 	go extractItemAssets(cfg.ItemsD2PDir, cfg.ItemsCacheDir)
 
 	skHex := mustEnv("WEB_SESSION_KEY")
@@ -108,13 +97,10 @@ func main() {
 		"inc": func(i int) int { return i + 1 },
 	}).ParseFS(assets, "templates/*.html"))
 
-	// Création initiale du schéma articles (au moins la table) pour que la
-	// landing publique fonctionne dès le premier accès.
 	_ = ensureArticlesSchema()
 
 	mux := http.NewServeMux()
 
-	// ---- Public : landing + articles + login joueur + download ------------
 	mux.HandleFunc("/", handleLanding)
 	mux.HandleFunc("/article/", handleArticle)
 	mux.HandleFunc("/download/macos", handleDownloadMac)
@@ -128,9 +114,7 @@ func main() {
 	mux.HandleFunc("/api/public/articles/", handleArticleAPI)
 	mux.HandleFunc("/api/public/community", apiPublicCommunity)
 
-	// ---- Admin : dashboard / API (login se fait via /api/public/login) -----
-	// Les anciens /login et /logout admin sont supprimés ; on redirige les
-	// éventuels bookmarks pour ne pas casser un onglet ouvert.
+	// Anciens /login et /logout admin : redirige les bookmarks existants.
 	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/#compte", http.StatusSeeOther)
 	})
@@ -161,16 +145,12 @@ func main() {
 	mux.Handle("/api/players/online", auth(http.HandlerFunc(apiPlayersOnline)))
 	mux.Handle("/api/events", auth(http.HandlerFunc(apiEvents)))
 	mux.Handle("/api/unhandled", auth(http.HandlerFunc(apiUnhandled)))
-	// Assets visuels publics : la landing référence /classes/bg_X.jpg,
-	// /breeds/X.png et /heads/X.png. Pas de données sensibles, on les
-	// expose sans auth (sinon les images cassent en non-loggé).
+	// Assets visuels publics référencés par la landing en non-loggé.
 	mux.Handle("/classes/", http.StripPrefix("/classes/", classAssetHandler()))
 	mux.Handle("/spells/", http.StripPrefix("/spells/", spellAssetHandler()))
 	mux.Handle("/heads/", http.StripPrefix("/heads/", headAssetHandler()))
 	mux.Handle("/breeds/", http.StripPrefix("/breeds/", breedAssetHandler()))
-	mux.Handle("/worldmap/", auth(http.StripPrefix("/worldmap/", worldmapAssetHandler())))
 
-	// dbgate reverse-proxy (gated by admin auth)
 	if dbgateURL := envOr("DBGATE_URL", ""); dbgateURL != "" {
 		u, err := url.Parse(dbgateURL)
 		if err == nil {
@@ -192,8 +172,6 @@ func main() {
 	log.Fatal(http.ListenAndServe(cfg.Listen, mux))
 }
 
-// ---------- helpers env -----------------------------------------------------
-
 func envOr(k, d string) string {
 	if v := os.Getenv(k); v != "" {
 		return v
@@ -209,24 +187,14 @@ func mustEnv(k string) string {
 	return v
 }
 
-// ---------- auth (unifié — un seul cookie player) ---------------------------
-//
-// Plus de double login. Un seul cookie `oneair_player` (cf. player.go) est
-// utilisé partout :
-//   - landing (/, /api/public/*) : pas d'auth requise
-//   - admin (/admin, /api/<admin>) : auth requise + Role >= 5
-//
-// La fonction sign() reste exportée pour player.go (HMAC partagé).
-
 func sign(s string) string {
 	h := hmac.New(sha256.New, cfg.SessionKey)
 	h.Write([]byte(s))
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// authMiddleware : autorise uniquement les sessions player liées à un
-// compte de rôle >= 5. Sinon redirige vers la landing avec ancre #compte
-// (où se trouve le formulaire de login unique).
+// authMiddleware autorise uniquement les sessions player liées à un compte
+// Role >= 5 ; sinon redirige vers la landing #compte (ou 401/403 sur /api/).
 func authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s := currentPlayer(r)
@@ -256,8 +224,6 @@ func redirectLogin(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/#compte", http.StatusSeeOther)
 }
 
-// renderForbidden : page minimaliste pour les comptes connectés mais non-admin
-// qui tentent d'accéder à /admin. Renvoie 403 + lien retour.
 func renderForbidden(w http.ResponseWriter, username string) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusForbidden)
@@ -271,8 +237,6 @@ func renderForbidden(w http.ResponseWriter, username string) {
 </div></body></html>`, template.HTMLEscapeString(username))
 }
 
-// ---------- dashboard -------------------------------------------------------
-
 func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	user := ""
 	if s := currentPlayer(r); s != nil {
@@ -282,8 +246,6 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 		"User": user,
 	})
 }
-
-// ---------- API : status ----------------------------------------------------
 
 func tcpUp(host, port string) bool {
 	c, err := net.DialTimeout("tcp", host+":"+port, 800*time.Millisecond)
@@ -318,21 +280,19 @@ func apiStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = db.QueryRow("SELECT COUNT(*) FROM " + cfg.AuthDB + ".accounts").Scan(&out.AccountsN)
 	_ = db.QueryRow("SELECT COUNT(*) FROM " + cfg.WorldDB + ".characters").Scan(&out.CharsN)
-	_ = db.QueryRow("SELECT COUNT(*) FROM " + cfg.WorldDB + ".oneair_online_clients").Scan(&out.Online)
+	_ = db.QueryRow("SELECT COUNT(*) FROM " + cfg.WorldDB + ".online_clients").Scan(&out.Online)
 	writeJSON(w, out)
 }
 
-// ---------- API : accounts --------------------------------------------------
-
 type Account struct {
-	ID                  int    `json:"id"`
-	Username            string `json:"username"`
-	Password            string `json:"password,omitempty"`
-	Role                int    `json:"role"`
-	Banned              int    `json:"banned"`
-	Nickname            string `json:"nickname"`
-	LastSelectedServer  int    `json:"lastSelectedServer"`
-	CharactersSlots     int    `json:"characterSlots"`
+	ID                 int    `json:"id"`
+	Username           string `json:"username"`
+	Password           string `json:"password,omitempty"`
+	Role               int    `json:"role"`
+	Banned             int    `json:"banned"`
+	Nickname           string `json:"nickname"`
+	LastSelectedServer int    `json:"lastSelectedServer"`
+	CharactersSlots    int    `json:"characterSlots"`
 }
 
 var safeUserRe = regexp.MustCompile(`^[A-Za-z0-9_-]{2,32}$`)
@@ -437,20 +397,18 @@ func apiAccounts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ---------- API : characters ------------------------------------------------
-
 type Character struct {
-	ID         int64   `json:"id"`
-	Name       string  `json:"name"`
-	AccountID  int     `json:"accountId"`
-	Username   string  `json:"username"`
-	BreedID    int     `json:"breedId"`
-	Sex        string  `json:"sex"`
-	Experience int64   `json:"experience"`
-	Kamas      int64   `json:"kamas"`
-	MapID      int64   `json:"mapId"`
-	CellID     int     `json:"cellId"`
-	Online     bool    `json:"online"`
+	ID         int64  `json:"id"`
+	Name       string `json:"name"`
+	AccountID  int    `json:"accountId"`
+	Username   string `json:"username"`
+	BreedID    int    `json:"breedId"`
+	Sex        string `json:"sex"`
+	Experience int64  `json:"experience"`
+	Kamas      int64  `json:"kamas"`
+	MapID      int64  `json:"mapId"`
+	CellID     int    `json:"cellId"`
+	Online     bool   `json:"online"`
 }
 
 func apiCharacters(w http.ResponseWriter, r *http.Request) {
@@ -480,9 +438,8 @@ func apiCharacters(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, c)
 	}
-	// online flag (best effort)
 	online := map[int64]bool{}
-	if rows2, err := db.Query("SELECT CharacterId FROM " + cfg.WorldDB + ".oneair_online_clients"); err == nil {
+	if rows2, err := db.Query("SELECT CharacterId FROM " + cfg.WorldDB + ".online_clients"); err == nil {
 		defer rows2.Close()
 		for rows2.Next() {
 			var id int64
@@ -498,8 +455,6 @@ func apiCharacters(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, out)
 }
-
-// ---------- API : inventory -------------------------------------------------
 
 type Item struct {
 	UID          int    `json:"uid"`
@@ -565,15 +520,27 @@ func apiInventory(w http.ResponseWriter, r *http.Request) {
 			if req.Quantity <= 0 {
 				req.Quantity = 1
 			}
-			// UID auto-incrémenté manuellement (pas d'auto_increment)
+			tx, err := db.Begin()
+			if err != nil {
+				httpErr(w, err)
+				return
+			}
 			var maxUID int
-			_ = db.QueryRow("SELECT COALESCE(MAX(UId),0) FROM " + cfg.WorldDB + ".character_items").Scan(&maxUID)
+			if err := tx.QueryRow("SELECT COALESCE(MAX(UId),0) FROM " + cfg.WorldDB + ".character_items FOR UPDATE").Scan(&maxUID); err != nil {
+				_ = tx.Rollback()
+				httpErr(w, err)
+				return
+			}
 			newUID := maxUID + 1
-			_, err := db.Exec(`INSERT INTO `+cfg.WorldDB+`.character_items
+			if _, err := tx.Exec(`INSERT INTO `+cfg.WorldDB+`.character_items
 				(UId, GId, Position, Quantity, Effects, AppearanceId, Look, CharacterId)
 				VALUES (?, ?, 63, ?, '', 0, '', ?)`,
-				newUID, req.GID, req.Quantity, cid)
-			if err != nil {
+				newUID, req.GID, req.Quantity, cid); err != nil {
+				_ = tx.Rollback()
+				httpErr(w, err)
+				return
+			}
+			if err := tx.Commit(); err != nil {
 				httpErr(w, err)
 				return
 			}
@@ -607,8 +574,6 @@ func apiInventory(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method", 405)
 	}
 }
-
-// ---------- API : backups ---------------------------------------------------
 
 type Backup struct {
 	Name string    `json:"name"`
@@ -682,29 +647,32 @@ func apiBackups(w http.ResponseWriter, r *http.Request) {
 }
 
 func triggerBackupNow() error {
-	// Le service backup boucle un sleep; on dump nous-mêmes en parallèle.
+	// Le service backup boucle sur un sleep ; on dump en parallèle pour ne pas
+	// attendre la prochaine itération.
 	ts := time.Now().UTC().Format("20060102T150405Z")
 	out := filepath.Join(cfg.BackupDir, "giny_"+ts+"_manual.sql.gz")
 	return runBackupTo(out)
 }
 
 func runBackupTo(out string) error {
-	pw := os.Getenv("MYSQL_ROOT_PASSWORD")
 	host := envOr("MYSQL_HOST", "mysql")
+	// MYSQL_PWD : MySQL lit le password depuis l'env, pas depuis argv (sinon
+	// visible dans `ps aux`).
 	cmd := exec.Command("sh", "-c",
-		fmt.Sprintf(`mysqldump -h%s -uroot -p'%s' --single-transaction --quick --routines --triggers --databases %s %s | gzip -c > %s`,
-			host, escapeShell(pw), cfg.AuthDB, cfg.WorldDB, escapeShell(out)))
+		fmt.Sprintf(`mysqldump -h%s -uroot --single-transaction --quick --routines --triggers --databases %s %s | gzip -c > %s`,
+			host, cfg.AuthDB, cfg.WorldDB, escapeShell(out)))
+	cmd.Env = append(os.Environ(), "MYSQL_PWD="+os.Getenv("MYSQL_ROOT_PASSWORD"))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
 
 func restoreBackup(path string) error {
-	pw := os.Getenv("MYSQL_ROOT_PASSWORD")
 	host := envOr("MYSQL_HOST", "mysql")
 	cmd := exec.Command("sh", "-c",
-		fmt.Sprintf(`gunzip -c '%s' | mysql -h%s -uroot -p'%s' --default-character-set=utf8mb4`,
-			escapeShell(path), host, escapeShell(pw)))
+		fmt.Sprintf(`gunzip -c '%s' | mysql -h%s -uroot --default-character-set=utf8mb4`,
+			escapeShell(path), host))
+	cmd.Env = append(os.Environ(), "MYSQL_PWD="+os.Getenv("MYSQL_ROOT_PASSWORD"))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
@@ -712,10 +680,8 @@ func restoreBackup(path string) error {
 
 func escapeShell(s string) string { return strings.ReplaceAll(s, "'", `'"'"'`) }
 
-// ---------- API : broadcast / kick (via oneair_actions table) ---------------
-
 func ensureActionsTable() error {
-	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS ` + cfg.WorldDB + `.oneair_actions (
+	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS ` + cfg.WorldDB + `.actions (
 		Id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
 		Type VARCHAR(48) NOT NULL,
 		Payload TEXT,
@@ -729,7 +695,7 @@ func ensureActionsTable() error {
 
 func queueAction(typ, payload string) {
 	_ = ensureActionsTable()
-	_, _ = db.Exec(`INSERT INTO `+cfg.WorldDB+`.oneair_actions (Type, Payload) VALUES (?, ?)`, typ, payload)
+	_, _ = db.Exec(`INSERT INTO `+cfg.WorldDB+`.actions (Type, Payload) VALUES (?, ?)`, typ, payload)
 }
 
 func apiBroadcast(w http.ResponseWriter, r *http.Request) {
@@ -769,47 +735,47 @@ func apiKick(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]string{"ok": "1"})
 }
 
-// /api/action — endpoint générique pour file une action arbitrair sur le world.
-// Whitelist des types acceptés pour éviter les abus.
+// allowedActionTypes : whitelist pour /api/action — toute action en dehors
+// est rejetée pour éviter qu'une mauvaise valeur n'ouvre un vecteur d'abus.
 var allowedActionTypes = map[string]bool{
-	"broadcast":         true,
-	"kick":              true,
-	"reload_inventory":  true,
-	"send_pm":           true,
-	"teleport":          true,
-	"set_kamas":         true,
-	"give_kamas":        true,
-	"set_level":         true,
-	"give_xp":           true,
-	"give_item":         true,
-	"heal":              true,
-	"save_now":          true,
-	"reload_items":      true,
-	"shutdown":          true,
-	"dump_inventory":    true,
-	"item_set_qty":      true,
-	"item_set_pos":      true,
-	"item_delete":       true,
-	"item_eff_add":      true,
-	"item_eff_set":      true,
-	"item_eff_del":      true,
-	"learn_spell":       true,
-	"forget_spell":      true,
-	"set_spell_level":   true,
-	"reset_spells":      true,
-	"dump_spells":       true,
-	"set_look":          true,
-	"set_breed":         true,
-	"set_sex":           true,
-	"set_head":          true,
-	"delete_character":  true,
-	"reset_character":   true,
-	"bulk_give_kamas":   true,
-	"bulk_give_xp":      true,
-	"bulk_give_item":    true,
-	"bulk_heal":         true,
-	"event_set":         true,
-	"event_clear":       true,
+	"broadcast":        true,
+	"kick":             true,
+	"reload_inventory": true,
+	"send_pm":          true,
+	"teleport":         true,
+	"set_kamas":        true,
+	"give_kamas":       true,
+	"set_level":        true,
+	"give_xp":          true,
+	"give_item":        true,
+	"heal":             true,
+	"save_now":         true,
+	"reload_items":     true,
+	"shutdown":         true,
+	"dump_inventory":   true,
+	"item_set_qty":     true,
+	"item_set_pos":     true,
+	"item_delete":      true,
+	"item_eff_add":     true,
+	"item_eff_set":     true,
+	"item_eff_del":     true,
+	"learn_spell":      true,
+	"forget_spell":     true,
+	"set_spell_level":  true,
+	"reset_spells":     true,
+	"dump_spells":      true,
+	"set_look":         true,
+	"set_breed":        true,
+	"set_sex":          true,
+	"set_head":         true,
+	"delete_character": true,
+	"reset_character":  true,
+	"bulk_give_kamas":  true,
+	"bulk_give_xp":     true,
+	"bulk_give_item":   true,
+	"bulk_heal":        true,
+	"event_set":        true,
+	"event_clear":      true,
 }
 
 func apiAction(w http.ResponseWriter, r *http.Request) {
@@ -833,8 +799,6 @@ func apiAction(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]string{"ok": "1"})
 }
 
-// /api/inventory/parsed?characterId=N — lit l'inventaire parsé écrit par
-// le poller (table oneair_inventory_dumps). Renvoie items + effets décodés.
 func apiInventoryParsed(w http.ResponseWriter, r *http.Request) {
 	cidStr := r.URL.Query().Get("characterId")
 	cid, err := strconv.ParseInt(cidStr, 10, 64)
@@ -842,14 +806,14 @@ func apiInventoryParsed(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "characterId requis", 400)
 		return
 	}
-	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS ` + cfg.WorldDB + `.oneair_inventory_dumps (
+	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS ` + cfg.WorldDB + `.inventory_dumps (
 		CharacterId BIGINT NOT NULL PRIMARY KEY,
 		Json LONGTEXT,
 		UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 	) ENGINE=InnoDB`)
 	var jsonStr string
 	var updatedAt time.Time
-	err = db.QueryRow(`SELECT Json, UpdatedAt FROM `+cfg.WorldDB+`.oneair_inventory_dumps WHERE CharacterId = ?`, cid).
+	err = db.QueryRow(`SELECT Json, UpdatedAt FROM `+cfg.WorldDB+`.inventory_dumps WHERE CharacterId = ?`, cid).
 		Scan(&jsonStr, &updatedAt)
 	if err == sql.ErrNoRows {
 		writeJSON(w, map[string]any{"items": []any{}, "updatedAt": nil, "needsDump": true})
@@ -864,7 +828,6 @@ func apiInventoryParsed(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"items": parsed, "updatedAt": updatedAt})
 }
 
-// /api/items/catalog?q=&type=&offset=&limit= — items du jeu, paginé.
 func apiItemsCatalog(w http.ResponseWriter, r *http.Request) {
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	typeFilter := r.URL.Query().Get("type")
@@ -905,7 +868,6 @@ func apiItemsCatalog(w http.ResponseWriter, r *http.Request) {
 			where = append(where, "TypeId NOT IN ("+strings.Join(ph, ",")+")")
 		}
 	}
-	args = append(args, limit, offset)
 	if usableFilter := r.URL.Query().Get("usable"); usableFilter != "" {
 		if usableFilter == "1" || usableFilter == "true" {
 			where = append(where, "LOWER(COALESCE(Usable,'')) = 'true'")
@@ -913,6 +875,7 @@ func apiItemsCatalog(w http.ResponseWriter, r *http.Request) {
 			where = append(where, "LOWER(COALESCE(Usable,'')) <> 'true'")
 		}
 	}
+	args = append(args, limit, offset)
 	rows, err := db.Query(`SELECT Id, COALESCE(Name,''), COALESCE(TypeId,0), COALESCE(Level,0),
 		CASE WHEN LOWER(COALESCE(Usable,'')) = 'true' THEN 1 ELSE 0 END AS Usable
 		FROM `+cfg.WorldDB+`.items WHERE `+strings.Join(where, " AND ")+`
@@ -923,7 +886,7 @@ func apiItemsCatalog(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 	type Item struct {
-		ID     int64 `json:"id"`
+		ID     int64  `json:"id"`
 		Name   string `json:"name"`
 		Type   int    `json:"type"`
 		Level  int    `json:"level"`
@@ -941,7 +904,6 @@ func apiItemsCatalog(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, out)
 }
 
-// /api/spells/catalog?q=&offset=&limit= — sorts du jeu paginés.
 func apiSpellsCatalog(w http.ResponseWriter, r *http.Request) {
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
@@ -981,7 +943,6 @@ func apiSpellsCatalog(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, out)
 }
 
-// /api/spells/parsed?characterId=N — sorts connus du joueur (depuis dump action).
 func apiSpellsParsed(w http.ResponseWriter, r *http.Request) {
 	cidStr := r.URL.Query().Get("characterId")
 	cid, err := strconv.ParseInt(cidStr, 10, 64)
@@ -989,14 +950,14 @@ func apiSpellsParsed(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "characterId requis", 400)
 		return
 	}
-	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS ` + cfg.WorldDB + `.oneair_spell_dumps (
+	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS ` + cfg.WorldDB + `.spell_dumps (
 		CharacterId BIGINT NOT NULL PRIMARY KEY,
 		Json LONGTEXT,
 		UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 	) ENGINE=InnoDB`)
 	var jsonStr string
 	var updatedAt time.Time
-	err = db.QueryRow(`SELECT Json, UpdatedAt FROM `+cfg.WorldDB+`.oneair_spell_dumps WHERE CharacterId = ?`, cid).
+	err = db.QueryRow(`SELECT Json, UpdatedAt FROM `+cfg.WorldDB+`.spell_dumps WHERE CharacterId = ?`, cid).
 		Scan(&jsonStr, &updatedAt)
 	if err == sql.ErrNoRows {
 		writeJSON(w, map[string]any{"spells": []any{}, "updatedAt": nil, "needsDump": true})
@@ -1011,16 +972,15 @@ func apiSpellsParsed(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"spells": parsed, "updatedAt": updatedAt})
 }
 
-// /api/events — liste les multiplicateurs d'événements actifs (table oneair_events).
 func apiEvents(w http.ResponseWriter, r *http.Request) {
-	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS ` + cfg.WorldDB + `.oneair_events (
+	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS ` + cfg.WorldDB + `.events (
 		Type VARCHAR(32) NOT NULL PRIMARY KEY,
 		Multiplier DOUBLE NOT NULL DEFAULT 1.0,
 		ExpiresAt DATETIME NULL,
 		UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 		UpdatedBy VARCHAR(64) NULL
 	) ENGINE=InnoDB`)
-	rows, err := db.Query(`SELECT Type, Multiplier, ExpiresAt, UpdatedAt FROM ` + cfg.WorldDB + `.oneair_events`)
+	rows, err := db.Query(`SELECT Type, Multiplier, ExpiresAt, UpdatedAt FROM ` + cfg.WorldDB + `.events`)
 	if err != nil {
 		httpErr(w, err)
 		return
@@ -1048,11 +1008,8 @@ func apiEvents(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, out)
 }
 
-// /api/players/online — liste détaillée des joueurs en ligne (online_clients
-// joint avec characters + map_positions + subareas/areas pour la zone).
 func apiPlayersOnline(w http.ResponseWriter, r *http.Request) {
-	// On crée la table on-the-fly au cas où elle n'existerait pas
-	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS ` + cfg.WorldDB + `.oneair_online_clients (
+	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS ` + cfg.WorldDB + `.online_clients (
 		CharacterId BIGINT NOT NULL PRIMARY KEY,
 		AccountId INT NULL, Name VARCHAR(255) NULL, Level INT NULL, MapId BIGINT NULL,
 		UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -1065,7 +1022,7 @@ func apiPlayersOnline(w http.ResponseWriter, r *http.Request) {
 		COALESCE(oc.MapId,0), COALESCE(mp.X,0), COALESCE(mp.Y,0),
 		COALESCE(s.Name,''), COALESCE(a.WorldMapId,0),
 		COALESCE(au.Username,''), oc.UpdatedAt
-		FROM ` + cfg.WorldDB + `.oneair_online_clients oc
+		FROM ` + cfg.WorldDB + `.online_clients oc
 		LEFT JOIN ` + cfg.WorldDB + `.characters c ON c.Id = oc.CharacterId
 		LEFT JOIN ` + cfg.WorldDB + `.map_positions mp ON mp.Id = oc.MapId
 		LEFT JOIN ` + cfg.WorldDB + `.maps m ON m.Id = oc.MapId
@@ -1110,9 +1067,6 @@ func apiPlayersOnline(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, out)
 }
 
-// /classes/<file> — sert les assets de classes depuis le client local.
-//   ex: /classes/symbol_8.png  → content/gfx/classes/symbol_8.png
-//   ex: /classes/bg_80.jpg     → bg_<breed><sex>.jpg
 func classAssetHandler() http.Handler {
 	dir := envOr("CLASSES_DIR", "/app/OneAir.app/Contents/Resources/content/gfx/classes")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -1127,7 +1081,6 @@ func classAssetHandler() http.Handler {
 		}
 		local := filepath.Join(dir, name)
 		if !fileExists(local) {
-			// fallback : essaye dans bgSelectCharacter/
 			local = filepath.Join(dir, "bgSelectCharacter", name)
 		}
 		if fileExists(local) {
@@ -1139,162 +1092,6 @@ func classAssetHandler() http.Handler {
 	})
 }
 
-// /api/worlds (déprécié — minimap retiré)
-func apiWorlds(w http.ResponseWriter, r *http.Request) {
-	rows, err := db.Query(`SELECT COALESCE(a.WorldMapId,0) as wid,
-		MIN(mp.X) as minX, MAX(mp.X) as maxX,
-		MIN(mp.Y) as minY, MAX(mp.Y) as maxY,
-		COUNT(*) as mapCount,
-		(SELECT GROUP_CONCAT(DISTINCT a2.Name SEPARATOR ', ')
-		 FROM ` + cfg.WorldDB + `.areas a2 WHERE a2.WorldMapId = a.WorldMapId LIMIT 5) as areaNames
-		FROM ` + cfg.WorldDB + `.map_positions mp
-		LEFT JOIN ` + cfg.WorldDB + `.maps m ON m.Id = mp.Id
-		LEFT JOIN ` + cfg.WorldDB + `.subareas s ON s.Id = m.SubareaId
-		LEFT JOIN ` + cfg.WorldDB + `.areas a ON a.Id = s.AreaId
-		GROUP BY wid
-		HAVING mapCount > 5
-		ORDER BY mapCount DESC`)
-	if err != nil {
-		httpErr(w, err)
-		return
-	}
-	defer rows.Close()
-	type World struct {
-		ID       int    `json:"id"`
-		MinX     int    `json:"minX"`
-		MaxX     int    `json:"maxX"`
-		MinY     int    `json:"minY"`
-		MaxY     int    `json:"maxY"`
-		MapCount int    `json:"mapCount"`
-		Name     string `json:"name"`
-	}
-	var out []World
-	for rows.Next() {
-		var w World
-		var areaNames sql.NullString
-		if err := rows.Scan(&w.ID, &w.MinX, &w.MaxX, &w.MinY, &w.MaxY, &w.MapCount, &areaNames); err != nil {
-			continue
-		}
-		if areaNames.Valid && areaNames.String != "" {
-			w.Name = areaNames.String
-		} else {
-			w.Name = "World " + strconv.Itoa(w.ID)
-		}
-		// Friendlier names for known worlds
-		w.Name = friendlyWorldName(w.ID, w.Name)
-		out = append(out, w)
-	}
-	writeJSON(w, out)
-}
-
-func friendlyWorldName(id int, fallback string) string {
-	known := map[int]string{
-		0:  "Monde des Douze",
-		1:  "Incarnam",
-		2:  "Royaume Sufokien (Île)",
-		13: "Île de Frigost",
-		14: "Île de Pandala",
-		15: "Île d'Otomaï",
-		16: "Île des Dragoeufs",
-		19: "Île des Wabbits",
-		21: "Bétaversse",
-		28: "Royaume Wakfu / Mont Tilse",
-		30: "Dimension Eliotrope",
-	}
-	if k, ok := known[id]; ok {
-		return k
-	}
-	return fallback
-}
-
-// /api/maps?cx=&cy=&w=&h=&world= — retourne les maps dans une fenêtre
-// rectangulaire, filtrées par worldMapId si fourni.
-func apiMaps(w http.ResponseWriter, r *http.Request) {
-	cx, _ := strconv.Atoi(r.URL.Query().Get("cx"))
-	cy, _ := strconv.Atoi(r.URL.Query().Get("cy"))
-	wW, _ := strconv.Atoi(r.URL.Query().Get("w"))
-	hW, _ := strconv.Atoi(r.URL.Query().Get("h"))
-	worldFilter := r.URL.Query().Get("world")
-	if wW <= 0 || wW > 60 {
-		wW = 15
-	}
-	if hW <= 0 || hW > 60 {
-		hW = 11
-	}
-	x0 := cx - wW/2
-	x1 := cx + wW/2
-	y0 := cy - hW/2
-	y1 := cy + hW/2
-
-	args := []any{x0, x1, y0, y1}
-	worldClause := ""
-	if worldFilter != "" {
-		if wid, err := strconv.Atoi(worldFilter); err == nil {
-			worldClause = " AND COALESCE(a.WorldMapId,0) = ?"
-			args = append(args, wid)
-		}
-	}
-
-	rows, err := db.Query(`SELECT mp.Id, mp.X, mp.Y, COALESCE(mp.Outdoor,'') as outdoor,
-		    COALESCE(s.Name,'') as zone,
-		    COALESCE(a.WorldMapId, 0) as worldId,
-		    COALESCE((SELECT COUNT(*) FROM `+cfg.WorldDB+`.oneair_online_clients oc WHERE oc.MapId = mp.Id),0) as players
-		FROM `+cfg.WorldDB+`.map_positions mp
-		LEFT JOIN `+cfg.WorldDB+`.maps m ON m.Id = mp.Id
-		LEFT JOIN `+cfg.WorldDB+`.subareas s ON s.Id = m.SubareaId
-		LEFT JOIN `+cfg.WorldDB+`.areas a ON a.Id = s.AreaId
-		WHERE mp.X BETWEEN ? AND ? AND mp.Y BETWEEN ? AND ?`+worldClause+`
-		ORDER BY mp.Y, mp.X LIMIT 3000`, args...)
-	if err != nil {
-		httpErr(w, err)
-		return
-	}
-	defer rows.Close()
-	type Cell struct {
-		ID      int64  `json:"id"`
-		X       int    `json:"x"`
-		Y       int    `json:"y"`
-		Outdoor string `json:"outdoor"`
-		Zone    string `json:"zone"`
-		World   int    `json:"world"`
-		Players int    `json:"players"`
-	}
-	var cells []Cell
-	for rows.Next() {
-		var c Cell
-		if err := rows.Scan(&c.ID, &c.X, &c.Y, &c.Outdoor, &c.Zone, &c.World, &c.Players); err != nil {
-			httpErr(w, err)
-			return
-		}
-		cells = append(cells, c)
-	}
-
-	// Joueurs détaillés par map (pour tooltips)
-	playerRows, _ := db.Query(`SELECT MapId, Name, COALESCE(Level,0)
-		FROM ` + cfg.WorldDB + `.oneair_online_clients`)
-	type Player struct {
-		MapID int64  `json:"mapId"`
-		Name  string `json:"name"`
-		Level int    `json:"level"`
-	}
-	var players []Player
-	if playerRows != nil {
-		defer playerRows.Close()
-		for playerRows.Next() {
-			var p Player
-			if err := playerRows.Scan(&p.MapID, &p.Name, &p.Level); err == nil {
-				players = append(players, p)
-			}
-		}
-	}
-
-	writeJSON(w, map[string]any{
-		"window":  map[string]int{"cx": cx, "cy": cy, "w": wW, "h": hW},
-		"cells":   cells,
-		"players": players,
-	})
-}
-
 func apiActionsList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "method", 405)
@@ -1302,7 +1099,7 @@ func apiActionsList(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = ensureActionsTable()
 	rows, err := db.Query(`SELECT Id, Type, COALESCE(Payload,''), ProcessedAt, COALESCE(Result,''), CreatedAt
-		FROM ` + cfg.WorldDB + `.oneair_actions
+		FROM ` + cfg.WorldDB + `.actions
 		ORDER BY Id DESC LIMIT 50`)
 	if err != nil {
 		httpErr(w, err)
@@ -1333,13 +1130,10 @@ func apiActionsList(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, out)
 }
 
-// ---------- helpers ---------------------------------------------------------
-
-// itemAssetHandler : sert les icônes d'items.
-// Stratégie :
-//   1) cache local /items-cache/{gid}.png (extrait des d2p Dofus)
-//   2) lookup iconId via items.AppearenceId ou DofusDB API → cache local /items-cache/{iconId}.png
-//   3) redirect vers DofusDB (api.dofusdb.fr) qui sert tous les item icons par iconId
+// itemAssetHandler résout une icône d'item dans cet ordre :
+//  1. cache local /items-cache/{gid}.png (extrait des .d2p)
+//  2. iconId via DofusDB → cache local /items-cache/{iconId}.png
+//  3. redirect vers api.dofusdb.fr/img/items/{iconId|gid}.png
 var iconIDCache sync.Map // gid (string) -> iconId (string), "0" = no icon
 
 func itemAssetHandler() http.Handler {
@@ -1355,13 +1149,11 @@ func itemAssetHandler() http.Handler {
 		}
 		gid := strings.TrimSuffix(name, ".png")
 
-		// 1) cache local par gid
 		if local := filepath.Join(cfg.ItemsCacheDir, name); fileExists(local) {
 			http.ServeFile(w, r, local)
 			return
 		}
 
-		// 2) lookup iconId
 		iconId, _ := resolveIconID(gid)
 		if iconId != "" && iconId != "0" {
 			if local := filepath.Join(cfg.ItemsCacheDir, iconId+".png"); fileExists(local) {
@@ -1372,7 +1164,6 @@ func itemAssetHandler() http.Handler {
 			return
 		}
 
-		// 3) fallback : tente direct en gid sur la CDN
 		http.Redirect(w, r, "https://api.dofusdb.fr/img/items/"+gid+".png", http.StatusFound)
 	})
 }
@@ -1382,7 +1173,6 @@ func fileExists(p string) bool {
 	return err == nil && !st.IsDir()
 }
 
-// /spells/{id}.png — redirige vers DofusDB (icône de sort officielle).
 func spellAssetHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		name := r.URL.Path
@@ -1395,7 +1185,6 @@ func spellAssetHandler() http.Handler {
 	})
 }
 
-// /heads/{id}.png — sert SmallHead_<id>.png depuis le client local OneAir.
 func headAssetHandler() http.Handler {
 	dir := envOr("HEADS_DIR", "/app/OneAir.app/Contents/Resources/content/gfx/heads")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -1414,29 +1203,8 @@ func headAssetHandler() http.Handler {
 	})
 }
 
-// /worldmap/{name} — sert les tuiles du worldmap extraites des .d2p locaux.
-// Les noms de fichiers sont tels que stockés dans l'archive (ex: "0_0.jpg").
-func worldmapAssetHandler() http.Handler {
-	dir := envOr("WORLDMAP_CACHE_DIR", "/worldmap-cache")
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		name := r.URL.Path
-		if strings.Contains(name, "..") || strings.Contains(name, "/") {
-			http.NotFound(w, r)
-			return
-		}
-		local := filepath.Join(dir, name)
-		if fileExists(local) {
-			w.Header().Set("Cache-Control", "public, max-age=86400")
-			http.ServeFile(w, r, local)
-			return
-		}
-		http.NotFound(w, r)
-	})
-}
-
-// /breeds/{id}.png — icône de classe (Iop, Crâ, …) servie depuis le client
-// local (logo_transparent_X.png dans /classes-src). DofusDB ne sert plus
-// ces assets sous l'ancienne URL ; on n'a pas besoin de fallback réseau.
+// breedAssetHandler sert logo_transparent_<id>.png depuis le client local —
+// DofusDB ne héberge plus ces icônes sous une URL stable.
 func breedAssetHandler() http.Handler {
 	dir := envOr("CLASSES_DIR", "/app/OneAir.app/Contents/Resources/content/gfx/classes")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -1456,12 +1224,10 @@ func breedAssetHandler() http.Handler {
 	})
 }
 
-// resolveIconID : trouve l'iconId d'un gid via DofusDB (cache mémoire).
 func resolveIconID(gid string) (string, error) {
 	if v, ok := iconIDCache.Load(gid); ok {
 		return v.(string), nil
 	}
-	// DofusDB
 	cli := &http.Client{Timeout: 4 * time.Second}
 	resp, err := cli.Get("https://api.dofusdb.fr/items/" + gid)
 	if err != nil {
