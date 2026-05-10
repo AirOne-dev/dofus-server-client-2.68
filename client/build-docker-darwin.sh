@@ -46,7 +46,7 @@ if [ ! -d "$ASSETS_TARGET" ]; then
             git clone --depth 1 https://github.com/loonaire/Cytrus-downloader.git cytrus-src
             cd cytrus-src && go build -o /tmp/cytrus .
             /tmp/cytrus -game dofus -platform darwin \
-                -release main -version 6.0_2.68.0.0 -outdir /out
+                -release main -version 6.0_2.68.0.0 -outdir /out/
         '
 else
     echo "==> [2/5] Assets Dofus 2.68 darwin déjà présents → skip fetch"
