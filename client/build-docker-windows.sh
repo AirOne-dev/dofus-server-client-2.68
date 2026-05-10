@@ -42,10 +42,8 @@ if [ ! -d "$ASSETS_TARGET" ]; then
             cd /tmp && rm -rf cytrus-src
             git clone --depth 1 https://github.com/loonaire/Cytrus-downloader.git cytrus-src
             cd cytrus-src && go build -o /tmp/cytrus .
-            for frag in main win64 lang_fr; do
-                /tmp/cytrus -game dofus -platform windows \
-                    -release "$frag" -version 6.0_2.68.0.0 -outdir /out/
-            done
+            /tmp/cytrus -game dofus -platform windows \
+                -release main -version 6.0_2.68.0.0 -outdir /out/
         '
 else
     echo "==> [2/4] Assets Dofus 2.68 windows déjà présents → skip fetch"
