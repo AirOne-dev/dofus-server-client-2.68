@@ -265,6 +265,12 @@ assemble_darwin_app() {
             swift sdk install /sdk-cache/darwin.artifactbundle.zip 2>&1 | tail -3
         fi
         if swift sdk list 2>/dev/null | grep -q '^darwin'; then
+            # SwiftPM exige Sources/OneAirLauncher/main.swift. Le canonique
+            # reste OneAirLauncher.swift à la racine ; on génère le symlink à
+            # la volée (Sources/ est gitignore — cf. OneAirLauncher/.gitignore).
+            mkdir -p "$SCRIPT_DIR/OneAirLauncher/Sources/OneAirLauncher"
+            ln -sfn ../../OneAirLauncher.swift \
+                "$SCRIPT_DIR/OneAirLauncher/Sources/OneAirLauncher/main.swift"
             echo "==> Cross-compile OneAirLauncher"
             (cd "$SCRIPT_DIR/OneAirLauncher" && \
                 swift build --swift-sdk arm64-apple-macosx -c release 2>&1 | tail -5)
