@@ -178,9 +178,8 @@ quand rebuild les images) dans `CLAUDE.md`.
 │   ├── DofusInvoker-patched.swf   # SWF Giny patché (BUILD_TYPE=DEBUG)
 │   ├── giny-config.xml
 │   ├── launcher/
-│   │   ├── macos/                 # pré-launcher Swift (anciennement
-│   │   │                          #   OneAirLauncher/ à la racine)
-│   │   └── windows/               # pré-launcher WPF C# (idem)
+│   │   ├── macos/                 # pré-launcher Swift (cible OneAir.app)
+│   │   └── windows/               # pré-launcher WPF C# (cible OneAir-Windows/)
 │   ├── zaap-server/               # fake Zaap Thrift en Go (DivaZaap fork)
 │   ├── .cache/                    # gitignoré — fetch via cytrus + Swift SDK
 │   │   ├── dofus-darwin-2.68/     # assets Dofus officiels (~5 GB)

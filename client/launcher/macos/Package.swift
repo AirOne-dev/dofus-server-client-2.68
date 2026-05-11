@@ -1,11 +1,9 @@
 // swift-tools-version:5.9
 //
-// SwiftPM est utilisé pour la cross-compile depuis Linux (cf.
-// client/Dockerfile.darwin). Le canonique reste OneAirLauncher.swift à la
-// racine du dossier ; Sources/OneAirLauncher/main.swift y est lié en
-// symlink (SwiftPM exige `main.swift` pour le top-level code).
-//
-//   swift build --swift-sdk arm64-apple-macosx -c release
+// Utilisé par client/build.sh pour cross-compiler depuis Linux via le
+// Swift SDK Darwin. Le canonique reste OneAirLauncher.swift dans ce
+// dossier ; Sources/OneAirLauncher/main.swift est un symlink généré au
+// build (SwiftPM exige `main.swift` pour le top-level code).
 
 import PackageDescription
 
