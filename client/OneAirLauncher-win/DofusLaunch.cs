@@ -1,7 +1,7 @@
 // Le launcher remplace `Dofus.exe` dans le bundle ; le binaire AIR captive
 // original est renommé `dofus-real.exe`. AIR ne valide pas le nom de l'exe
 // au runtime tant qu'on a retiré META-INF/AIR/hash et signatures.xml du
-// bundle (cf. build-app-windows.sh).
+// bundle (cf. build.sh).
 
 using System;
 using System.Collections.Generic;
