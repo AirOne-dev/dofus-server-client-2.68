@@ -25,7 +25,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 CACHE_DIR="$SCRIPT_DIR/.cache"
-DIST_DIR="$ROOT_DIR/dist"
+BUILD_DIR="$SCRIPT_DIR/build"
+LAUNCHER_MAC_DIR="$SCRIPT_DIR/launcher/macos"
+LAUNCHER_WIN_DIR="$SCRIPT_DIR/launcher/windows"
+ASSETS_DARWIN_DIR="$CACHE_DIR/dofus-darwin-2.68"
+ASSETS_WINDOWS_DIR="$CACHE_DIR/dofus-windows-2.68"
 
 DARWIN_IMAGE="${ONEAIR_BUILDER_MAC_IMAGE:-oneair-builder-darwin:latest}"
 WINDOWS_IMAGE="${ONEAIR_BUILDER_WIN_IMAGE:-oneair-builder-windows:latest}"
@@ -151,7 +155,7 @@ cp swift-sdk-darwin/output/darwin-linux-x86_64.artifactbundle.zip /work/out.arti
 fetch_cytrus_assets() {
     local platform="$1"  # "darwin" | "windows"
     local image="$2"
-    local assets_dir="$SCRIPT_DIR/dofus-${platform}-2.68"
+    local assets_dir="$CACHE_DIR/dofus-${platform}-2.68"
     local target="$assets_dir/dofus/2.68.0.0/${platform}/main"
     if [ -d "$target" ]; then
         echo "==> Assets Dofus 2.68 ${platform} déjà présents → skip fetch"
@@ -204,10 +208,10 @@ JSON
 # soit dans le container oneair-builder-darwin (utilise plistlib + rcodesign).
 # -----------------------------------------------------------------------------
 assemble_darwin_app() {
-    local app_dir="$DIST_DIR/OneAir.app"
+    local app_dir="$BUILD_DIR/OneAir.app"
     local src_dir
-    if [ -d "$SCRIPT_DIR/dofus-darwin-2.68/dofus/2.68.0.0/darwin/main/Dofus.app" ]; then
-        src_dir="$SCRIPT_DIR/dofus-darwin-2.68/dofus/2.68.0.0/darwin"
+    if [ -d "$ASSETS_DARWIN_DIR/dofus/2.68.0.0/darwin/main/Dofus.app" ]; then
+        src_dir="$ASSETS_DARWIN_DIR/dofus/2.68.0.0/darwin"
     elif [ -d "$SCRIPT_DIR/dofus-darwin/dofus/2.73.3.14/darwin/main/Dofus.app" ]; then
         src_dir="$SCRIPT_DIR/dofus-darwin/dofus/2.73.3.14/darwin"
         echo "AVERTISSEMENT : fallback 2.73.3.14 — proto incompatible Giny"
@@ -255,10 +259,10 @@ assemble_darwin_app() {
     fi
 
     # Launcher Swift : cross-compile si SDK Darwin dispo, sinon binaire pré-buildé
-    local launcher_bin="$SCRIPT_DIR/OneAirLauncher/OneAirLauncher"
-    local launcher_assets="$SCRIPT_DIR/OneAirLauncher/Assets"
+    local launcher_bin="$LAUNCHER_MAC_DIR/OneAirLauncher"
+    local launcher_assets="$LAUNCHER_MAC_DIR/Assets"
     if [ "$IS_MACOS" -eq 0 ] && command -v swift >/dev/null 2>&1 \
-            && [ -f "$SCRIPT_DIR/OneAirLauncher/Package.swift" ]; then
+            && [ -f "$LAUNCHER_MAC_DIR/Package.swift" ]; then
         if ! swift sdk list 2>/dev/null | grep -q '^darwin' \
                 && [ -f /sdk-cache/darwin.artifactbundle.zip ]; then
             echo "==> Install Swift SDK Darwin (1ère fois dans ce container)"
@@ -266,15 +270,15 @@ assemble_darwin_app() {
         fi
         if swift sdk list 2>/dev/null | grep -q '^darwin'; then
             # SwiftPM exige Sources/OneAirLauncher/main.swift. Le canonique
-            # reste OneAirLauncher.swift à la racine ; on génère le symlink à
-            # la volée (Sources/ est gitignore — cf. OneAirLauncher/.gitignore).
-            mkdir -p "$SCRIPT_DIR/OneAirLauncher/Sources/OneAirLauncher"
+            # reste OneAirLauncher.swift à la racine (launcher/macos/) ; on génère le symlink à
+            # la volée (Sources/ est gitignore — cf. launcher/macos/.gitignore).
+            mkdir -p "$LAUNCHER_MAC_DIR/Sources/OneAirLauncher"
             ln -sfn ../../OneAirLauncher.swift \
-                "$SCRIPT_DIR/OneAirLauncher/Sources/OneAirLauncher/main.swift"
+                "$LAUNCHER_MAC_DIR/Sources/OneAirLauncher/main.swift"
             echo "==> Cross-compile OneAirLauncher"
-            (cd "$SCRIPT_DIR/OneAirLauncher" && \
+            (cd "$LAUNCHER_MAC_DIR" && \
                 swift build --swift-sdk arm64-apple-macosx -c release 2>&1 | tail -5)
-            local built="$SCRIPT_DIR/OneAirLauncher/.build/arm64-apple-macosx/release/OneAirLauncher"
+            local built="$LAUNCHER_MAC_DIR/.build/arm64-apple-macosx/release/OneAirLauncher"
             [ -f "$built" ] && launcher_bin="$built"
         fi
     fi
@@ -345,8 +349,8 @@ PY
 # OneAir-Windows/ — toujours via Docker (cross-compile WPF + Go)
 # -----------------------------------------------------------------------------
 assemble_windows_bundle() {
-    local app_dir="$DIST_DIR/OneAir-Windows"
-    local src_base="$SCRIPT_DIR/dofus-windows-2.68/dofus/2.68.0.0/windows"
+    local app_dir="$BUILD_DIR/OneAir-Windows"
+    local src_base="$ASSETS_WINDOWS_DIR/dofus/2.68.0.0/windows"
     [ -d "$src_base/win64" ] || { echo "ERREUR : $src_base/win64 introuvable." >&2; return 1; }
     [ -d "$src_base/main" ]  || { echo "ERREUR : $src_base/main introuvable."  >&2; return 1; }
 
@@ -389,11 +393,11 @@ assemble_windows_bundle() {
     if ! command -v dotnet >/dev/null 2>&1 && [ -x /opt/dotnet/dotnet ]; then
         export PATH="/opt/dotnet:$PATH"
     fi
-    (cd "$SCRIPT_DIR/OneAirLauncher-win" && dotnet publish -c Release -r win-x64 \
+    (cd "$LAUNCHER_WIN_DIR" && dotnet publish -c Release -r win-x64 \
         --self-contained -p:PublishSingleFile=true -p:EnableWindowsTargeting=true)
     # On renomme Dofus.exe → dofus-real.exe et on dépose le launcher sous Dofus.exe
     mv "$app_dir/Dofus.exe" "$app_dir/dofus-real.exe"
-    cp "$SCRIPT_DIR/OneAirLauncher-win/bin/Release/net8.0-windows/win-x64/publish/OneAirLauncher.exe" \
+    cp "$LAUNCHER_WIN_DIR/bin/Release/net8.0-windows/win-x64/publish/OneAirLauncher.exe" \
         "$app_dir/Dofus.exe"
     rm -f "$app_dir/META-INF/AIR/debug" 2>/dev/null || true
 
@@ -407,18 +411,18 @@ assemble_windows_bundle() {
 zip_output() {
     local kind="$1"  # "darwin" | "windows"
     require_docker
-    mkdir -p "$DIST_DIR"
+    mkdir -p "$BUILD_DIR"
     local image folder zipname
     if [ "$kind" = "darwin" ]; then
         image="$DARWIN_IMAGE"; folder="OneAir.app"; zipname="OneAir-MacOS.zip"
     else
         image="$WINDOWS_IMAGE"; folder="OneAir-Windows"; zipname="OneAir-Windows.zip"
     fi
-    echo "==> Zip → $DIST_DIR/$zipname"
+    echo "==> Zip → $BUILD_DIR/$zipname"
     # Toutes les paths dans bash -c sont container-relatives (/work est le
-    # mount de $ROOT_DIR). cd dans dist/ pour que le zip contienne OneAir.app
-    # (ou OneAir-Windows) à la racine, pas dist/OneAir.app.
-    docker run --rm -v "$ROOT_DIR:/work" -w /work/dist "$image" bash -c "
+    # mount de $ROOT_DIR). cd dans client/build/ pour que le zip contienne OneAir.app
+    # (ou OneAir-Windows) à la racine, pas client/build/OneAir.app.
+    docker run --rm -v "$ROOT_DIR:/work" -w /work/client/build "$image" bash -c "
         command -v zip >/dev/null || { apt-get update -qq && apt-get install -y -qq zip >/dev/null 2>&1; }
         rm -f ${zipname}.tmp
         zip -ryq0 ${zipname}.tmp ${folder}
@@ -448,7 +452,7 @@ build_darwin_via_docker() {
     if [ -f "$SDK_BUNDLE" ]; then
         sdk_opts=(-v "$CACHE_DIR:/sdk-cache:ro" -v "oneair-swiftpm:/root/.swiftpm")
     fi
-    rm -rf "$DIST_DIR/OneAir.app"
+    rm -rf "$BUILD_DIR/OneAir.app"
     docker run --rm \
         -v "$ROOT_DIR:/work" \
         -v "oneair-go-cache:/tmp/go-cache" \
@@ -468,7 +472,7 @@ build_windows_via_docker() {
     echo "==> Image $WINDOWS_IMAGE"
     docker build --pull -f "$dockerfile" -t "$WINDOWS_IMAGE" "$SCRIPT_DIR"
     fetch_cytrus_assets windows "$WINDOWS_IMAGE"
-    rm -rf "$DIST_DIR/OneAir-Windows"
+    rm -rf "$BUILD_DIR/OneAir-Windows"
     docker run --rm \
         -v "$ROOT_DIR:/work" \
         -v "oneair-go-cache:/tmp/go-cache" \
@@ -511,7 +515,7 @@ if [ -z "$TARGET" ]; then
         3) TARGET=all ;;
         *) echo "Choix invalide" >&2; exit 1 ;;
     esac
-    read -r -p "Zipper le résultat dans dist/ ? [Y/n] : " yn
+    read -r -p "Zipper le résultat dans client/build/ ? [Y/n] : " yn
     case "$yn" in n|N|no|NO) DO_ZIP=0 ;; esac
     if [ "$IS_MACOS" -eq 1 ] && [ "$TARGET" != "windows" ]; then
         read -r -p "macOS natif (sans Docker) pour le bundle macOS ? [y/N] : " yn

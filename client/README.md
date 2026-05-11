@@ -7,40 +7,43 @@ pré-launcher Swift, d'un faux Zaap server, et d'un SWF patché.
 ## `build.sh`
 
 Point d'entrée unique. Lance le menu interactif sans arg, ou passe une cible :
-`darwin`, `windows`, `all`, `sdk`. Flags : `--no-zip`, `--native` (macOS hôte).
+`darwin`, `windows`, `all`. Flags : `--no-zip`, `--native` (macOS hôte).
 Lit `.env` à la racine pour `SERVER_HOST` / `PUBLIC_AUTH_PORT` / `SERVER_DISPLAY_NAME`.
 
 ```bash
 ./client/build.sh                    # menu
-./client/build.sh darwin             # OneAir.app via Docker
-./client/build.sh windows            # OneAir-Windows/
+./client/build.sh darwin             # client/build/OneAir.app via Docker
+./client/build.sh windows            # client/build/OneAir-Windows/
 ```
 
 Étapes du build darwin :
 
-1. Copie `dofus-darwin-2.68/.../Dofus.app` → `OneAir.app`
+1. Copie `.cache/dofus-darwin-2.68/.../Dofus.app` → `build/OneAir.app`
 2. Merge le fragment `lang_fr` (gfx + i18n + config-lang-fr.xml)
 3. Override `Contents/Resources/config.xml` avec `giny-config.xml` (config Giny
    de base), puis patch `connection.host` aux valeurs `.env`
 4. Remplace `DofusInvoker.swf` par notre version patchée
 5. Génère `Contents/Resources/credentials.json` (params zaap pour le SWF)
 6. Restaure les symlinks Adobe AIR.framework cassés par cytrus-downloader
-7. Substitue `Contents/MacOS/Dofus` par notre launcher Swift, et déplace le
-   binaire AIR original vers `dofus-real`
+7. Substitue `Contents/MacOS/Dofus` par notre launcher Swift cross-compilé
+   depuis `launcher/macos/`, et déplace le binaire AIR original vers `dofus-real`
 8. Intègre `zaap-server` (Go) dans `Contents/MacOS/`
 9. Patch Info.plist (CFBundleName=OneAir, etc.)
-10. Strip xattrs + signature ad-hoc
+10. Strip xattrs + signature ad-hoc (`rcodesign`)
 
 ## Sources de ce dossier
 
 | Fichier / dossier | Rôle |
 |---|---|
-| `dofus-darwin-2.68/` | Client Dofus 2.68 officiel darwin (~5 GB) |
+| `build.sh` | Build script (point d'entrée unique macOS+Windows) |
+| `Dockerfile.{darwin,windows}` | Images builder Linux |
 | `giny-config.xml` | Base `config.xml` Giny — patché à chaque build avec les valeurs `.env` |
 | `DofusInvoker-patched.swf` | SWF Giny custom, voir « Patches SWF » |
-| `OneAirLauncher/` | Pré-launcher Swift (source + binaire) |
+| `launcher/macos/` | Pré-launcher Swift (sources + Package.swift) |
+| `launcher/windows/` | Pré-launcher WPF .NET 8 (sources + .csproj) |
 | `zaap-server/` | Faux Zaap server en Go (port DivaZaap → Thrift Apache) |
-| `build.sh` | Build script (point d'entrée unique macOS+Windows) |
+| `.cache/` (gitignoré) | Assets Dofus officiels (~5 GB chacun) + Swift SDK Darwin |
+| `build/` (gitignoré) | Bundles assemblés et zips servis par `/download/{macos,windows}` |
 
 ## Patches SWF appliqués
 
@@ -62,7 +65,7 @@ Pour rebuild le SWF de zéro, on utilise [JPEXS Free Flash Decompiler](https://g
 Les sources AS3 patchées vivent (temporairement) dans `/tmp/giny-as3` après
 décompilation, et l'import via `ffdec.jar -importScript` produit le SWF final.
 
-## OneAirLauncher (Swift)
+## launcher/macos (Swift)
 
 Pré-launcher cliquable lancé par macOS. Avant `exec` du vrai binaire AIR :
 - charge les comptes saisis (multi-comptes via dropdown stylé)
@@ -73,10 +76,11 @@ Pré-launcher cliquable lancé par macOS. Avant `exec` du vrai binaire AIR :
   `--login=<user> --game-token=<password>`
 - exec `dofus-real` → AIR captif charge `DofusInvoker.swf` qui lit le credentials.json
 
-Recompile :
+Build : passe par `./client/build.sh darwin` qui cross-compile via SwiftPM +
+le Swift SDK Darwin assemblé dans `.cache/`. Pour un dev natif rapide sur Mac :
 
 ```bash
-cd client/OneAirLauncher && swiftc -O -o OneAirLauncher OneAirLauncher.swift \
+cd client/launcher/macos && swiftc -O -o OneAirLauncher OneAirLauncher.swift \
     -framework AppKit -framework Network -framework CoreImage
 ```
 
@@ -110,10 +114,10 @@ et synchronise les deux.
 
 | Fichier | Contenu |
 |---|---|
-| `OneAir.app/Contents/Resources/oneair-debug.log` | Traces AS3 (chat input, intercept `.ui`, événements connexion) |
+| `client/build/OneAir.app/Contents/Resources/oneair-debug.log` | Traces AS3 (chat input, intercept `.ui`, événements connexion) |
 | `~/Library/Logs/OneAir/zaap-server.log` | Logs du faux Zaap |
 | `~/Library/Logs/OneAir/launcher.log` | Logs du launcher Swift |
 
 ```bash
-tail -f OneAir.app/Contents/Resources/oneair-debug.log
+tail -f client/build/OneAir.app/Contents/Resources/oneair-debug.log
 ```
