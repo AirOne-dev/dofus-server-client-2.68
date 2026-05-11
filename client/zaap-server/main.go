@@ -43,7 +43,10 @@ func main() {
 		}
 	}
 
-	transportFactory := thrift.NewTTransportFactory()
+	// Buffer each Thrift response into a single Write so it hits the wire as
+	// one TCP segment — see nodelayListener in server.go for the AIR-side
+	// constraint that forces this.
+	transportFactory := thrift.NewTBufferedTransportFactory(8192)
 	protocolFactory := thrift.NewTBinaryProtocolFactoryConf(&thrift.TConfiguration{})
 
 	ctx, cancel := context.WithCancel(context.Background())

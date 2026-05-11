@@ -92,12 +92,14 @@ cat > "$APP_DIR/credentials.json" <<'JSON'
 {"port":4242,"name":"dofus","release":"main","instanceId":1,"hash":"464e4625-67f1-4706-985c-8358f8661e3c"}
 JSON
 
-# Étape 7 : zaap-server.exe (cross-compilé Go)
+# Étape 7 : zaap-server.exe (cross-compilé Go). Toujours rebuild : le cache
+# Go rend un no-op quasi instantané, et un test "fichier présent" laissait
+# passer des binaires obsolètes quand main.go changeait (ex: ajout d'un flag
+# CLI → ancien .exe rejette l'arg et exit 2 → jeu ne se lance pas).
 ZAAP_EXE="$SCRIPT_DIR/zaap-server/zaap-server.exe"
-if [ ! -x "$ZAAP_EXE" ]; then
-    echo "==> Cross-compile zaap-server.exe"
-    (cd "$SCRIPT_DIR/zaap-server" && GOOS=windows GOARCH=amd64 go build -o zaap-server.exe .)
-fi
+echo "==> Cross-compile zaap-server.exe"
+(cd "$SCRIPT_DIR/zaap-server" && GOOS=windows GOARCH=amd64 CGO_ENABLED=0 \
+    go build -trimpath -ldflags='-s -w' -o zaap-server.exe .)
 cp "$ZAAP_EXE" "$APP_DIR/zaap-server.exe"
 
 # Étape 8 : OneAirLauncher.exe (build C# WPF self-contained single-file).
