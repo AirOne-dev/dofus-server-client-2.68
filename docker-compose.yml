@@ -111,10 +111,10 @@ services:
       # (icônes items/heads/breeds, .d2p) et (2) fallback du download
       # /download/macos si le zip statique est absent. Tous les paths Go
       # default-pointent vers /app/OneAir.app/Contents/Resources/...
-      - ./OneAir.app:/app/OneAir.app:ro
+      - ./dist/OneAir.app:/app/OneAir.app:ro
       # Bundle Windows du client : fallback du /download/windows.
-      - ./OneAir-Windows:/app/OneAir-Windows:ro
-      # Zips statiques produits par build-docker-{darwin,windows}.sh.
+      - ./dist/OneAir-Windows:/app/OneAir-Windows:ro
+      # Zips statiques produits par client/build.sh.
       # Chemins par défaut : /app/dist/OneAir-MacOS.zip + OneAir-Windows.zip
       # → servis directement par http.ServeFile (Range supporté, instant).
       # Override via env ONEAIR_APP_ZIP / ONEAIR_WIN_ZIP.
