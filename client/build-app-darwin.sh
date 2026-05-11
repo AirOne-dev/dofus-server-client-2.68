@@ -165,24 +165,22 @@ else
 fi
 
 # Étape 4b bis : intégrer le faux Zaap server (DivaZaap recompilé).
-# Sur Linux on cross-compile (GOOS=darwin) si le binaire n'existe pas ou
-# n'est pas un Mach-O valide. On défaut sur arm64 (Apple Silicon) — peut être
-# overridé via $ZAAP_GOARCH (= "amd64" pour Intel).
+# Toujours rebuild : le cache Go rend un no-op quasi instantané, et tester
+# uniquement la présence/magic Mach-O laissait passer des binaires obsolètes
+# (ex: main.go gagne un flag → ancien binaire rejette l'arg → jeu ne se lance
+# pas). Sur Linux on cross-compile (GOOS=darwin). Défaut arm64 (Apple
+# Silicon), overridable via $ZAAP_GOARCH (= "amd64" pour Intel).
 ZAAP_BIN="$SCRIPT_DIR/zaap-server/zaap-server"
 ZAAP_GOARCH="${ZAAP_GOARCH:-arm64}"
-if [ "$IS_MACOS" -eq 0 ]; then
-    # Vérifie magic Mach-O (cf https://opensource.apple.com/source/cctools/)
-    needs_rebuild=1
-    if [ -f "$ZAAP_BIN" ] && head -c 4 "$ZAAP_BIN" 2>/dev/null | od -An -tx1 \
-            | tr -d ' \n' | grep -qE '^cffaedfe|^cafebabe|^feedfacf'; then
-        needs_rebuild=0
-    fi
-    if [ "$needs_rebuild" -eq 1 ]; then
-        echo "==> Cross-compile zaap-server pour darwin/${ZAAP_GOARCH}"
-        (cd "$SCRIPT_DIR/zaap-server" && \
-            GOOS=darwin GOARCH="$ZAAP_GOARCH" CGO_ENABLED=0 \
-            go build -trimpath -ldflags='-s -w' -o zaap-server .)
-    fi
+if [ "$IS_MACOS" -eq 0 ] || [ ! -f "$ZAAP_BIN" ]; then
+    echo "==> Cross-compile zaap-server pour darwin/${ZAAP_GOARCH}"
+    (cd "$SCRIPT_DIR/zaap-server" && \
+        GOOS=darwin GOARCH="$ZAAP_GOARCH" CGO_ENABLED=0 \
+        go build -trimpath -ldflags='-s -w' -o zaap-server .)
+else
+    echo "==> Rebuild zaap-server (natif macOS, cache Go)"
+    (cd "$SCRIPT_DIR/zaap-server" && CGO_ENABLED=0 \
+        go build -trimpath -ldflags='-s -w' -o zaap-server .)
 fi
 if [ -s "$ZAAP_BIN" ]; then
     echo "==> Intégration de zaap-server (DivaZaap)"

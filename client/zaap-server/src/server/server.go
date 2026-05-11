@@ -4,12 +4,49 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"net"
 	"net/http"
 
 	"divazaap/src/zaap"
 
 	"github.com/apache/thrift/lib/go/thrift"
 )
+
+// Windows AIR's flash.net.Socket (cf. com.ankama.zaap.TFixedSocket.
+// socketDataHandler) invokes the Thrift read callback exactly once per
+// SOCKET_DATA event. If a single response spans several TCP segments, the
+// parser hits a partial-read EOF on the first event and the remaining
+// segments fire SOCKET_DATA into a nulled callback. Fix: each response must
+// be one Write (TBufferedTransport in main.go) AND one segment (NoDelay
+// below, otherwise Nagle would coalesce consecutive responses).
+type nodelayListener struct{ net.Listener }
+
+func (l nodelayListener) Accept() (net.Conn, error) {
+	c, err := l.Listener.Accept()
+	if err != nil {
+		return c, err
+	}
+	if tcp, ok := c.(*net.TCPConn); ok {
+		_ = tcp.SetNoDelay(true)
+	}
+	return c, nil
+}
+
+// thrift.TServerSocket creates its own net.Listener internally and gives us
+// no hook to set per-conn socket options, so we implement TServerTransport
+// directly over a pre-bound listener.
+type nodelayServerTransport struct{ listener net.Listener }
+
+func (t *nodelayServerTransport) Listen() error { return nil }
+func (t *nodelayServerTransport) Accept() (thrift.TTransport, error) {
+	conn, err := t.listener.Accept()
+	if err != nil {
+		return nil, thrift.NewTTransportExceptionFromError(err)
+	}
+	return thrift.NewTSocketFromConnConf(conn, &thrift.TConfiguration{}), nil
+}
+func (t *nodelayServerTransport) Close() error     { return t.listener.Close() }
+func (t *nodelayServerTransport) Interrupt() error { return t.listener.Close() }
 
 // RunningServer wraps the thrift server with the ability to stop it gracefully
 type RunningServer struct {
@@ -31,10 +68,11 @@ func (rs *RunningServer) Stop() {
 
 // RunServer starts a new server instance and returns a RunningServer for controlling it
 func RunServer(transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory, zaapAddr string, httpAddr string, authAddr string, ctx context.Context) (*RunningServer, error) {
-	transport, err := thrift.NewTServerSocket(zaapAddr)
+	rawListener, err := net.Listen("tcp", zaapAddr)
 	if err != nil {
 		return nil, err
 	}
+	transport := &nodelayServerTransport{listener: nodelayListener{rawListener}}
 
 	handler := NewZaapHandler()
 	processor := zaap.NewZaapServiceProcessor(handler)
