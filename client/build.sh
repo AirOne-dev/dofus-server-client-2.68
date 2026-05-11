@@ -171,7 +171,7 @@ fetch_cytrus_assets() {
         "$image" bash -ce "
             cd /tmp && rm -rf cytrus-src
             git clone --depth 1 https://github.com/loonaire/Cytrus-downloader.git cytrus-src
-            cd cytrus-src && go build -o /tmp/cytrus .
+            cd cytrus-src && go build -buildvcs=false -o /tmp/cytrus .
             /tmp/cytrus -game dofus -platform ${platform} \
                 -release main -version 6.0_2.68.0.0 -outdir /out/
         "
@@ -307,11 +307,11 @@ assemble_darwin_app() {
         echo "==> Cross-compile zaap-server pour darwin/${ZAAP_GOARCH}"
         (cd "$SCRIPT_DIR/zaap-server" && \
             GOOS=darwin GOARCH="$ZAAP_GOARCH" CGO_ENABLED=0 \
-            go build -trimpath -ldflags='-s -w' -o zaap-server .)
+            go build -buildvcs=false -trimpath -ldflags='-s -w' -o zaap-server .)
     else
         echo "==> Rebuild zaap-server (natif macOS)"
         (cd "$SCRIPT_DIR/zaap-server" && CGO_ENABLED=0 \
-            go build -trimpath -ldflags='-s -w' -o zaap-server .)
+            go build -buildvcs=false -trimpath -ldflags='-s -w' -o zaap-server .)
     fi
     cp "$zaap_bin" "$app_dir/Contents/MacOS/zaap-server"
     chmod +x "$app_dir/Contents/MacOS/zaap-server"
@@ -390,7 +390,7 @@ assemble_windows_bundle() {
 
     echo "==> Cross-compile zaap-server.exe"
     (cd "$SCRIPT_DIR/zaap-server" && GOOS=windows GOARCH=amd64 CGO_ENABLED=0 \
-        go build -trimpath -ldflags='-s -w' -o zaap-server.exe .)
+        go build -buildvcs=false -trimpath -ldflags='-s -w' -o zaap-server.exe .)
     cp "$SCRIPT_DIR/zaap-server/zaap-server.exe" "$app_dir/zaap-server.exe"
 
     echo "==> Build OneAirLauncher.exe (dotnet publish)"
