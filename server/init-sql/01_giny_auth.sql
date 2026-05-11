@@ -48,8 +48,7 @@ CREATE TABLE IF NOT EXISTS `accounts` (
 --
 
 INSERT INTO `accounts` (`Id`, `Username`, `Password`, `LastSelectedServerId`, `IPs`, `CharactersSlots`, `Banned`, `Role`, `Nickname`, `Ogrines`) VALUES
-(1, 'admin', 'test', 291, '127.0.0.1', 15, 0, 5, 'Street', 600),
-(2, 'admin2', 'test', 291, '127.0.0.1', 5, 0, 5, 'Skinz', 0);
+(1, 'admin', 'test', 291, '127.0.0.1', 15, 0, 5, 'AirOne', 69);
 
 -- --------------------------------------------------------
 
@@ -92,8 +91,7 @@ CREATE TABLE IF NOT EXISTS `world_servers` (
 --
 
 INSERT INTO `world_servers` (`Id`, `Name`, `Type`, `MonoAccount`, `Host`, `Port`) VALUES
-(291, 'Imagiro', 'SERVER_TYPE_CLASSICAL', '0', '127.0.0.1', 5555),
-(50, 'Ombre', 'SERVER_TYPE_HARDCORE', '0', 'localhost', 5555);
+(291, 'One Air', 'SERVER_TYPE_CLASSICAL', '0', '127.0.0.1', 5556);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
