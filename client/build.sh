@@ -270,6 +270,11 @@ assemble_darwin_app() {
             mkdir -p "$LAUNCHER_MAC_DIR/Sources/OneAirLauncher"
             ln -sfn ../../OneAirLauncher.swift \
                 "$LAUNCHER_MAC_DIR/Sources/OneAirLauncher/main.swift"
+            # .build est gitignoré et contient des PCH path-bound : si le
+            # dossier launcher a été renommé, swift refuse de compiler avec
+            # "PCH was compiled with module cache path '...'". On nuke pour
+            # garantir un état propre.
+            rm -rf "$LAUNCHER_MAC_DIR/.build"
             echo "==> Cross-compile OneAirLauncher"
             (cd "$LAUNCHER_MAC_DIR" && \
                 swift build --swift-sdk arm64-apple-macosx -c release 2>&1 | tail -5)
@@ -388,6 +393,11 @@ assemble_windows_bundle() {
     if ! command -v dotnet >/dev/null 2>&1 && [ -x /opt/dotnet/dotnet ]; then
         export PATH="/opt/dotnet:$PATH"
     fi
+    # bin/obj sont gitignorés et leurs dgspec.json contiennent des paths
+    # absolus du conteneur précédent ; on nuke pour éviter les "Could not
+    # find file '<obj>/<guid>.tmp.nuget.dgspec.json'" lors des restores
+    # après un rename du dossier.
+    rm -rf "$LAUNCHER_WIN_DIR/bin" "$LAUNCHER_WIN_DIR/obj"
     (cd "$LAUNCHER_WIN_DIR" && dotnet publish -c Release -r win-x64 \
         --self-contained -p:PublishSingleFile=true -p:EnableWindowsTargeting=true)
     # On renomme Dofus.exe → dofus-real.exe et on dépose le launcher sous Dofus.exe
