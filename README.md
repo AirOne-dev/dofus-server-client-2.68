@@ -140,7 +140,6 @@ connexion Internet pour le 1er build.
 ./client/build.sh windows           # → OneAir-Windows/ + dist/OneAir-Windows.zip
 ./client/build.sh darwin            # → OneAir.app/ + dist/OneAir-MacOS.zip
 ./client/build.sh all
-./client/build.sh sdk               # (re)build du Swift SDK Darwin
 ```
 
 Détails (Swift SDK Darwin auto-assemblé, override d'arch zaap-server,
