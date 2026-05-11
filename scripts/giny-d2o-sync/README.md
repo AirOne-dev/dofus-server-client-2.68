@@ -19,7 +19,7 @@ Ce wrapper :
    - `ClientConstants.ClientPath` → `/data` (au lieu d'un chemin Windows)
    - `DatabaseManager.Initialize(...)` → lit les credentials depuis l'env
 3. Compile `Giny.DatabaseSynchronizer.dll`
-4. Lance le binaire avec ton dossier `OneAir.app/Contents/Resources` monté
+4. Lance le binaire avec ton dossier `dist/OneAir.app/Contents/Resources` monté
    en read-only sur `/data`, et connecté à ton MySQL existant via le
    réseau Docker `dofus-giny_giny-net`.
 
@@ -29,7 +29,7 @@ disque et n'est lue qu'au runtime, sur ta machine.
 ## Pré-requis
 
 - Stack OneAir up (au moins `giny-mysql` doit tourner)
-- Le dossier `OneAir.app/Contents/Resources/data/` doit contenir :
+- Le dossier `dist/OneAir.app/Contents/Resources/data/` doit contenir :
   - `data/common/*.d2o` (Monsters.d2o, Items.d2o, etc.)
   - `data/i18n/i18n_fr.d2i`
   - `content/maps/maps0.d2p`, `content/maps/elements.ele` (pour les maps)
@@ -52,7 +52,7 @@ Variables d'environnement supportées (override) :
 
 | Var | Défaut | Description |
 |---|---|---|
-| `DATA_DIR` | `./OneAir.app/Contents/Resources` | dossier client (doit contenir `data/`) |
+| `DATA_DIR` | `./dist/OneAir.app/Contents/Resources` | dossier client (doit contenir `data/`) |
 | `DB_HOST` | `mysql` | hôte MySQL vu depuis le container |
 | `DB_NAME` | `${MYSQL_WORLD_DB}` ou `giny_world` | base cible |
 | `DB_USER` | `root` | utilisateur MySQL |

@@ -204,7 +204,7 @@ JSON
 # soit dans le container oneair-builder-darwin (utilise plistlib + rcodesign).
 # -----------------------------------------------------------------------------
 assemble_darwin_app() {
-    local app_dir="$ROOT_DIR/OneAir.app"
+    local app_dir="$DIST_DIR/OneAir.app"
     local src_dir
     if [ -d "$SCRIPT_DIR/dofus-darwin-2.68/dofus/2.68.0.0/darwin/main/Dofus.app" ]; then
         src_dir="$SCRIPT_DIR/dofus-darwin-2.68/dofus/2.68.0.0/darwin"
@@ -345,7 +345,7 @@ PY
 # OneAir-Windows/ — toujours via Docker (cross-compile WPF + Go)
 # -----------------------------------------------------------------------------
 assemble_windows_bundle() {
-    local app_dir="$ROOT_DIR/OneAir-Windows"
+    local app_dir="$DIST_DIR/OneAir-Windows"
     local src_base="$SCRIPT_DIR/dofus-windows-2.68/dofus/2.68.0.0/windows"
     [ -d "$src_base/win64" ] || { echo "ERREUR : $src_base/win64 introuvable." >&2; return 1; }
     [ -d "$src_base/main" ]  || { echo "ERREUR : $src_base/main introuvable."  >&2; return 1; }
@@ -416,14 +416,14 @@ zip_output() {
     fi
     echo "==> Zip → $DIST_DIR/$zipname"
     # Toutes les paths dans bash -c sont container-relatives (/work est le
-    # mount de $ROOT_DIR). $zipname / $folder interpolés côté hôte, le reste
-    # tourne dans le container.
-    docker run --rm -v "$ROOT_DIR:/work" -w /work "$image" bash -c "
+    # mount de $ROOT_DIR). cd dans dist/ pour que le zip contienne OneAir.app
+    # (ou OneAir-Windows) à la racine, pas dist/OneAir.app.
+    docker run --rm -v "$ROOT_DIR:/work" -w /work/dist "$image" bash -c "
         command -v zip >/dev/null || { apt-get update -qq && apt-get install -y -qq zip >/dev/null 2>&1; }
-        cd /work && rm -f dist/${zipname}.tmp
-        zip -ryq0 dist/${zipname}.tmp ${folder}
-        mv dist/${zipname}.tmp dist/${zipname}
-        echo \"    \$(du -h dist/${zipname} | cut -f1)\"
+        rm -f ${zipname}.tmp
+        zip -ryq0 ${zipname}.tmp ${folder}
+        mv ${zipname}.tmp ${zipname}
+        echo \"    \$(du -h ${zipname} | cut -f1)\"
     "
 }
 
@@ -448,7 +448,7 @@ build_darwin_via_docker() {
     if [ -f "$SDK_BUNDLE" ]; then
         sdk_opts=(-v "$CACHE_DIR:/sdk-cache:ro" -v "oneair-swiftpm:/root/.swiftpm")
     fi
-    rm -rf "$ROOT_DIR/OneAir.app"
+    rm -rf "$DIST_DIR/OneAir.app"
     docker run --rm \
         -v "$ROOT_DIR:/work" \
         -v "oneair-go-cache:/tmp/go-cache" \
@@ -468,7 +468,7 @@ build_windows_via_docker() {
     echo "==> Image $WINDOWS_IMAGE"
     docker build --pull -f "$dockerfile" -t "$WINDOWS_IMAGE" "$SCRIPT_DIR"
     fetch_cytrus_assets windows "$WINDOWS_IMAGE"
-    rm -rf "$ROOT_DIR/OneAir-Windows"
+    rm -rf "$DIST_DIR/OneAir-Windows"
     docker run --rm \
         -v "$ROOT_DIR:/work" \
         -v "oneair-go-cache:/tmp/go-cache" \

@@ -57,13 +57,16 @@ workflow ou ajoute une règle. Pas pour chaque commit.
   `giny/server:latest`. MySQL et DBGate à côté.
 - `server/web/` — service Go single-binary : landing publique `/`, dashboard
   admin `/admin`, APIs `/api/*` et `/api/public/*`. Image `oneair/web`.
-- `client/OneAirLauncher/` (Swift macOS) → bundle `OneAir.app/`.
-- `client/OneAirLauncher-win/` (WPF .NET 8) → bundle `OneAir-Windows/`.
+- `client/OneAirLauncher/` (Swift macOS) → bundle `dist/OneAir.app/`.
+- `client/OneAirLauncher-win/` (WPF .NET 8) → bundle `dist/OneAir-Windows/`.
 - `client/zaap-server/` (Go) — émulateur Thrift Zaap, embarqué dans les deux
   bundles. Spawn par les launchers, écoute sur 127.0.0.1:4242 et :4243.
 - `client/DofusInvoker-patched.swf` — SWF AS3 patché, partagé Mac/Win.
-- `OneAir.app/Contents/Resources/DofusInvoker.swf` — SWF vivant côté Mac
-  (c'est lui qu'on patche en dev, puis on copie dans `client/`).
+- `dist/OneAir.app/Contents/Resources/DofusInvoker.swf` — SWF vivant côté
+  Mac (c'est lui qu'on patche en dev, puis on copie dans `client/`).
+- `dist/` — sortie de `client/build.sh` : `OneAir.app/`, `OneAir-Windows/`
+  et les zips servis par `/download/{macos,windows}`. Monté en lecture
+  seule dans le container `web` (cf. `docker-compose.yml`).
 
 ## Workflow patch SWF
 
@@ -73,12 +76,12 @@ Le SWF est patché par injection AS3 via FFDec :
 $EDITOR /tmp/scripts-import/com/ankamagames/dofus/.../ChatFrame.as
 java -jar /tmp/ffdec/ffdec.jar -importScript \
   /tmp/DofusInvoker-base.swf /tmp/DofusInvoker-debug.swf /tmp/scripts-import
-cp /tmp/DofusInvoker-debug.swf ./OneAir.app/Contents/Resources/DofusInvoker.swf
+cp /tmp/DofusInvoker-debug.swf ./dist/OneAir.app/Contents/Resources/DofusInvoker.swf
 cp /tmp/DofusInvoker-debug.swf ./client/DofusInvoker-patched.swf
 pkill -f dofus-real; pkill -f OneAir; pkill -f zaap-server
-xattr -cr ./OneAir.app && codesign --force --deep -s - ./OneAir.app
-rm -f ./OneAir.app/Contents/Resources/oneair-debug.log
-open ./OneAir.app
+xattr -cr ./dist/OneAir.app && codesign --force --deep -s - ./dist/OneAir.app
+rm -f ./dist/OneAir.app/Contents/Resources/oneair-debug.log
+open ./dist/OneAir.app
 ```
 
 `/tmp/DofusInvoker-base.swf` = SWF vanilla patché (point de départ immuable).
@@ -126,7 +129,7 @@ Le script se ré-invoque dans le container builder avec
 - `MouseEvent.CLICK` sur Sprite ajouté dynamiquement → intercepté par Berilia.
   Listener stage en mode capture (`useCapture=true`, priorité haute).
 - Patch SWF qui crash → silencieux côté UI. Toujours wrapper en try/catch
-  avec `oneAirLog()` (écrit dans `OneAir.app/Contents/Resources/oneair-debug.log`).
+  avec `oneAirLog()` (écrit dans `dist/OneAir.app/Contents/Resources/oneair-debug.log`).
 - `Inventory.GetItems()` retourne aussi les équipés. Trier par
   `IsEquiped() ? 0 : 1`. Modifier un item équipé → `Character.RefreshStats()`.
 
@@ -213,7 +216,7 @@ le handler vanilla, route les 11 messages haven-bag vers
 
 ## Debug
 
-- Log SWF : `OneAir.app/Contents/Resources/oneair-debug.log` (rolling).
+- Log SWF : `dist/OneAir.app/Contents/Resources/oneair-debug.log` (rolling).
 - Log serveur : `docker logs giny-{auth,world,web}`.
 - DB : DBGate via `/dbgate/` (gated par session admin) ou direct
   `docker exec giny-mysql mysql -u root -p"$MYSQL_ROOT_PASSWORD"`.

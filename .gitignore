@@ -1,14 +1,10 @@
 # Secrets
 .env
 
-# Bundles clients (~5 GB chacun, générés par client/build-docker-*.sh)
-OneAir.app/
-OneAir-Windows/
-
-# Zips de distribution (générés par les wrappers Docker)
+# Bundles + zips clients (~5 GB chacun, générés par client/build.sh)
 dist/
 
-# Assets Dofus officiels (~5 GB chacun, fetch via cytrus dans build-docker-*.sh)
+# Assets Dofus officiels (~5 GB chacun, fetch via cytrus dans client/build.sh)
 client/dofus-darwin-2.68/
 client/dofus-windows-2.68/
 client/dofus-files/

@@ -22,7 +22,7 @@ deux côtés, pas de Wine).
 ```bash
 cp .env.example .env                 # ajuster ports / passwords si besoin
 docker compose up -d --build         # stack serveur
-open OneAir.app                      # client macOS
+open dist/OneAir.app                 # client macOS (build via ./client/build.sh darwin)
 ```
 
 Premier lancement : **+ Nouveau compte** dans le launcher, JOUER. Le compte
@@ -137,8 +137,8 @@ connexion Internet pour le 1er build.
 
 ```bash
 ./client/build.sh                   # menu interactif (cible + zip)
-./client/build.sh windows           # → OneAir-Windows/ + dist/OneAir-Windows.zip
-./client/build.sh darwin            # → OneAir.app/ + dist/OneAir-MacOS.zip
+./client/build.sh windows           # → dist/OneAir-Windows/ + dist/OneAir-Windows.zip
+./client/build.sh darwin            # → dist/OneAir.app/      + dist/OneAir-MacOS.zip
 ./client/build.sh all
 ```
 
@@ -157,18 +157,9 @@ quand rebuild les images) dans `CLAUDE.md`.
 │   ├── entrypoint.sh
 │   ├── config/                    # *.tmpl rendus au boot
 │   ├── init-sql/                  # importé au 1er boot MySQL
-│   ├── OneAirChatCommands.cs      # commandes chat custom
-│   ├── OneAirActionPoller.cs      # poller actions admin → table actions
-│   ├── OneAirEventManager.cs      # multiplicateurs XP/Kamas/Drop
-│   ├── OneAirHavenBagHandler.cs   # remplace HavenBagHandler vanilla
-│   ├── OneAirHavenBagPatch.cs     # logique havre-sac complète
-│   ├── OneAirUnhandledLogger.cs   # capture des actions non gérées
-│   ├── OneAirItemEffects.cs       # handlers d'effets d'items custom
-│   ├── OneAirNoopHandlers.cs      # stubs réseau no-op
-│   ├── OneAirDungeons.cs          # NPCs hub donjons
-│   ├── OneAirDungeonSeeder.cs     # seed canonique des donjons
-│   ├── OneAirActivityFeed.cs      # feed pour /api/public/community
-│   ├── OneAirDeathManager.cs      # gestion mort
+│   ├── backups/                   # dumps mysqldump (rotation 20, gitignoré)
+│   ├── OneAir*.cs                 # patches Giny (commandes chat, poller
+│   │                              #   d'actions, havre-sac, events, etc.)
 │   ├── web/                       # service Go (landing + admin)
 │   │   ├── main.go                # routing, sessions, APIs admin
 │   │   ├── landing.go             # landing publique + article SSR
@@ -180,17 +171,21 @@ quand rebuild les images) dans `CLAUDE.md`.
 │   │   ├── templates/             # *.html (go:embed)
 │   │   └── static/                # *.css, *.js (go:embed)
 │   └── SWF/AuthPatch.swf          # RawPatch.swf Giny
-├── client/                        # sources des clients
+├── client/                        # sources des clients (gitignorées :
+│   │                              #   dofus-*-2.68/, .cache/)
 │   ├── README.md                  # détails build + patches SWF
-│   ├── build-app-{darwin,windows}.sh
-│   ├── build-docker-{darwin,windows}.sh
+│   ├── build.sh                   # point d'entrée unique (menu + CLI)
 │   ├── Dockerfile.{darwin,windows}
 │   ├── DofusInvoker-patched.swf   # SWF Giny patché (BUILD_TYPE=DEBUG)
 │   ├── giny-config.xml
-│   ├── dofus-{darwin,windows}-2.68/
-│   ├── OneAirLauncher/            # Swift macOS
-│   ├── OneAirLauncher-win/        # WPF C# Windows
-│   └── zaap-server/               # Go (DivaZaap fork)
+│   ├── OneAirLauncher/            # pré-launcher Swift macOS
+│   ├── OneAirLauncher-win/        # pré-launcher WPF C# Windows
+│   └── zaap-server/               # fake Zaap Thrift en Go (DivaZaap fork)
+├── dist/                          # sortie de client/build.sh (gitignoré)
+│   ├── OneAir.app/                # bundle macOS prêt à `open`
+│   ├── OneAir-Windows/            # bundle Windows
+│   ├── OneAir-MacOS.zip           # servi par /download/macos
+│   └── OneAir-Windows.zip         # servi par /download/windows
 └── scripts/
     ├── start-server.sh / stop-server.sh
     ├── create-account.sh
@@ -220,7 +215,7 @@ AIR/Flash.
 - **Dofus** est une marque déposée d'**Ankama Games**. Aucun nom,
   graphisme, son, texture, ou binaire Adobe AIR captif n'est redistribué
   ici. Les utilisateurs récupèrent les assets via le CDN officiel Cytrus
-  (`build-docker-*.sh`) et doivent posséder une copie légitime de Dofus.
+  (`client/build.sh`) et doivent posséder une copie légitime de Dofus.
 - **macOS SDK** (cross-compile launcher Swift depuis Linux) : EULA réserve
   l'usage à du hardware Apple. Mirror phracker en zone grise. Optionnel.
 - **Aucune garantie** : si Ankama notifie le projet, il sera retiré.
