@@ -94,19 +94,21 @@ docker logs -f giny-world
 
 ## Workflow build clients
 
-**Mac (natif ou Linux+Docker)** :
+Point d'entrée unique `./client/build.sh` (menu interactif si aucun arg) :
+
 ```bash
-./client/build-app-darwin.sh         # Mac : swiftc + codesign natifs
-./client/build-docker-darwin.sh      # Linux : Swift SDK Darwin auto-assemblé
+./client/build.sh darwin             # OneAir.app via Docker (toujours)
+./client/build.sh darwin --native    # OneAir.app via outils macOS hôte
+./client/build.sh windows            # OneAir-Windows/ (Docker obligatoire)
+./client/build.sh all
+./client/build.sh sdk                # rebuild Swift SDK Darwin seul
+./client/build.sh <target> --no-zip  # skip le zip dist/
 ```
 
-**Windows (Linux+Docker recommandé)** :
-```bash
-./client/build-docker-windows.sh     # → OneAir-Windows/ + dist/OneAir-Windows.zip
-```
-
-Les bundles finaux sont zippés dans `dist/` sans compression (assets déjà
-compressés). Le service `web` les sert via `/download/{macos,windows}`.
+Le script se ré-invoque dans le container builder avec
+`ONEAIR_INSIDE_CONTAINER=1` pour faire l'assembly. Bundles zippés dans
+`dist/` (Store, pas de compression — assets déjà compressés). Le service
+`web` les sert via `/download/{macos,windows}`.
 
 ## Pièges AS3 / FFDec
 

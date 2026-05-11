@@ -4,16 +4,19 @@ Le client tourne **sans Wine** : on part du Dofus 2.68.0.0 darwin officiel
 (distribué par Ankama dans Cytrus à l'époque) et on l'augmente d'un
 pré-launcher Swift, d'un faux Zaap server, et d'un SWF patché.
 
-## `build-app-darwin.sh`
+## `build.sh`
 
-Reconstruit `OneAir.app` à partir des sources de ce dossier + `.env` (lu à la
-racine du projet pour `SERVER_HOST` / `PUBLIC_AUTH_PORT` / `SERVER_DISPLAY_NAME`).
+Point d'entrée unique. Lance le menu interactif sans arg, ou passe une cible :
+`darwin`, `windows`, `all`, `sdk`. Flags : `--no-zip`, `--native` (macOS hôte).
+Lit `.env` à la racine pour `SERVER_HOST` / `PUBLIC_AUTH_PORT` / `SERVER_DISPLAY_NAME`.
 
 ```bash
-./client/build-app-darwin.sh
+./client/build.sh                    # menu
+./client/build.sh darwin             # OneAir.app via Docker
+./client/build.sh windows            # OneAir-Windows/
 ```
 
-Étapes du script :
+Étapes du build darwin :
 
 1. Copie `dofus-darwin-2.68/.../Dofus.app` → `OneAir.app`
 2. Merge le fragment `lang_fr` (gfx + i18n + config-lang-fr.xml)
@@ -37,7 +40,7 @@ racine du projet pour `SERVER_HOST` / `PUBLIC_AUTH_PORT` / `SERVER_DISPLAY_NAME`
 | `DofusInvoker-patched.swf` | SWF Giny custom, voir « Patches SWF » |
 | `OneAirLauncher/` | Pré-launcher Swift (source + binaire) |
 | `zaap-server/` | Faux Zaap server en Go (port DivaZaap → Thrift Apache) |
-| `build-app-darwin.sh` | Build script |
+| `build.sh` | Build script (point d'entrée unique macOS+Windows) |
 
 ## Patches SWF appliqués
 

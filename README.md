@@ -135,11 +135,12 @@ connexion Internet pour le 1er build.
 
 ## Rebuild des clients (sans toolchain hôte)
 
-Sur Linux, deux images Docker dédiées :
-
 ```bash
-./client/build-docker-windows.sh    # → OneAir-Windows/ + dist/OneAir-Windows.zip
-./client/build-docker-darwin.sh     # → OneAir.app/ + dist/OneAir-MacOS.zip
+./client/build.sh                   # menu interactif (cible + zip)
+./client/build.sh windows           # → OneAir-Windows/ + dist/OneAir-Windows.zip
+./client/build.sh darwin            # → OneAir.app/ + dist/OneAir-MacOS.zip
+./client/build.sh all
+./client/build.sh sdk               # (re)build du Swift SDK Darwin
 ```
 
 Détails (Swift SDK Darwin auto-assemblé, override d'arch zaap-server,
