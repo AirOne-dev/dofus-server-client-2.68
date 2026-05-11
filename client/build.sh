@@ -217,7 +217,8 @@ assemble_darwin_app() {
     fi
 
     echo "==> Bundle cible : $app_dir"
-    rm -rf "$app_dir"
+    # cf. assemble_windows_bundle : rm -rf déplacé côté hôte (dispatcher).
+    [ "${ONEAIR_INSIDE_CONTAINER:-0}" = "1" ] || rm -rf "$app_dir"
     echo "==> Copie main/Dofus.app ($(du -sh "$src_dir/main/Dofus.app" | cut -f1))"
     cp -R "$src_dir/main/Dofus.app" "$app_dir"
 
@@ -344,7 +345,10 @@ assemble_windows_bundle() {
     [ -d "$src_base/main" ]  || { echo "ERREUR : $src_base/main introuvable."  >&2; return 1; }
 
     echo "==> Bundle cible : $app_dir"
-    rm -rf "$app_dir"; mkdir -p "$app_dir"
+    # rm -rf est fait côté hôte avant docker run (cf. dispatcher) : Docker
+    # Desktop sur macOS énumère mal les fichiers avec accents UTF-8 et `rm`
+    # échoue avec "Directory not empty".
+    mkdir -p "$app_dir"
     echo "==> Copie win64/ ($(du -sh "$src_base/win64" | cut -f1))"
     cp -R "$src_base/win64/." "$app_dir/"
     echo "==> Merge main/ → bundle"
@@ -398,19 +402,22 @@ zip_output() {
     local kind="$1"  # "darwin" | "windows"
     require_docker
     mkdir -p "$DIST_DIR"
-    local image folder out
+    local image folder zipname
     if [ "$kind" = "darwin" ]; then
-        image="$DARWIN_IMAGE"; folder="OneAir.app"; out="$DIST_DIR/OneAir-MacOS.zip"
+        image="$DARWIN_IMAGE"; folder="OneAir.app"; zipname="OneAir-MacOS.zip"
     else
-        image="$WINDOWS_IMAGE"; folder="OneAir-Windows"; out="$DIST_DIR/OneAir-Windows.zip"
+        image="$WINDOWS_IMAGE"; folder="OneAir-Windows"; zipname="OneAir-Windows.zip"
     fi
-    echo "==> Zip → $out"
+    echo "==> Zip → $DIST_DIR/$zipname"
+    # Toutes les paths dans bash -c sont container-relatives (/work est le
+    # mount de $ROOT_DIR). $zipname / $folder interpolés côté hôte, le reste
+    # tourne dans le container.
     docker run --rm -v "$ROOT_DIR:/work" -w /work "$image" bash -c "
         command -v zip >/dev/null || { apt-get update -qq && apt-get install -y -qq zip >/dev/null 2>&1; }
-        cd /work && rm -f $(basename "$out").tmp
-        zip -ryq0 dist/$(basename "$out").tmp $folder
-        mv dist/$(basename "$out").tmp $out
-        echo \"    \$(du -h $out | cut -f1)\"
+        cd /work && rm -f dist/${zipname}.tmp
+        zip -ryq0 dist/${zipname}.tmp ${folder}
+        mv dist/${zipname}.tmp dist/${zipname}
+        echo \"    \$(du -h dist/${zipname} | cut -f1)\"
     "
 }
 
@@ -435,6 +442,7 @@ build_darwin_via_docker() {
     if [ -f "$SDK_BUNDLE" ]; then
         sdk_opts=(-v "$CACHE_DIR:/sdk-cache:ro" -v "oneair-swiftpm:/root/.swiftpm")
     fi
+    rm -rf "$ROOT_DIR/OneAir.app"
     docker run --rm \
         -v "$ROOT_DIR:/work" \
         -v "oneair-go-cache:/tmp/go-cache" \
@@ -454,6 +462,7 @@ build_windows_via_docker() {
     echo "==> Image $WINDOWS_IMAGE"
     docker build --pull -f "$dockerfile" -t "$WINDOWS_IMAGE" "$SCRIPT_DIR"
     fetch_cytrus_assets windows "$WINDOWS_IMAGE"
+    rm -rf "$ROOT_DIR/OneAir-Windows"
     docker run --rm \
         -v "$ROOT_DIR:/work" \
         -v "oneair-go-cache:/tmp/go-cache" \
@@ -504,7 +513,11 @@ if [ -z "$TARGET" ]; then
     fi
 fi
 
-# Dispatch
+# Dispatch — toujours `if ... fi` plutôt que `A && B && cmd` parce que
+# `set -e` fait sortir le script si le chain renvoie non-zero (ce qui arrive
+# en --no-zip à l'intérieur du container).
+on_host() { [ "${ONEAIR_INSIDE_CONTAINER:-0}" != "1" ]; }
+
 case "$TARGET" in
     darwin)
         if [ "${ONEAIR_INSIDE_CONTAINER:-0}" = "1" ] || [ "$NATIVE_DARWIN" = "1" ]; then
@@ -512,7 +525,7 @@ case "$TARGET" in
         else
             build_darwin_via_docker
         fi
-        [ "$DO_ZIP" = "1" ] && [ "${ONEAIR_INSIDE_CONTAINER:-0}" != "1" ] && zip_output darwin
+        if [ "$DO_ZIP" = "1" ] && on_host; then zip_output darwin; fi
         ;;
     windows)
         if [ "${ONEAIR_INSIDE_CONTAINER:-0}" = "1" ]; then
@@ -520,7 +533,7 @@ case "$TARGET" in
         else
             build_windows_via_docker
         fi
-        [ "$DO_ZIP" = "1" ] && [ "${ONEAIR_INSIDE_CONTAINER:-0}" != "1" ] && zip_output windows
+        if [ "$DO_ZIP" = "1" ] && on_host; then zip_output windows; fi
         ;;
     all)
         if [ "$NATIVE_DARWIN" = "1" ]; then
@@ -528,8 +541,8 @@ case "$TARGET" in
         else
             build_darwin_via_docker
         fi
-        [ "$DO_ZIP" = "1" ] && zip_output darwin
+        if [ "$DO_ZIP" = "1" ]; then zip_output darwin; fi
         build_windows_via_docker
-        [ "$DO_ZIP" = "1" ] && zip_output windows
+        if [ "$DO_ZIP" = "1" ]; then zip_output windows; fi
         ;;
 esac
