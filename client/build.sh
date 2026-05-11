@@ -8,10 +8,13 @@
 #
 #  Usage :
 #    ./build.sh                            # menu interactif
-#    ./build.sh darwin [--no-zip]
+#    ./build.sh darwin [--no-zip] [--native]
 #    ./build.sh windows [--no-zip]
 #    ./build.sh all [--no-zip]
-#    ./build.sh sdk                        # (re)build du Swift SDK Darwin
+#
+#  Le Swift SDK Darwin (~700 MB) est assemblé automatiquement la 1ère fois
+#  qu'on build la cible darwin et qu'il n'est pas dans .cache/. Pour forcer
+#  une reconstruction : rm client/.cache/darwin.artifactbundle.zip
 #
 #  Variable d'env interne : ONEAIR_INSIDE_CONTAINER=1 fait que la fonction
 #  d'assemblage tourne directement sans dispatch Docker (utilisé par le
@@ -471,11 +474,11 @@ NATIVE_DARWIN=0
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        darwin|windows|all|sdk) TARGET="$1" ;;
-        --no-zip)               DO_ZIP=0 ;;
-        --native)               NATIVE_DARWIN=1 ;;  # macOS host uniquement
+        darwin|windows|all) TARGET="$1" ;;
+        --no-zip)           DO_ZIP=0 ;;
+        --native)           NATIVE_DARWIN=1 ;;  # macOS host uniquement
         -h|--help)
-            sed -n '2,18p' "$0" | sed 's/^# \?//'; exit 0 ;;
+            sed -n '2,22p' "$0" | sed 's/^# \?//'; exit 0 ;;
         *) echo "Argument inconnu : $1" >&2; exit 1 ;;
     esac
     shift
@@ -486,28 +489,23 @@ if [ -z "$TARGET" ]; then
     echo "  1) macOS (OneAir.app)"
     echo "  2) Windows (OneAir-Windows/)"
     echo "  3) Les deux"
-    echo "  4) (Re)build Swift SDK Darwin uniquement"
     read -r -p "Choix [1] : " choice
     case "${choice:-1}" in
         1) TARGET=darwin ;;
         2) TARGET=windows ;;
         3) TARGET=all ;;
-        4) TARGET=sdk ;;
         *) echo "Choix invalide" >&2; exit 1 ;;
     esac
-    if [ "$TARGET" != "sdk" ]; then
-        read -r -p "Zipper le résultat dans dist/ ? [Y/n] : " yn
-        case "$yn" in n|N|no|NO) DO_ZIP=0 ;; esac
-        if [ "$IS_MACOS" -eq 1 ] && [ "$TARGET" != "windows" ]; then
-            read -r -p "macOS natif (sans Docker) pour le bundle macOS ? [y/N] : " yn
-            case "$yn" in y|Y|yes|YES) NATIVE_DARWIN=1 ;; esac
-        fi
+    read -r -p "Zipper le résultat dans dist/ ? [Y/n] : " yn
+    case "$yn" in n|N|no|NO) DO_ZIP=0 ;; esac
+    if [ "$IS_MACOS" -eq 1 ] && [ "$TARGET" != "windows" ]; then
+        read -r -p "macOS natif (sans Docker) pour le bundle macOS ? [y/N] : " yn
+        case "$yn" in y|Y|yes|YES) NATIVE_DARWIN=1 ;; esac
     fi
 fi
 
 # Dispatch
 case "$TARGET" in
-    sdk) build_darwin_sdk ;;
     darwin)
         if [ "${ONEAIR_INSIDE_CONTAINER:-0}" = "1" ] || [ "$NATIVE_DARWIN" = "1" ]; then
             assemble_darwin_app

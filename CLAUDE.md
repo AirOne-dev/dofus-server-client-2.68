@@ -101,9 +101,12 @@ Point d'entrée unique `./client/build.sh` (menu interactif si aucun arg) :
 ./client/build.sh darwin --native    # OneAir.app via outils macOS hôte
 ./client/build.sh windows            # OneAir-Windows/ (Docker obligatoire)
 ./client/build.sh all
-./client/build.sh sdk                # rebuild Swift SDK Darwin seul
 ./client/build.sh <target> --no-zip  # skip le zip dist/
 ```
+
+Le Swift SDK Darwin (~700 MB) est assemblé automatiquement la 1ère fois
+qu'on build `darwin`. Pour forcer une reconstruction : supprimer
+`client/.cache/darwin.artifactbundle.zip` avant le build.
 
 Le script se ré-invoque dans le container builder avec
 `ONEAIR_INSIDE_CONTAINER=1` pour faire l'assembly. Bundles zippés dans
