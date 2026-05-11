@@ -3,7 +3,7 @@
 #
 # Pré-requis :
 #   - docker compose stack OneAir up (au moins giny-mysql)
-#   - dossier ./dist/OneAir.app/Contents/Resources/data accessible
+#   - dossier ./client/build/OneAir.app/Contents/Resources/data accessible
 #
 # Variables (overridables) :
 #   DATA_DIR     : chemin du dossier "data" du client (par défaut OneAir.app)
@@ -24,7 +24,7 @@ if [ -f "$ROOT_DIR/.env" ]; then
     set -a; . "$ROOT_DIR/.env"; set +a
 fi
 
-: "${DATA_DIR:=$ROOT_DIR/dist/OneAir.app/Contents/Resources}"
+: "${DATA_DIR:=$ROOT_DIR/client/build/OneAir.app/Contents/Resources}"
 : "${DB_HOST:=mysql}"
 : "${DB_NAME:=${MYSQL_WORLD_DB:-giny_world}}"
 : "${DB_USER:=root}"

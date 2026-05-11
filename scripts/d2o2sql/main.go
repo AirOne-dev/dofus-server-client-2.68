@@ -3,8 +3,8 @@
 //
 // Usage :
 //   go run ./scripts/d2o2sql \
-//      --data  ./dist/OneAir.app/Contents/Resources/data/common \
-//      --i18n  ./dist/OneAir.app/Contents/Resources/data/i18n/i18n_fr.d2i \
+//      --data  ./client/build/OneAir.app/Contents/Resources/data/common \
+//      --i18n  ./client/build/OneAir.app/Contents/Resources/data/i18n/i18n_fr.d2i \
 //      --out   ./server/init-sql
 //
 // Émet un fichier .sql par mapping connu (cf. mappings.go) sous la forme

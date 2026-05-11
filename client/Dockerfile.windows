@@ -6,7 +6,7 @@
 #    - OneAirLauncher.exe : .NET 8 WPF self-contained single-file (Microsoft SDK)
 #    - zaap-server.exe    : Go GOOS=windows GOARCH=amd64
 #  Le SWF DofusInvoker patché et les binaires Adobe AIR captive viennent du
-#  bundle cytrus déjà téléchargé dans client/dofus-windows-2.68/.
+#  bundle cytrus déjà téléchargé dans client/.cache/dofus-windows-2.68/.
 # =============================================================================
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0

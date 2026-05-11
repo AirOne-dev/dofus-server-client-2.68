@@ -173,7 +173,7 @@ func handleDownloadMac(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	zipPath := envOr("ONEAIR_APP_ZIP", "/app/dist/OneAir-MacOS.zip")
+	zipPath := envOr("ONEAIR_APP_ZIP", "/app/build/OneAir-MacOS.zip")
 	if st, err := os.Stat(zipPath); err == nil && !st.IsDir() {
 		w.Header().Set("Content-Type", "application/zip")
 		w.Header().Set("Content-Disposition", `attachment; filename="OneAir-MacOS.zip"`)
@@ -204,7 +204,7 @@ func handleDownloadWindows(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	zipPath := envOr("ONEAIR_WIN_ZIP", "/app/dist/OneAir-Windows.zip")
+	zipPath := envOr("ONEAIR_WIN_ZIP", "/app/build/OneAir-Windows.zip")
 	if st, err := os.Stat(zipPath); err == nil && !st.IsDir() {
 		w.Header().Set("Content-Type", "application/zip")
 		w.Header().Set("Content-Disposition", `attachment; filename="OneAir-Windows.zip"`)

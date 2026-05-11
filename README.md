@@ -22,7 +22,7 @@ deux côtés, pas de Wine).
 ```bash
 cp .env.example .env                 # ajuster ports / passwords si besoin
 docker compose up -d --build         # stack serveur
-open dist/OneAir.app                 # client macOS (build via ./client/build.sh darwin)
+open client/build/OneAir.app         # client macOS (build via ./client/build.sh darwin)
 ```
 
 Premier lancement : **+ Nouveau compte** dans le launcher, JOUER. Le compte
@@ -41,7 +41,7 @@ Tout est servi par le service `web` sur **<http://localhost>** :
 - `/article/{slug}` — page article (Markdown léger).
 - `/admin` — dashboard auth-gated (compte avec `Role >= 5`).
 - `/dbgate/` — DBGate iframé (gated par session admin).
-- `/download/{macos,windows}` — bundles depuis `dist/` ou env
+- `/download/{macos,windows}` — bundles depuis `client/build/` ou env
   `DOWNLOAD_{MACOS,WINDOWS}_URL`.
 - `/api/public/{login,logout,me,character,status,articles,community}`.
 
@@ -137,8 +137,8 @@ connexion Internet pour le 1er build.
 
 ```bash
 ./client/build.sh                   # menu interactif (cible + zip)
-./client/build.sh windows           # → dist/OneAir-Windows/ + dist/OneAir-Windows.zip
-./client/build.sh darwin            # → dist/OneAir.app/      + dist/OneAir-MacOS.zip
+./client/build.sh windows           # → client/build/OneAir-Windows/ + .zip
+./client/build.sh darwin            # → client/build/OneAir.app/      + .zip
 ./client/build.sh all
 ```
 
@@ -171,21 +171,26 @@ quand rebuild les images) dans `CLAUDE.md`.
 │   │   ├── templates/             # *.html (go:embed)
 │   │   └── static/                # *.css, *.js (go:embed)
 │   └── SWF/AuthPatch.swf          # RawPatch.swf Giny
-├── client/                        # sources des clients (gitignorées :
-│   │                              #   dofus-*-2.68/, .cache/)
+├── client/                        # sources + outputs des clients
 │   ├── README.md                  # détails build + patches SWF
 │   ├── build.sh                   # point d'entrée unique (menu + CLI)
 │   ├── Dockerfile.{darwin,windows}
 │   ├── DofusInvoker-patched.swf   # SWF Giny patché (BUILD_TYPE=DEBUG)
 │   ├── giny-config.xml
-│   ├── OneAirLauncher/            # pré-launcher Swift macOS
-│   ├── OneAirLauncher-win/        # pré-launcher WPF C# Windows
-│   └── zaap-server/               # fake Zaap Thrift en Go (DivaZaap fork)
-├── dist/                          # sortie de client/build.sh (gitignoré)
-│   ├── OneAir.app/                # bundle macOS prêt à `open`
-│   ├── OneAir-Windows/            # bundle Windows
-│   ├── OneAir-MacOS.zip           # servi par /download/macos
-│   └── OneAir-Windows.zip         # servi par /download/windows
+│   ├── launcher/
+│   │   ├── macos/                 # pré-launcher Swift (anciennement
+│   │   │                          #   OneAirLauncher/ à la racine)
+│   │   └── windows/               # pré-launcher WPF C# (idem)
+│   ├── zaap-server/               # fake Zaap Thrift en Go (DivaZaap fork)
+│   ├── .cache/                    # gitignoré — fetch via cytrus + Swift SDK
+│   │   ├── dofus-darwin-2.68/     # assets Dofus officiels (~5 GB)
+│   │   ├── dofus-windows-2.68/    # idem
+│   │   └── darwin.artifactbundle.zip  # Swift SDK Darwin (~700 MB)
+│   └── build/                     # gitignoré — sortie de client/build.sh
+│       ├── OneAir.app/            # bundle macOS prêt à `open`
+│       ├── OneAir-Windows/        # bundle Windows
+│       ├── OneAir-MacOS.zip       # servi par /download/macos
+│       └── OneAir-Windows.zip     # servi par /download/windows
 └── scripts/
     ├── start-server.sh / stop-server.sh
     ├── create-account.sh

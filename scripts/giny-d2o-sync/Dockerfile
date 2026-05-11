@@ -62,7 +62,7 @@ COPY --from=build /out/ /opt/sync/
 # Le synchronizer suppose que /data contient :
 #   data/common/*.d2o
 #   data/i18n/i18n_fr.d2i
-# (chemins relatifs à /data, montés depuis dist/OneAir.app/Contents/Resources)
+# (chemins relatifs à /data, montés depuis client/build/OneAir.app/Contents/Resources)
 ENV DB_HOST=mysql
 ENV DB_NAME=giny_world
 ENV DB_USER=root

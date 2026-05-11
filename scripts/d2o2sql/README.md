@@ -23,18 +23,18 @@ local et générer des fichiers `.sql` d'import dans la stack Giny.
 ```bash
 # 1. Liste tous les .d2o et leurs classes (utile pour ajouter un mapping)
 go run ./scripts/d2o2sql --list \
-    --data ./dist/OneAir.app/Contents/Resources/data/common
+    --data ./client/build/OneAir.app/Contents/Resources/data/common
 
 # 2. Génère les .sql pour les mappings connus
 go run ./scripts/d2o2sql \
-    --data ./dist/OneAir.app/Contents/Resources/data/common \
-    --i18n ./dist/OneAir.app/Contents/Resources/data/i18n/i18n_fr.d2i \
+    --data ./client/build/OneAir.app/Contents/Resources/data/common \
+    --i18n ./client/build/OneAir.app/Contents/Resources/data/i18n/i18n_fr.d2i \
     --out  ./server/init-sql
 
 # 3. Pour ne traiter qu'un fichier précis
 go run ./scripts/d2o2sql \
-    --data ./dist/OneAir.app/Contents/Resources/data/common \
-    --i18n ./dist/OneAir.app/Contents/Resources/data/i18n/i18n_fr.d2i \
+    --data ./client/build/OneAir.app/Contents/Resources/data/common \
+    --i18n ./client/build/OneAir.app/Contents/Resources/data/i18n/i18n_fr.d2i \
     --only Areas.d2o,SubAreas.d2o \
     --out  ./server/init-sql
 
