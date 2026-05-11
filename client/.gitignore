@@ -1,2 +1,7 @@
 # Cache du Swift SDK Darwin (~700 MB) — produit par make-darwin-sdk.sh
 .cache/
+
+# Binaires zaap-server reconstruits à chaque build-app-*.sh.
+zaap-server/zaap-server
+zaap-server/zaap-server.exe
+zaap-server/divazaap
