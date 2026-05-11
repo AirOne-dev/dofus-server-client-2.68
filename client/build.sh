@@ -218,6 +218,10 @@ assemble_darwin_app() {
     echo "==> Bundle cible : $app_dir"
     # cf. assemble_windows_bundle : rm -rf déplacé côté hôte (dispatcher).
     [ "${ONEAIR_INSIDE_CONTAINER:-0}" = "1" ] || rm -rf "$app_dir"
+    # cp -R Dofus.app $app_dir crée $app_dir comme copie — mais exige que le
+    # PARENT existe. Sur Linux Docker bind-mount $ROOT_DIR:/work n'auto-crée
+    # pas /work/client/build/ s'il manque côté hôte ; on le force ici.
+    mkdir -p "$BUILD_DIR"
     echo "==> Copie main/Dofus.app ($(du -sh "$src_dir/main/Dofus.app" | cut -f1))"
     cp -R "$src_dir/main/Dofus.app" "$app_dir"
 
@@ -457,6 +461,7 @@ build_darwin_via_docker() {
     if [ -f "$SDK_BUNDLE" ]; then
         sdk_opts=(-v "$CACHE_DIR:/sdk-cache:ro" -v "oneair-swiftpm:/root/.swiftpm")
     fi
+    mkdir -p "$BUILD_DIR"
     rm -rf "$BUILD_DIR/OneAir.app"
     docker run --rm \
         -v "$ROOT_DIR:/work" \
@@ -477,6 +482,7 @@ build_windows_via_docker() {
     echo "==> Image $WINDOWS_IMAGE"
     docker build --pull -f "$dockerfile" -t "$WINDOWS_IMAGE" "$SCRIPT_DIR"
     fetch_cytrus_assets windows "$WINDOWS_IMAGE"
+    mkdir -p "$BUILD_DIR"
     rm -rf "$BUILD_DIR/OneAir-Windows"
     docker run --rm \
         -v "$ROOT_DIR:/work" \
