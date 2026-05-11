@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS `accounts` (
 --
 
 INSERT INTO `accounts` (`Id`, `Username`, `Password`, `LastSelectedServerId`, `IPs`, `CharactersSlots`, `Banned`, `Role`, `Nickname`, `Ogrines`) VALUES
-(1, 'admin', 'test', 291, '127.0.0.1', 15, 0, 5, 'AirOne', 69);
+(1, 'test', 'test', 291, '127.0.0.1', 15, 0, 5, 'AirOne', 69);
 
 -- --------------------------------------------------------
 
