@@ -209,14 +209,9 @@ JSON
 # -----------------------------------------------------------------------------
 assemble_darwin_app() {
     local app_dir="$BUILD_DIR/OneAir.app"
-    local src_dir
-    if [ -d "$ASSETS_DARWIN_DIR/dofus/2.68.0.0/darwin/main/Dofus.app" ]; then
-        src_dir="$ASSETS_DARWIN_DIR/dofus/2.68.0.0/darwin"
-    elif [ -d "$SCRIPT_DIR/dofus-darwin/dofus/2.73.3.14/darwin/main/Dofus.app" ]; then
-        src_dir="$SCRIPT_DIR/dofus-darwin/dofus/2.73.3.14/darwin"
-        echo "AVERTISSEMENT : fallback 2.73.3.14 — proto incompatible Giny"
-    else
-        echo "ERREUR : aucun client darwin trouvé dans $SCRIPT_DIR" >&2
+    local src_dir="$ASSETS_DARWIN_DIR/dofus/2.68.0.0/darwin"
+    if [ ! -d "$src_dir/main/Dofus.app" ]; then
+        echo "ERREUR : assets darwin introuvables sous $src_dir — fetch_cytrus_assets a-t-il tourné ?" >&2
         return 1
     fi
 

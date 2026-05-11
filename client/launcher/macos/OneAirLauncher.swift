@@ -178,7 +178,7 @@ enum DofusLaunch {
         }
 
         if let h = try? FileHandle(forWritingTo: logURL) {
-            try? h.seekToEnd()
+            _ = try? h.seekToEnd()
             h.write((logLines.joined(separator: "\n") + "\n").data(using: .utf8)!)
             try? h.close()
         } else {
