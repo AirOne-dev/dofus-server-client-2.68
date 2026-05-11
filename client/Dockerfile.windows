@@ -11,15 +11,17 @@
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0
 
-ARG GO_VERSION=1.22.6
-ARG TARGETARCH
+# Pas de ARG : la substitution ${ARG} dans RUN est cassée sur les builders
+# Docker pré-BuildKit. L'arch est détectée via `dpkg --print-architecture`
+# pour rester portable (legacy + BuildKit, amd64 + arm64).
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl ca-certificates xz-utils rsync python3 zip unzip git \
     && rm -rf /var/lib/apt/lists/*
 
-# Go officiel arch-aware (TARGETARCH = amd64 ou arm64).
-RUN curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${TARGETARCH}.tar.gz" \
+RUN GO_VERSION=1.22.6 \
+    && ARCH=$(dpkg --print-architecture) \
+    && curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${ARCH}.tar.gz" \
         | tar -C /usr/local -xz
 ENV PATH=/usr/local/go/bin:${PATH}
 ENV GOPATH=/go GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod

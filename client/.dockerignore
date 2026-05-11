@@ -1,0 +1,7 @@
+# Docker n'a besoin que des Dockerfile* dans le contexte. Tout le reste
+# (sources, assets cytrus, bundles output, caches Swift SDK) est monté en
+# bind mount au moment du docker run, pas COPIé dans l'image.
+**
+
+!Dockerfile.darwin
+!Dockerfile.windows
