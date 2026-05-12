@@ -195,32 +195,22 @@ CREATE TABLE IF NOT EXISTS dungeon_progress (
             return false;
         }
 
-        // Hook appelé depuis Character.OnEnterMap. Détecte si la map est :
-        //   * une salle de donjon : on sauvegarde la progression
-        //   * la map de sortie : on purge la progression du donjon
-        //   * la map d'entrée : pas d'action (l'entrée ne compte pas comme reprise)
+        // Hook appelé depuis Character.OnEnterMap. Sauvegarde la progression
+        // dès qu'on entre dans une salle de donjon. On ne purge JAMAIS sur la
+        // map de sortie : pour 89 donjons sur 124 (Crypte de Kardorim, Antre
+        // du Dragon Cochon, etc.), entrance == exit, donc respawner à
+        // l'entrée après une défaite déclencherait la purge et casserait la
+        // reprise. La progression est de toute façon écrasée par le prochain
+        // SaveProgress quand le joueur clique "Entrer" et arrive en salle 1.
         public static void OnEnterMap(Character character)
         {
             try
             {
                 if (character == null || character.Map == null) return;
                 long mapId = character.Map.Id;
-
-                // Sortie de donjon : purge la progression.
-                foreach (var d in DungeonRecord.GetDungeonRecords())
-                {
-                    if (d.ExitMapId == mapId)
-                    {
-                        ClearProgress(character.Id, d.Id);
-                    }
-                }
-
-                // Salle de donjon : sauvegarde.
                 var dungeon = DungeonRecord.GetDungeonByMapId(mapId);
                 if (dungeon == null) return;
-                // Si c'est l'entrée elle-même, on ignore.
                 if (dungeon.EntranceMapId == mapId) return;
-                // Si c'est explicitement listé comme room du donjon, on sauve.
                 if (dungeon.Rooms != null && dungeon.Rooms.Any(r => r.MapId == mapId))
                 {
                     SaveProgress(character.Id, dungeon.Id, mapId);
