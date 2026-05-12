@@ -1,0 +1,66 @@
+﻿using Giny.Core.IO;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Giny.Core.Network
+{
+    public class Http
+    {
+        public static async Task<string> GetAsync(HttpClient client, string url)
+        {
+            var response = await client.GetAsync(url);
+            return await response.Content.ReadAsStringAsync();
+        }
+        public static string Get(string url)
+        {
+            string result = string.Empty;
+
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            request.AutomaticDecompression = DecompressionMethods.GZip;
+
+            using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+            using (Stream stream = response.GetResponseStream())
+            using (StreamReader reader = new StreamReader(stream))
+            {
+                result = reader.ReadToEnd();
+            }
+            return result;
+        }
+        public static async Task<string> PostAsync(HttpClient client, string url, Dictionary<string, string> values)
+        {
+            var content = new FormUrlEncodedContent(values);
+
+            var response = await client.PostAsync(url, content);
+            var responseString = await response.Content.ReadAsStringAsync();
+            return responseString;
+        }
+
+        public static async Task<T> PostAsync<T>(string url, HttpClient client, dynamic obj) where T : class
+        {
+            using StringContent jsonContent = new(
+         Json.Serialize(obj), Encoding.UTF8, "application/json");
+
+            using HttpResponseMessage response = await client.PostAsync(
+               url,
+                jsonContent);
+
+
+            var jsonResponse = await response.Content.ReadAsStringAsync();
+
+            if (response.Content.Headers.ContentLength > 0 && response.StatusCode == HttpStatusCode.OK)
+            {
+                return Json.Deserialize<T>(jsonResponse);
+            }
+            else
+            {
+                return null;
+            }
+        }
+    }
+}

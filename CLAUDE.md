@@ -51,10 +51,12 @@ workflow ou ajoute une règle. Pas pour chaque commit.
 
 ## Architecture
 
-- `server/` — image Docker .NET 6 qui clone Giny.NETCore (branche 2.68),
-  applique des patches via `Dockerfile` (sed), copie nos `OneAir*.cs`.
-  Containers : `giny-auth` (5555), `giny-world` (5556) ; image partagée
-  `giny/server:latest`. MySQL et DBGate à côté.
+- `server/` — image Docker .NET 6. Le source Giny.NETCore est **vendoré**
+  dans `server/giny/` (cf. `server/giny/UPSTREAM.md` pour le commit pinné),
+  avec nos modifs `OneAir*` éditées directement dans l'arbre. Le Dockerfile
+  ne fait plus que `COPY giny/` + `dotnet publish`. Containers : `giny-auth`
+  (5555), `giny-world` (5556) ; image partagée `giny/server:latest`. MySQL
+  et DBGate à côté.
 - `server/web/` — service Go single-binary : landing publique `/`, dashboard
   admin `/admin`, APIs `/api/*` et `/api/public/*`. Image `oneair/web`.
 - `client/launcher/macos/` (Swift) → bundle `client/build/OneAir.app/`.
@@ -92,12 +94,22 @@ open ./client/build/OneAir.app
 
 ## Workflow patch serveur
 
+Tout le code .cs vit dans `server/giny/Sources/`. Pour modifier un comportement
+existant, edit direct le fichier Giny (la modif coexiste avec le code OneAir).
+Pour ajouter une feature OneAir : créer/éditer un `OneAir*.cs` au bon endroit
+sous `server/giny/Sources/Servers/Giny.World/...`.
+
 ```bash
-$EDITOR ./server/OneAirChatCommands.cs
-docker compose build auth                                    # ~1-2min cold
+$EDITOR server/giny/Sources/Servers/Giny.World/Managers/Chat/OneAirChatCommands.cs
+docker compose build auth                                    # ~10s cold
 docker compose up -d --no-deps --force-recreate auth world
 docker logs -f giny-world
 ```
+
+Pour ajouter un nouveau hook dans le code Giny vanilla : éditer directement
+le fichier source dans `server/giny/Sources/...`. Préfixer chaque ajout
+`OneAir`/`_oneAir` pour rester repérable (`grep -rn "OneAir" server/giny`).
+Voir `server/giny/UPSTREAM.md` pour le commit upstream pinné.
 
 ## Workflow build clients
 
@@ -181,15 +193,18 @@ retomber sur `TopMap`/`BottomMap` sans filtrer par `MapRecord.GetMap(...) != nul
 
 `OneAirUnhandledLogger.cs` sérialise dans `unhandled_log` chaque action
 joueur que Giny ne sait pas exécuter (item sans handler, sort sans effet,
-NPC muet, message protocol orphelin, etc.). Hooks installés via sed dans le
-Dockerfile. Logger non-bloquant (queue 2s), non-throwing, dédup 30s,
+NPC muet, message protocol orphelin, etc.). Hooks injectés directement
+dans les .cs Giny (cherchables avec `grep -rn "OneAirUnhandledLogger"
+server/giny`). Logger non-bloquant (queue 2s), non-throwing, dédup 30s,
 auto-purge > 30j.
 
 Panel admin `/admin#unhandled` avec bouton *Copier pour Claude* qui produit
 un Markdown auto-suffisant.
 
-Ajouter une catégorie : nouveau `LogXxx()` + sed dans Dockerfile + ligne
-descriptive dans `formatUnhandledMarkdown` (`server/web/unhandled.go`).
+Ajouter une catégorie : nouveau `LogXxx()` dans `OneAirUnhandledLogger.cs`
++ appel inline injecté à l'endroit voulu dans le code Giny (`server/giny/
+Sources/...`) + ligne descriptive dans `formatUnhandledMarkdown` (`server/
+web/unhandled.go`).
 
 ## Havre-sac
 

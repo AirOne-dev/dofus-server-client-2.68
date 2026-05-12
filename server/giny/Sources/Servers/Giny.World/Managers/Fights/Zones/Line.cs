@@ -1,0 +1,92 @@
+﻿using Giny.Protocol.Custom.Enums;
+using Giny.World.Managers.Fights.Cast;
+using Giny.World.Managers.Maps;
+using Giny.World.Records.Maps;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Giny.World.Managers.Fights.Zones
+{
+    public class Line : Zone
+    {
+        private bool FromCaster
+        {
+            get;
+            set;
+        }
+        private bool StopAtTarget
+        {
+            get;
+            set;
+        }
+        public Line(byte minRadius, byte radius, bool fromCaster, bool stopAtTarget)
+        {
+            Radius = radius;
+            MinRadius = minRadius;
+            FromCaster = fromCaster;
+            StopAtTarget = stopAtTarget;
+        }
+        public Line(byte minRadius, byte radius, bool fromCaster, bool stopAtTarget,DirectionsEnum direction):
+            this(minRadius,radius,fromCaster, stopAtTarget)
+        {
+            Direction = direction;
+        }
+        public override CellRecord[] GetCells(CellRecord centerCell, CellRecord casterCell, MapRecord map)
+        {
+            short distance = 0;
+            List<CellRecord> aCells = new List<CellRecord>();
+            MapPoint origin = !FromCaster ? centerCell.Point : casterCell.Point;
+            int x = origin.X;
+            int y = origin.Y;
+
+            int length = !this.FromCaster ? Radius : this.Radius + this.MinRadius - 1;
+
+            if (FromCaster && this.StopAtTarget)
+            {
+                distance = origin.DistanceTo(centerCell.Point); // distanceToCell
+
+                bool flag = distance < length;
+
+                length = flag ? distance : length;
+            }
+            for (int r = this.MinRadius; r <= length; r++)
+            {
+                switch (this.Direction)
+                {
+                    case DirectionsEnum.DIRECTION_WEST:
+                        MapPoint.AddCellIfValid(x - r, y - r, map, aCells);
+                        break;
+                    case DirectionsEnum.DIRECTION_NORTH:
+                        MapPoint.AddCellIfValid(x - r, y + r, map, aCells);
+                        break;
+                    case DirectionsEnum.DIRECTION_EAST:
+                        MapPoint.AddCellIfValid(x + r, y + r, map, aCells);
+                        break;
+                    case DirectionsEnum.DIRECTION_SOUTH:
+                        MapPoint.AddCellIfValid(x + r, y - r, map, aCells);
+                        break;
+                    case DirectionsEnum.DIRECTION_NORTH_WEST:
+                        MapPoint.AddCellIfValid(x - r, y, map, aCells);
+                        break;
+                    case DirectionsEnum.DIRECTION_SOUTH_WEST:
+                        MapPoint.AddCellIfValid(x, y - r, map, aCells);
+                        break;
+                    case DirectionsEnum.DIRECTION_SOUTH_EAST:
+                        MapPoint.AddCellIfValid(x + r, y, map, aCells);
+                        break;
+                    case DirectionsEnum.DIRECTION_NORTH_EAST:
+                        MapPoint.AddCellIfValid(x, y + r, map, aCells);
+                        break;
+                }
+            }
+
+
+            return aCells.ToArray();
+        }
+
+      
+    }
+}

@@ -1,0 +1,166 @@
+﻿using Giny.Core.Extensions;
+using Giny.World.Managers.Fights.Cast;
+using Giny.World.Managers.Fights.Fighters;
+using Giny.World.Managers.Fights.Zones;
+using Giny.World.Records.Maps;
+using Giny.World.Records.Spells;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Giny.World.Managers.Fights.AI
+{
+    public class CastOnEnemyAction : AIAction
+    {
+        public const int MaxIterations = 20;
+
+        private Fighter? WeakerEnemy
+        {
+            get;
+            set;
+        }
+        public CastOnEnemyAction(AIFighter fighter) : base(fighter)
+        {
+
+        }
+
+
+        protected override void Apply()
+        {
+            WeakerEnemy = Fighter.EnemyTeam.GetFighters().OrderBy(x => x.Stats.Life.Percentage).FirstOrDefault();
+
+            CastSpells();
+
+        }
+        private void CastSpells(int iterations = 0)
+        {
+            if (iterations >= MaxIterations)
+            {
+                return;
+            }
+            List<SpellCast> allCasts = new List<SpellCast>();
+
+            foreach (var cell in EnumeratePossiblePosition())
+            {
+                allCasts.AddRange(GetSpellCasts(cell));
+            }
+
+            allCasts.AddRange(GetSpellCasts(Fighter.Cell));
+
+
+            if (allCasts.Count == 0)
+            {
+                return;
+            }
+            Dictionary<SpellCast, double> castEfficiencies = new Dictionary<SpellCast, double>();
+
+
+            foreach (var cast in allCasts)
+            {
+                castEfficiencies.Add(cast, GetEfficiency(cast));
+            }
+
+            var bestCast = castEfficiencies.MaxBy(x => x.Value).Key;
+
+
+            if (bestCast != null)
+            {
+                if (Fighter.Fight.Ended || !Fighter.Alive)
+                {
+                    return;
+                }
+
+                if (bestCast.Target != null && !bestCast.Target.Alive)
+                {
+                    return;
+                }
+
+                var path = Fighter.FindPath(bestCast.CastCell);
+                Fighter.Move(path);
+
+                if (bestCast.CastCell == Fighter.Cell)
+                {
+                    Fighter.CastSpell(bestCast);
+                }
+
+                CastSpells(iterations + 1);
+            }
+        }
+
+        private double GetEfficiency(SpellCast cast)
+        {
+            double value = -cast.CastCell.Point.ManhattanDistanceTo(Fighter.Cell.Point);
+
+            if (cast.Target != null && !cast.Target.IsSummoned() && !cast.Target.IsFriendlyWith(Fighter))
+            {
+                value += 10;
+            }
+
+            if (cast.Target != null && cast.Target.Stats.Life.Percentage < 15d && WeakerEnemy != null && cast.Target == WeakerEnemy)
+            {
+                value += 10;
+            }
+
+            return value;
+        }
+        private List<SpellCast> GetSpellCasts(CellRecord cell)
+        {
+            Random random = new Random();
+
+            List<SpellCast> casts = new List<SpellCast>();
+
+            foreach (var spellRecord in GetSpells().Where(x => x.Category == SpellCategoryEnum.Agressive || x.Category == SpellCategoryEnum.Debuff).Shuffle())
+            {
+                var spell = Fighter.GetSpell(spellRecord.Id);
+
+                if (spell.Level.Effects.Any(x => x.EffectEnum == Protocol.Enums.EffectsEnum.Effect_Kill))
+                    continue;
+                if (spell.Level.MaxRange == 0)
+                {
+                    SpellCast cast = new SpellCast(Fighter, spell, Fighter.Cell);
+                    cast.CastCell = cell;
+                    cast.Target = Fighter;
+
+                    if (Fighter.CanCastSpell(cast) == SpellCastResult.OK)
+                    {
+                        casts.Add(cast);
+                    }
+                }
+            }
+
+            foreach (var target in Fighter.EnemyTeam.GetFighters())
+            {
+                foreach (var spellRecord in GetSpells().Where(x => x.Category == SpellCategoryEnum.Agressive || x.Category == SpellCategoryEnum.Debuff).Shuffle())
+                {
+                    var spell = Fighter.GetSpell(spellRecord.Id);
+
+                    var targetCell = target.Cell;
+
+                    if (target.IsInvisible())
+                    {
+                        targetCell = Fighter.Fight.Map.GetCell(Fighter.GetSpellZone(spell.Level, Fighter.Cell.Point).EnumerateValidPoints().Random(random));
+                    }
+
+                    if (spellRecord.Category == SpellCategoryEnum.Agressive && target.IsInvulnerable())
+                    {
+                        continue;
+                    }
+                    SpellCast cast = new SpellCast(Fighter, spell, targetCell);
+                    cast.CastCell = cell;
+
+                    if (!target.IsInvisible())
+                        cast.Target = target;
+
+                    if (Fighter.CanCastSpell(cast) == SpellCastResult.OK)
+                    {
+                        casts.Add(cast);
+                    }
+                }
+            }
+
+            return casts;
+        }
+    }
+}
