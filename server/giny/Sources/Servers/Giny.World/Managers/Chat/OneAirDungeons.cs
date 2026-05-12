@@ -138,39 +138,11 @@ namespace Giny.World.Managers.Chat
                     }
                 }
 
-                // Entrée de donjon : ouvre le vrai dialog Dofus natif si la map
-                // + le template NPC sont couverts par OneAirDungeonResumeData.
-                // Sinon, on laisse Giny gérer (vanilla npc_replies / npc_actions).
-                if (character.Map.Id == mapId)
-                {
-                    var npc = character.Map.Instance.GetEntity<Npc>((long)npcId);
-                    if (npc != null && npc.Template != null && npc.SpawnRecord != null)
-                    {
-                        var entries = OneAirDungeonResume.GetEntriesForNpc(mapId, (short)npc.Template.Id);
-                        if (entries.Count > 0)
-                        {
-                            // Pour chaque donjon accessible depuis ce NPC, regarde
-                            // s'il y a une progression sauvegardée à afficher.
-                            var savedRoomByDungeon = new System.Collections.Generic.Dictionary<long, long>();
-                            foreach (var entry in entries)
-                            {
-                                long firstRoom = 0;
-                                var d = DungeonRecord.GetDungeonRecords().FirstOrDefault(x => x.Id == entry.DungeonId);
-                                if (d != null && d.Rooms != null && d.Rooms.Count > 0)
-                                    firstRoom = d.Rooms[0].MapId;
-
-                                var saved = OneAirDungeonResume.GetSavedRoom(character.Id, entry.DungeonId);
-                                // Si la salle sauvée === entrée OU 1ère salle, on
-                                // considère qu'il n'y a pas de progression à reprendre.
-                                if (saved.HasValue && saved.Value != mapId && saved.Value != firstRoom)
-                                    savedRoomByDungeon[entry.DungeonId] = saved.Value;
-                            }
-                            var dlg = new Giny.World.Managers.Dialogs.OneAirDungeonResumeDialog(character, npc, entries, savedRoomByDungeon);
-                            character.OpenDialog(dlg);
-                            return true;
-                        }
-                    }
-                }
+                // L'entrée de donjon : on ne fait RIEN ici. Le dialog vanilla
+                // (NpcTalkDialog, alimenté par npc_actions + npc_replies) gère
+                // tout. La reply "Reprendre <donjon> où vous l'avez quittée" est
+                // injectée dynamiquement dans NpcTalkDialog.DialogQuestion via
+                // OneAirDungeonResume.GetExtraRepliesForNpcTalk.
             }
             catch (Exception e) { Logger.Write("[OneAir] OneAirDungeons.TryHandleNpcAction failed: " + e.Message, Channels.Warning); }
             return false;

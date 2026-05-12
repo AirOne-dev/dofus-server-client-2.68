@@ -26,9 +26,11 @@ using System.Collections.Generic;
 using System.Linq;
 using Giny.Core;
 using Giny.Core.IO.Configuration;
+using Giny.ORM;
 using Giny.Protocol.Custom.Enums;
 using Giny.World.Managers.Entities.Characters;
 using Giny.World.Managers.Entities.Npcs;
+using Giny.World.Managers.Generic;
 using Giny.World.Managers.Maps.Npcs;
 using Giny.World.Records.Maps;
 using Giny.World.Records.Npcs;
@@ -133,6 +135,64 @@ CREATE TABLE IF NOT EXISTS dungeon_progress (
         public static List<OneAirDungeonResumeEntry> GetEntriesForNpc(long mapId, short npcTemplateId)
         {
             return GetEntriesForMap(mapId).Where(e => e.NpcTemplateId == npcTemplateId).ToList();
+        }
+
+        // Hook appelé depuis NpcTalkDialog.DialogQuestion(). Retourne la liste des
+        // replyId additionnels à afficher quand le joueur a une progression
+        // sauvegardée pour un (ou plusieurs) donjon(s) accessible(s) depuis ce
+        // NPC. Le client filtre par d2o.dialogReplies du template, donc le
+        // replyId doit être valide pour ce NPC ; c'est garanti par construction
+        // (on ne fournit que des replyIds extraits du d2o de ce template).
+        public static List<int> GetExtraRepliesForNpcTalk(Character character, Npc npc)
+        {
+            var extras = new List<int>();
+            try
+            {
+                if (character == null || npc?.SpawnRecord == null || npc.Template == null) return extras;
+                long mapId = npc.SpawnRecord.MapId;
+                foreach (var entry in GetEntriesForNpc(mapId, (short)npc.Template.Id))
+                {
+                    if (entry.ResumeReplyId <= 0) continue;
+                    var saved = GetSavedRoom(character.Id, entry.DungeonId);
+                    if (!saved.HasValue) continue;
+                    var dungeon = DungeonRecord.GetDungeonRecords().FirstOrDefault(d => d.Id == entry.DungeonId);
+                    long firstRoom = (dungeon?.Rooms != null && dungeon.Rooms.Count > 0) ? dungeon.Rooms[0].MapId : 0;
+                    // Ignore si la "progression" est juste sur l'entrée ou la 1ère salle.
+                    if (saved.Value == mapId || saved.Value == firstRoom) continue;
+                    extras.Add(entry.ResumeReplyId);
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.Write("[OneAir] GetExtraRepliesForNpcTalk failed: " + e.Message, Channels.Warning);
+            }
+            return extras;
+        }
+
+        // Hook appelé depuis NpcTalkDialog.Reply() AVANT le routage vanilla.
+        // Retourne true si la reply correspond à un Reprendre <donjon> et qu'on
+        // a téléporté le joueur ; le caller ferme alors le dialog.
+        public static bool TryHandleExtraReply(Character character, Npc npc, int replyId)
+        {
+            try
+            {
+                if (character == null || npc?.SpawnRecord == null || npc.Template == null) return false;
+                long mapId = npc.SpawnRecord.MapId;
+                foreach (var entry in GetEntriesForNpc(mapId, (short)npc.Template.Id))
+                {
+                    if (replyId != entry.ResumeReplyId || entry.ResumeReplyId <= 0) continue;
+                    var saved = GetSavedRoom(character.Id, entry.DungeonId);
+                    if (!saved.HasValue) return false;
+                    if (MapRecord.GetMap(saved.Value) == null) return false;
+                    character.Teleport(saved.Value);
+                    return true;
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.Write("[OneAir] TryHandleExtraReply failed: " + e.Message, Channels.Warning);
+            }
+            return false;
         }
 
         // Hook appelé depuis Character.OnEnterMap. Détecte si la map est :
@@ -304,6 +364,116 @@ ON DUPLICATE KEY UPDATE LastRoomMapId=@r, UpdatedAt=CURRENT_TIMESTAMP";
                 }
             }
             Logger.Write($"[OneAir] DungeonResume entrance NPCs : {created} spawned, {replaced} fallback removed, {kept} kept, {failed} failed, {skippedNoTemplate} skip-no-template", Channels.Info);
+        }
+
+        // Pour chaque NPC d'entrée qu'on a spawné mais qui n'a pas de TALK action
+        // vanilla, seed npc_actions + npc_replies pour qu'il propose un dialog
+        // fonctionnel (Donner la clef et entrer / Sortir). La reply "Reprendre"
+        // est ajoutée dynamiquement par GetExtraRepliesForNpcTalk au moment du
+        // dialog — pas seedée car conditionnelle à la progression. Idempotent :
+        // skip si une TALK existe déjà sur ce spawn (les NPCs vanilla type
+        // Rotabla, Mawy, etc. l'ont déjà dans le dump initial).
+        public static void EnsureEntranceDialogs()
+        {
+            int seededActions = 0, seededReplies = 0, kept = 0, failed = 0;
+            foreach (var kv in _byEntranceMerged.Value)
+            {
+                long mapId = kv.Key;
+                var map = MapRecord.GetMap(mapId);
+                if (map == null) continue;
+
+                // Group entries by NPC template (un NPC peut handler plusieurs donjons).
+                var byTemplate = kv.Value.GroupBy(e => e.NpcTemplateId);
+                foreach (var grp in byTemplate)
+                {
+                    short tpl = grp.Key;
+                    var npc = map.Instance.GetEntity<Npc>(n => n.Template != null && n.Template.Id == tpl);
+                    if (npc?.SpawnRecord == null) continue;
+                    var spawnId = npc.SpawnRecord.Id;
+
+                    // Skip si TALK déjà présent (vanilla seed).
+                    if (NpcActionRecord.GetNpcActions(spawnId).Any(a => a.Action == NpcActionsEnum.TALK))
+                    {
+                        kept++;
+                        continue;
+                    }
+
+                    // Pick le questionMsgId de la 1ère entrée (toutes les entrées
+                    // partagent forcément le même template + la même map, donc le
+                    // même messageId convient pour le dialog d'entrée commun).
+                    int msgId = grp.First().QuestionMessageId;
+                    if (msgId <= 0) continue;
+
+                    try
+                    {
+                        // Seed TALK action.
+                        var action = new NpcActionRecord
+                        {
+                            Id = NpcActionRecord.PopNextId(),
+                            NpcSpawnId = spawnId,
+                            Action = NpcActionsEnum.TALK,
+                            Param1 = msgId.ToString(),
+                            Param2 = "",
+                            Param3 = "",
+                            Criteria = "",
+                        };
+                        action.AddNow();
+                        npc.SpawnRecord.Actions.Add(action);
+                        seededActions++;
+
+                        // Seed enter + exit replies pour chaque donjon servi par ce NPC.
+                        foreach (var entry in grp)
+                        {
+                            long firstRoom = 0;
+                            var dungeon = DungeonRecord.GetDungeonRecords().FirstOrDefault(d => d.Id == entry.DungeonId);
+                            if (dungeon?.Rooms != null && dungeon.Rooms.Count > 0) firstRoom = dungeon.Rooms[0].MapId;
+
+                            if (entry.EnterReplyId > 0 && firstRoom > 0)
+                            {
+                                var firstRoomMap = MapRecord.GetMap(firstRoom);
+                                short enterCell = firstRoomMap != null ? firstRoomMap.RandomWalkableCell().Id : (short)0;
+                                var enterReply = new NpcReplyRecord
+                                {
+                                    Id = NpcReplyRecord.PopNextId(),
+                                    ReplyId = entry.EnterReplyId,
+                                    NpcSpawnId = spawnId,
+                                    MessageId = msgId,
+                                    ActionIdentifier = GenericActionEnum.Teleport,
+                                    Param1 = firstRoom.ToString(),
+                                    Param2 = enterCell.ToString(),
+                                    Param3 = "",
+                                    Criteria = "",
+                                };
+                                enterReply.AddNow();
+                                seededReplies++;
+                            }
+                            if (entry.ExitReplyId > 0)
+                            {
+                                var exitReply = new NpcReplyRecord
+                                {
+                                    Id = NpcReplyRecord.PopNextId(),
+                                    ReplyId = entry.ExitReplyId,
+                                    NpcSpawnId = spawnId,
+                                    MessageId = msgId,
+                                    ActionIdentifier = GenericActionEnum.None,
+                                    Param1 = "",
+                                    Param2 = "",
+                                    Param3 = "",
+                                    Criteria = "",
+                                };
+                                exitReply.AddNow();
+                                seededReplies++;
+                            }
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        failed++;
+                        Logger.Write($"[OneAir] DungeonResume dialog seed failed mapId={mapId} tpl={tpl}: {e.Message}", Channels.Warning);
+                    }
+                }
+            }
+            Logger.Write($"[OneAir] DungeonResume entrance dialogs : {seededActions} TALK actions seeded, {seededReplies} replies seeded, {kept} kept (vanilla), {failed} failed", Channels.Info);
         }
 
         private static MySqlConnection OpenConn()

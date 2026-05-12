@@ -44,11 +44,6 @@ namespace Giny.World.Handlers.Roleplay.Maps.Npcs
         [MessageHandler]
         public static void HandleNpcDialogReplyMessage(NpcDialogReplyMessage message, WorldClient client)
         {
-            if (client.Character.Dialog is OneAirDungeonResumeDialog)
-            {
-                client.Character.GetDialog<OneAirDungeonResumeDialog>().Reply(message.replyId);
-                return;
-            }
             if (client.Character.Dialog is NpcTalkDialog)
             {
                 client.Character.GetDialog<NpcTalkDialog>().Reply(message.replyId);
