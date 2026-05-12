@@ -51,7 +51,11 @@ namespace Giny.World.Logging
                 source = client.Character.Name;
             }
 
-            if (client.Character.Map != null)
+            // OneAir : vanilla check Character != null ligne 49 puis lit Character.Map ici
+            // sans re-checker. Si Character bascule null entre les deux (switch perso / reco
+            // pendant un chat reçu), la NRE remonte hors du try/catch dispatcher et tue le
+            // process world. On mirror le null-check.
+            if (client.Character != null && client.Character.Map != null)
             {
                 mapId = client.Character.Map.Id;
             }

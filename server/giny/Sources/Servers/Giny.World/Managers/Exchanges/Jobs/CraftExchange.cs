@@ -127,7 +127,11 @@ namespace Giny.World.Managers.Exchanges.Jobs
                 }
             }
             Character.Inventory.RemoveItems(removed);
-            Character.Inventory.AddItems(results);
+            // OneAir: stack within craft batch. ItemCollection.AddItems(results) compare
+            // contre m_items mais diffère l'insertion : N items frais (UId=0) ne se voient
+            // pas entre eux et finissent en N entrées Quantity=1. AddItem(item) (singulier)
+            // ajoute immédiatement à m_items donc l'item N+1 stack sur l'item N.
+            foreach (var __oneAirCraftRes in results) Character.Inventory.AddItem(__oneAirCraftRes);
 
             if (results.Count == 1)
             {

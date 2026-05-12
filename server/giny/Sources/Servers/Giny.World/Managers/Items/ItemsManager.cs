@@ -189,7 +189,7 @@ namespace Giny.World.Managers.Items
 
         private UniqueIdProvider m_idprovider;
 
-        private Dictionary<ItemUsageHandlerAttribute, MethodInfo> m_usageHandlers = new Dictionary<ItemUsageHandlerAttribute, MethodInfo>();
+        internal Dictionary<ItemUsageHandlerAttribute, MethodInfo> m_usageHandlers = new Dictionary<ItemUsageHandlerAttribute, MethodInfo>();
 
         [StartupInvoke("Items manager", StartupInvokePriority.SixthPath)]
         public void Initialize()
@@ -384,6 +384,11 @@ namespace Giny.World.Managers.Items
                     return (bool)function.Value.Invoke(null, new object[] { character, item });
 
                 }
+                // OneAir multi-effets : vanilla return après le 1er effet matché.
+                // Pain Gouin (AddHealth + AddPermanentVitality) ne donnait que le heal,
+                // le +1 vita perma était perdu. DispatchEffects boucle sur tous les
+                // effets. Le foreach vanilla devient unreachable (CS0162 toléré).
+                return Giny.World.Managers.Items.OneAirItemUses.DispatchEffects(character, item, m_usageHandlers);
                 foreach (var effect in item.Effects.OfType<Effect>())
                 {
                     function = m_usageHandlers.FirstOrDefault(x => x.Key.Effect == effect.EffectEnum);
