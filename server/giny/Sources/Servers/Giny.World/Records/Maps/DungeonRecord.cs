@@ -1,0 +1,158 @@
+﻿using Giny.Core.DesignPattern;
+using Giny.IO.D2O;
+using Giny.ORM.Attributes;
+using Giny.ORM.Interfaces;
+using ProtoBuf;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Giny.World.Records.Maps
+{
+    [D2OClass("Dungeon")]
+    [Table("dungeons")]
+    public class DungeonRecord : IRecord
+    {
+        [Container]
+        private static Dictionary<long, DungeonRecord> Dungeons = new Dictionary<long, DungeonRecord>();
+
+        [D2OField("id")]
+        [Primary]
+        public long Id
+        {
+            get;
+            set;
+        }
+        [I18NField]
+        [D2OField("nameId")]
+        [Update]
+        public string Name
+        {
+            get;
+            set;
+        }
+
+        [D2OField("entranceMapId")]
+        [Update]
+        public long EntranceMapId
+        {
+            get;
+            set;
+        }
+        [D2OField("exitMapId")]
+        [Update]
+        public long ExitMapId
+        {
+            get;
+            set;
+        }
+
+        [D2OField("optimalPlayerLevel")]
+        public short OptimalPlayerLevel
+        {
+            get;
+            set;
+        }
+
+        [D2OField("mapIds")]
+        [Blob]
+        [Update]
+        public List<MonsterRoom> Rooms
+        {
+            get;
+            set;
+        }
+
+        public long? GetNextMapId(long currentMapId)
+        {
+            int index = 0;
+
+            foreach (var room in Rooms)
+            {
+                if (room.MapId == currentMapId)
+                {
+                    if (index >= Rooms.Count - 1)
+                    {
+                        return ExitMapId;
+                    }
+                    return Rooms.ElementAt(index + 1).MapId;
+                }
+
+                index++;
+
+            }
+
+
+            return null;
+        }
+
+        public static IEnumerable<DungeonRecord> GetDungeonRecords()
+        {
+            return Dungeons.Values;
+        }
+
+        public static DungeonRecord GetDungeon(long id)
+        {
+            return Dungeons[id];
+        }
+        public static DungeonRecord GetDungeonByMapId(long mapId)
+        {
+            return Dungeons.Values.FirstOrDefault(x => x.Rooms.Any(x => x.MapId == mapId));
+        }
+        public static bool IsDungeonEntrance(long id)
+        {
+            return Dungeons.Values.Any(x => x.EntranceMapId == id);
+        }
+        public override string ToString()
+        {
+            return "{" + Id + "} " + Name;
+        }
+
+
+    }
+
+    [ProtoContract]
+    public class MonsterRoom
+    {
+        public const float DefaultRespawnDelay = 10f;
+
+        [ProtoMember(1)]
+        public List<short> MonsterIds
+        {
+            get;
+            set;
+        }
+        [ProtoMember(2)]
+        public float RespawnDelay
+        {
+            get;
+            set;
+        }
+
+        [ProtoMember(3)]
+        public long MapId
+        {
+            get;
+            set;
+        }
+
+        public MonsterRoom()
+        {
+            RespawnDelay = DefaultRespawnDelay;
+            this.MonsterIds = new List<short>();
+        }
+        public MonsterRoom(float respawnDelay, long mapId, params short[] monsters)
+        {
+            this.RespawnDelay = respawnDelay;
+            this.MapId = mapId;
+            this.MonsterIds = monsters.ToList();
+        }
+
+        public int GetRespawnInterval()
+        {
+            return (int)(RespawnDelay * 1000);
+        }
+    }
+}

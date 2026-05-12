@@ -71,7 +71,7 @@ Cookie HMAC-SHA256, expire 8 h, comparaison constant-time.
 | `.hbset <theme>` | Admin | Change le thème havre-sac |
 | `.hbnpc` / `.hbhere` | Admin | Helpers debug NPC havre-sac |
 
-Implémentation : `server/OneAirChatCommands.cs`. Refresh tooltip auto via
+Implémentation : `server/giny/Sources/Servers/Giny.World/Managers/Chat/OneAirChatCommands.cs`. Refresh tooltip auto via
 `ObjectModifiedMessage` ; `Character.RefreshStats()` si l'item est équipé.
 
 Les boutons in-game `.ui` (panneau admin) et `.itemui` (éditeur d'objets)
@@ -79,7 +79,7 @@ ne sont pas des commandes chat — ils sont déclenchés côté SWF AS3.
 
 ## Actions live (poller)
 
-Le world tourne `OneAirActionPoller.cs` qui lit `giny_world.actions` toutes
+Le world tourne `OneAirActionPoller.cs` (sous `server/giny/`) qui lit `giny_world.actions` toutes
 les 1.5 s. Types : `broadcast`, `kick`, `reload_inventory`, `send_pm`,
 `teleport`, `set_kamas`, `give_kamas`, `set_level`, `give_xp`, `give_item`,
 `heal`, `save_now`, `reload_items`, `shutdown`, `dump_inventory`,
@@ -153,13 +153,13 @@ quand rebuild les images) dans `CLAUDE.md`.
 ├── .env / .env.example
 ├── docker-compose.yml             # mysql + dbgate + auth + world + web + backup
 ├── server/                        # stack Giny.NETCore
-│   ├── Dockerfile                 # build .NET 6 + sed patches Giny
+│   ├── Dockerfile                 # build .NET 6 (COPY giny/ + dotnet publish)
 │   ├── entrypoint.sh
 │   ├── config/                    # *.tmpl rendus au boot
 │   ├── init-sql/                  # importé au 1er boot MySQL
 │   ├── backups/                   # dumps mysqldump (rotation 20, gitignoré)
-│   ├── OneAir*.cs                 # patches Giny (commandes chat, poller
-│   │                              #   d'actions, havre-sac, events, etc.)
+│   ├── giny/                      # source Giny.NETCore vendoré (cf. giny/UPSTREAM.md)
+│   │   └── Sources/.../OneAir*.cs # nos commandes chat, poller, havre-sac…
 │   ├── web/                       # service Go (landing + admin)
 │   │   ├── main.go                # routing, sessions, APIs admin
 │   │   ├── landing.go             # landing publique + article SSR
