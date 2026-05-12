@@ -69,7 +69,26 @@ COPY OneAirDungeons.cs        Sources/Servers/Giny.World/Managers/Chat/OneAirDun
 COPY OneAirDeathManager.cs    Sources/Servers/Giny.World/Managers/Chat/OneAirDeathManager.cs
 COPY OneAirDungeonSeeder.cs   Sources/Servers/Giny.World/Managers/Chat/OneAirDungeonSeeder.cs
 COPY OneAirItemEffects.cs     Sources/Servers/Giny.World/Managers/Items/OneAirItemEffects.cs
+COPY OneAirItemUses.cs        Sources/Servers/Giny.World/Managers/Items/OneAirItemUses.cs
 COPY OneAirNoopHandlers.cs    Sources/Servers/Giny.World/Handlers/OneAir/OneAirNoopHandlers.cs
+
+# Stacking dans un batch de craft. ItemCollection.AddItems(results) check
+# GetSameItem contre m_items, mais les insertions dans m_items sont
+# différées après la boucle → 90 items frais (UId=0) ne se voient pas entre
+# eux et finissent en 90 entrées Quantity=1. AddItem(item) (singulier) ajoute
+# immédiatement à m_items donc l'item N+1 stack sur l'item N.
+RUN sed -i 's|Character\.Inventory\.AddItems(results);|foreach (var __oneAirCraftRes in results) Character.Inventory.AddItem(__oneAirCraftRes); /* OneAir: stack within craft batch */|' \
+    Sources/Servers/Giny.World/Managers/Exchanges/Jobs/CraftExchange.cs
+
+# Multi-effets : vanilla ItemsManager.UseItem return après le 1er effet
+# matché → un Pain Gouin (AddHealth + AddPermanentVitality) ne donnait que le
+# heal, le +1 vita perma était perdu. On expose m_usageHandlers en internal
+# et on inject un return vers OneAirItemUses.DispatchEffects avant le
+# foreach (le foreach vanilla devient unreachable, CS0162 toléré).
+RUN sed -i 's|private Dictionary<ItemUsageHandlerAttribute, MethodInfo> m_usageHandlers|internal Dictionary<ItemUsageHandlerAttribute, MethodInfo> m_usageHandlers|' \
+    Sources/Servers/Giny.World/Managers/Items/ItemsManager.cs && \
+    sed -i 's|foreach (var effect in item.Effects.OfType<Effect>())|return Giny.World.Managers.Items.OneAirItemUses.DispatchEffects(character, item, m_usageHandlers); foreach (var effect in item.Effects.OfType<Effect>())|' \
+    Sources/Servers/Giny.World/Managers/Items/ItemsManager.cs
 
 RUN sed -i 's|character\.OpenZaap((MapElement)parameter);|Giny.World.Managers.Chat.OneAirHavenBagPatch.HandleZaapInteraction(character, (MapElement)parameter);|' \
     Sources/Servers/Giny.World/Managers/Generic/GenericActions.cs
@@ -168,6 +187,14 @@ RUN sed -i '/public override void OnMessageUnhandled/,/^        }$/ s|if (Config
 
 RUN sed -i 's|LogManager.Instance.AppendError(this, message, ex);|LogManager.Instance.AppendError(this, message, ex); Giny.World.Managers.Chat.OneAirUnhandledLogger.LogNetError(this, message, ex);|' \
     Sources/Servers/Giny.World/Network/WorldClient.cs
+
+# LogManager.AppendError check `client.Character != null` ligne 49 puis lit
+# `client.Character.Map` ligne 54 SANS re-checker. Si Character est null à ce
+# moment-là (chat reçu pendant la fenêtre de switch perso / reco), la
+# 2ᵉ NRE remonte non gérée hors du try/catch du dispatcher → process world
+# down. Mirror le null-check pour qu'AppendError ne throw plus.
+RUN sed -i 's|if (client.Character.Map != null)|if (client.Character != null \&\& client.Character.Map != null)|' \
+    Sources/Servers/Giny.World/Logging/LogManager.cs
 
 # Range default:→break: ne log que les types d'échange non supportés
 # (pet/mount swap, taxcollector, …), pas les rejets légitimes.
