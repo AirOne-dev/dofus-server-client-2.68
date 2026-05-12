@@ -1791,6 +1791,11 @@ namespace Giny.World.Managers.Entities.Characters
                 {
                     CurrentMapMessage(Record.MapId);
                 }
+                // OneAir : si le combat était dans un donjon, tp à l'entrée
+                // (mapId = map du combat, fournie par Fight.RejoinMap).
+                else if (Giny.World.Managers.Chat.OneAirDeathManager.TryRespawnAtDungeonEntrance(this, mapId))
+                {
+                }
                 else
                 {
                     SpawnPoint();
