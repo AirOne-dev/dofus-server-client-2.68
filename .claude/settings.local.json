@@ -247,7 +247,8 @@
       "Bash(echo \"WEB: $?\")",
       "Bash(rm -f /tmp/web-test)",
       "Read(//home/client/**)",
-      "Bash(echo \"ZAAP: $?\")"
+      "Bash(echo \"ZAAP: $?\")",
+      "Bash(docker volume *)"
     ]
   }
 }
