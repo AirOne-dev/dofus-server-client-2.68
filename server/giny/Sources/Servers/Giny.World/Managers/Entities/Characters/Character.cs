@@ -1263,7 +1263,7 @@ namespace Giny.World.Managers.Entities.Characters
             {
                 this.Map.Instance.AddEntity(this);
 
-                this.Map.Instance.SendMapComplementary(Client); Giny.World.Managers.Chat.OneAirHavenBagPatch.OnAfterEnterMap(this);
+                this.Map.Instance.SendMapComplementary(Client); Giny.World.Managers.Chat.OneAirHavenBagPatch.OnAfterEnterMap(this); Giny.World.Managers.Chat.OneAirDungeonResume.OnEnterMap(this);
                 this.Map.Instance.SendMapFightCount(Client);
 
                 foreach (Character current in this.Map.Instance.GetEntities<Character>())

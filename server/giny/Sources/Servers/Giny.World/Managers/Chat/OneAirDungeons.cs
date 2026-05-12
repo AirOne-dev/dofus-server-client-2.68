@@ -138,40 +138,35 @@ namespace Giny.World.Managers.Chat
                     }
                 }
 
-                // Gardien d'entrée : tp 1ère salle pour TOUS les NPCs sauf si un
-                // npc_replies Teleport vers cette salle existe déjà (vanilla OK).
-                var dungeon = DungeonRecord.GetDungeonRecords().FirstOrDefault(d => d.EntranceMapId == mapId);
-                if (dungeon != null && character.Map.Id == mapId)
+                // Entrée de donjon : ouvre le vrai dialog Dofus natif si la map
+                // + le template NPC sont couverts par OneAirDungeonResumeData.
+                // Sinon, on laisse Giny gérer (vanilla npc_replies / npc_actions).
+                if (character.Map.Id == mapId)
                 {
                     var npc = character.Map.Instance.GetEntity<Npc>((long)npcId);
-                    if (npc != null && npc.SpawnRecord != null)
+                    if (npc != null && npc.Template != null && npc.SpawnRecord != null)
                     {
-                        long firstRoom = (dungeon.Rooms != null && dungeon.Rooms.Count > 0) ? dungeon.Rooms[0].MapId : 0;
-
-                        bool vanillaCanTp = false;
-                        if (firstRoom > 0)
+                        var entries = OneAirDungeonResume.GetEntriesForNpc(mapId, (short)npc.Template.Id);
+                        if (entries.Count > 0)
                         {
-                            try
+                            // Pour chaque donjon accessible depuis ce NPC, regarde
+                            // s'il y a une progression sauvegardée à afficher.
+                            var savedRoomByDungeon = new System.Collections.Generic.Dictionary<long, long>();
+                            foreach (var entry in entries)
                             {
-                                vanillaCanTp = NpcReplyRecord.GetNpcReplies().Any(r =>
-                                    r.NpcSpawnId == npc.SpawnRecord.Id
-                                    && r.ActionIdentifier == GenericActionEnum.Teleport
-                                    && long.TryParse(r.Param1, out long m) && m == firstRoom);
-                            }
-                            catch { }
-                        }
+                                long firstRoom = 0;
+                                var d = DungeonRecord.GetDungeonRecords().FirstOrDefault(x => x.Id == entry.DungeonId);
+                                if (d != null && d.Rooms != null && d.Rooms.Count > 0)
+                                    firstRoom = d.Rooms[0].MapId;
 
-                        if (!vanillaCanTp)
-                        {
-                            if (firstRoom > 0)
-                            {
-                                character.Teleport(firstRoom);
-                                character.Reply("Bienvenue dans <b>" + dungeon.Name + "</b>.");
+                                var saved = OneAirDungeonResume.GetSavedRoom(character.Id, entry.DungeonId);
+                                // Si la salle sauvée === entrée OU 1ère salle, on
+                                // considère qu'il n'y a pas de progression à reprendre.
+                                if (saved.HasValue && saved.Value != mapId && saved.Value != firstRoom)
+                                    savedRoomByDungeon[entry.DungeonId] = saved.Value;
                             }
-                            else
-                            {
-                                character.ReplyError("Aucune salle configurée pour ce donjon (" + dungeon.Id + ").");
-                            }
+                            var dlg = new Giny.World.Managers.Dialogs.OneAirDungeonResumeDialog(character, npc, entries, savedRoomByDungeon);
+                            character.OpenDialog(dlg);
                             return true;
                         }
                     }

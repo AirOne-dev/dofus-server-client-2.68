@@ -41,3 +41,13 @@ CREATE TABLE IF NOT EXISTS havenbag_interactives (
     Type VARCHAR(16) NOT NULL,
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
+
+-- OneAir — progression de donjon (reprise "où vous l'avez quittée")
+-- Aligné avec OneAirDungeonResume.EnsureSchema().
+CREATE TABLE IF NOT EXISTS dungeon_progress (
+    CharacterId BIGINT NOT NULL,
+    DungeonId BIGINT NOT NULL,
+    LastRoomMapId BIGINT NOT NULL,
+    UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (CharacterId, DungeonId)
+) ENGINE=InnoDB;
