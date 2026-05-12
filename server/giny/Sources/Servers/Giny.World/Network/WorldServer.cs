@@ -211,7 +211,7 @@ namespace Giny.World.Network
         private void OnServerStarted()
         {
             Logger.Write($"(World) World Server started '{Server.EndPoint.Address}:{Server.EndPoint.Port}' ", Channels.Info);
-            Giny.World.Managers.Chat.OneAirUnhandledLogger.Start(); Giny.World.Managers.Chat.OneAirActivityFeed.EnsureSchema(); Giny.World.Managers.Chat.OneAirEventManager.Initialize(); Giny.World.Managers.Chat.OneAirHavenBagPatch.EnsureSchema(); Giny.World.Managers.Chat.OneAirHavenBagPatch.LoadInteractiveBindings(); Giny.World.Managers.Chat.OneAirDungeons.EnsureNpcs(); Giny.World.Managers.Chat.OneAirDungeons.EnsureDungeonGardiens(); Giny.World.Managers.Chat.OneAirDungeons.CleanupHubDialogs(); Giny.World.Managers.Chat.OneAirDungeonSeeder.SeedAll(); Giny.World.Managers.Chat.OneAirActionPoller.Start(); Giny.World.Managers.Chat.OneAirRegenManager.Start(); SetServerStatus(ServerStatusEnum.ONLINE);
+            Giny.World.Managers.Chat.OneAirUnhandledLogger.Start(); Giny.World.Managers.Chat.OneAirActivityFeed.EnsureSchema(); Giny.World.Managers.Chat.OneAirEventManager.Initialize(); Giny.World.Managers.Chat.OneAirHavenBagPatch.EnsureSchema(); Giny.World.Managers.Chat.OneAirHavenBagPatch.LoadInteractiveBindings(); Giny.World.Managers.Chat.OneAirDungeons.EnsureNpcs(); Giny.World.Managers.Chat.OneAirDungeons.EnsureDungeonGardiens(); Giny.World.Managers.Chat.OneAirDungeons.CleanupHubDialogs(); Giny.World.Managers.Chat.OneAirActionPoller.Start(); Giny.World.Managers.Chat.OneAirRegenManager.Start(); SetServerStatus(ServerStatusEnum.ONLINE);
         }
     }
 }
