@@ -39,3 +39,4 @@ server/backups/*
 .idea/
 *.swp
 *~
+.claude/settings.local.json
