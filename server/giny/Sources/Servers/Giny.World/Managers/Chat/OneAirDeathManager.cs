@@ -27,10 +27,8 @@ namespace Giny.World.Managers.Chat
                 int hpAfter = isDead ? 1 : Math.Max(1, fighter.Stats.LifePoints);
                 int maxHp = character.Stats.MaxLifePoints;
                 if (hpAfter > maxHp) hpAfter = maxHp;
-                int hpBefore = character.Stats.LifePoints;
                 try { character.Stats.Life.Current = hpAfter; }
                 catch (Exception e) { Logger.Write("[OneAir] persist HP failed: " + e.Message, Channels.Warning); }
-                Logger.Write($"[OneAir] OnFightEnding char={character.Id} alive={fighter.Alive} fighterHP={fighter.Stats.LifePoints} isDead={isDead} hpBefore={hpBefore} hpAfter={hpAfter} charHPNow={character.Stats.LifePoints}", Channels.Info);
             }
             catch (Exception e)
             {

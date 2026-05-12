@@ -150,16 +150,30 @@ CREATE TABLE IF NOT EXISTS dungeon_progress (
             {
                 if (character == null || npc?.SpawnRecord == null || npc.Template == null) return extras;
                 long mapId = npc.SpawnRecord.MapId;
-                foreach (var entry in GetEntriesForNpc(mapId, (short)npc.Template.Id))
+                var entries = GetEntriesForNpc(mapId, (short)npc.Template.Id);
+                if (entries.Count == 0) return extras;
+                foreach (var entry in entries)
                 {
-                    if (entry.ResumeReplyId <= 0) continue;
+                    if (entry.ResumeReplyId <= 0)
+                    {
+                        Logger.Write($"[OneAir] GetExtras char={character.Id} dungeon={entry.DungeonId} skip: no ResumeReplyId", Channels.Info);
+                        continue;
+                    }
                     var saved = GetSavedRoom(character.Id, entry.DungeonId);
-                    if (!saved.HasValue) continue;
+                    if (!saved.HasValue)
+                    {
+                        Logger.Write($"[OneAir] GetExtras char={character.Id} dungeon={entry.DungeonId} skip: no saved progress", Channels.Info);
+                        continue;
+                    }
                     var dungeon = DungeonRecord.GetDungeonRecords().FirstOrDefault(d => d.Id == entry.DungeonId);
                     long firstRoom = (dungeon?.Rooms != null && dungeon.Rooms.Count > 0) ? dungeon.Rooms[0].MapId : 0;
-                    // Ignore si la "progression" est juste sur l'entrée ou la 1ère salle.
-                    if (saved.Value == mapId || saved.Value == firstRoom) continue;
+                    if (saved.Value == mapId || saved.Value == firstRoom)
+                    {
+                        Logger.Write($"[OneAir] GetExtras char={character.Id} dungeon={entry.DungeonId} skip: saved={saved.Value} is entrance or first room", Channels.Info);
+                        continue;
+                    }
                     extras.Add(entry.ResumeReplyId);
+                    Logger.Write($"[OneAir] GetExtras char={character.Id} dungeon={entry.DungeonId} ADD replyId={entry.ResumeReplyId} (saved={saved.Value})", Channels.Info);
                 }
             }
             catch (Exception e)
@@ -214,6 +228,7 @@ CREATE TABLE IF NOT EXISTS dungeon_progress (
                 if (dungeon.Rooms != null && dungeon.Rooms.Any(r => r.MapId == mapId))
                 {
                     SaveProgress(character.Id, dungeon.Id, mapId);
+                    Logger.Write($"[OneAir] DungeonResume save char={character.Id} dungeon={dungeon.Id} ({dungeon.Name}) room={mapId}", Channels.Info);
                 }
             }
             catch (Exception e)
