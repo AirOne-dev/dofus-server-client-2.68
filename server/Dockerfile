@@ -192,6 +192,23 @@ RUN sed -i 's|SetExperience(Experience + value);|long _oaOldXp = Experience; Set
 RUN sed -i 's|AchievementManager\.Instance\.OnPlayerFightEnding(this);|Giny.World.Managers.Chat.OneAirActivityFeed.OnFightEnding(this); AchievementManager.Instance.OnPlayerFightEnding(this);|' \
     Sources/Servers/Giny.World/Managers/Fights/Fighters/CharacterFighter.cs
 
+# Régen PV hors combat — 1 HP/s debout, 2 HP/s assis (emote sit/rest).
+# Comportement vanilla Dofus 2.x : LifePointsRegenBeginMessage(regenRate) +
+# LifePointsRegenEndMessage à la fin / sur changement de rythme.
+COPY OneAirRegenManager.cs Sources/Servers/Giny.World/Managers/Chat/OneAirRegenManager.cs
+
+RUN sed -i 's|Giny.World.Managers.Chat.OneAirActionPoller.Start();|Giny.World.Managers.Chat.OneAirActionPoller.Start(); Giny.World.Managers.Chat.OneAirRegenManager.Start();|' \
+    Sources/Servers/Giny.World/Network/WorldServer.cs
+
+# Hook PlayEmote → tracking de l'état assis pour accélérer la régen.
+RUN sed -i 's|EmoteRecord template = EmoteRecord.GetEmote(emoteId);|EmoteRecord template = EmoteRecord.GetEmote(emoteId); Giny.World.Managers.Chat.OneAirRegenManager.OnEmotePlayed(this, emoteId);|' \
+    Sources/Servers/Giny.World/Managers/Entities/Characters/Character.cs
+
+# Tout déplacement casse l'état assis (comportement Dofus). MovementKeys=keyMovements
+# n'apparaît qu'une fois dans le fichier (corps de MoveOnMap).
+RUN sed -i 's|this.MovementKeys = keyMovements;|this.MovementKeys = keyMovements; Giny.World.Managers.Chat.OneAirRegenManager.OnMovementStarted(this);|' \
+    Sources/Servers/Giny.World/Managers/Entities/Characters/Character.cs
+
 # Build Auth + World (les outils WPF Giny ne sont pas buildés : pas utiles
 # côté serveur et requerraient EnableWindowsTargeting).
 RUN dotnet publish Sources/Servers/Giny.Auth/Giny.Auth.csproj \
