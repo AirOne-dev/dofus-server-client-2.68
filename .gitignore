@@ -24,7 +24,6 @@ server/web/oneair-web
 client/launcher/macos/Sources/
 
 # Données runtime
-data/
 Dofus\ Stump.app/
 
 # Logs / backups
