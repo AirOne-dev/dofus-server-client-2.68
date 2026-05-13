@@ -250,7 +250,7 @@ namespace Giny.World.Managers.Chat
         }
 
         // Création d'alliance. Le joueur doit être chef d'une guilde.
-        [ChatCommand("alliancecreate", ServerRoleEnum.Player)]
+        [ChatCommand("alliancecreate", ServerRoleEnum.Administrator)]
         public static void AllianceCreateCommand(WorldClient client, string tag, string name)
         {
             var emblem = new Giny.World.Records.Alliances.AllianceEmblemRecord((short)1, 0x000000, (byte)1, 0xFFFFFF);
