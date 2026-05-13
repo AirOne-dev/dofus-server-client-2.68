@@ -743,48 +743,6 @@ CREATE TABLE IF NOT EXISTS havenbag_interactives (
             }
         }
 
-        // NPCs vanilla qui peuvent traîner sur les maps havre-sac et qui
-        // n'ont aucun rôle gameplay OneAir : on les purge au boot.
-        // - 1451 Régisse Kardestin (PNJ Vulkania)
-        // - 2000 Darwin Chester (PNJ donjons Harebourg)
-        // Ajouter ici si d'autres apparaissent.
-        private static readonly short[] BlacklistedHavenBagNpcs = new short[] { 1451, 2000 };
-
-        // Appelé au boot. Retire les NPCs blacklistés des 4 maps havre-sac
-        // (mémoire + table npc_spawns), pour qu'ils ne reviennent pas au prochain
-        // reload. Idempotent et non-throwing.
-        public static void EnsureNoVanillaInhabitants()
-        {
-            int removed = 0;
-            try
-            {
-                foreach (var mapId in ThemeToMapId.Values)
-                {
-                    var map = Giny.World.Records.Maps.MapRecord.GetMap(mapId);
-                    if (map == null) continue;
-                    foreach (var npc in map.Instance.GetEntities<Giny.World.Managers.Entities.Npcs.Npc>())
-                    {
-                        if (System.Array.IndexOf(BlacklistedHavenBagNpcs, npc.SpawnRecord.TemplateId) < 0) continue;
-                        try { Giny.World.Managers.Maps.Npcs.NpcsManager.Instance.RemoveNpc(npc.SpawnRecord.Id); removed++; }
-                        catch (System.Exception e) { Logger.Write("[OneAir] HavenBag npc remove failed: " + e.Message, Channels.Warning); }
-                    }
-                }
-
-                // Coup de balai en DB direct : si des spawns sont en DB mais pas
-                // en mémoire (état corrompu, ORM partial load), on les vire aussi.
-                using var c = OpenConn();
-                using var cmd = c.CreateCommand();
-                cmd.CommandText = "DELETE FROM npc_spawns WHERE TemplateId IN (1451, 2000) AND MapId IN (162791424, 162793472, 162795520, 162791426)";
-                int dbRemoved = cmd.ExecuteNonQuery();
-                if (dbRemoved > 0) removed += dbRemoved;
-            }
-            catch (System.Exception e)
-            {
-                Logger.Write("[OneAir] EnsureNoVanillaInhabitants failed: " + e.Message, Channels.Warning);
-            }
-            Logger.Write($"[OneAir] HavenBag : {removed} vanilla NPC(s) purged (Régisse Kardestin / Darwin Chester)", Channels.Info);
-        }
-
         // Hook depuis Character.OnEnterMap après SendMapComplementary.
         // Sans la séquence d'init (furnitures/packs/zaaps/room) la map reste
         // noire et le binding 'H = exit' n'est pas armé.
@@ -1310,16 +1268,9 @@ CREATE TABLE IF NOT EXISTS havenbag_interactives (
                 short level = (short)ExperienceManager.Instance.GetCharacterLevel(character.Record.Experience);
                 var owner = new CharacterMinimalInformations(level, character.Id, character.Name);
 
-                // Filtre défensif : même si EnsureNoVanillaInhabitants tourne au
-                // boot, si quelqu'un addnpc en runtime ces NPCs polluent l'UI.
-                // On les retire du payload envoyé au client.
-                var filteredActors = msg.actors.Where(a =>
-                    !(a is Giny.Protocol.Types.GameRolePlayNpcInformations npc &&
-                      System.Array.IndexOf(BlacklistedHavenBagNpcs, npc.npcId) >= 0)).ToArray();
-
                 return new MapComplementaryInformationsDataInHavenBagMessage(
                     owner, theme, roomId, /*maxRoomId*/ 1,
-                    msg.subAreaId, msg.mapId, msg.houses, filteredActors,
+                    msg.subAreaId, msg.mapId, msg.houses, msg.actors,
                     msg.interactiveElements, msg.statedElements, msg.obstacles,
                     msg.fights, msg.hasAggressiveMonsters, msg.fightStartPositions);
             }
