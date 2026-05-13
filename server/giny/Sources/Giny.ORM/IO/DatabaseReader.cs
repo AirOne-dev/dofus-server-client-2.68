@@ -204,8 +204,20 @@ namespace Giny.ORM.IO
         /* Maybe store all properties info instead of calling .NET reflection methods? */
         private object ConvertObject(object obj, PropertyInfo property)
         {
-
-
+            // OneAir : DBNull universel. Sans ça, Convert.ChangeType throw sur
+            // toute colonne nullable côté DB (typique pour DateTime, int?, …).
+            if (obj is DBNull) return null;
+            // String vide → DateTime : Convert.ChangeType throw FormatException.
+            // On retourne null pour que le caller skipe SetValue et garde le
+            // default DateTime.MinValue. Limité aux types qui plantent vraiment :
+            // List<int> attend obj.ToString().Split() et fonctionne sur "".
+            if (obj is string s && s.Length == 0)
+            {
+                var t = System.Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+                if (t == typeof(DateTime) || t == typeof(int) || t == typeof(long) || t == typeof(short)
+                    || t == typeof(byte) || t == typeof(double) || t == typeof(float) || t == typeof(bool))
+                    return null;
+            }
 
             MethodInfo deserializationMethod = TableManager.Instance.GetDeserializationMethods(property.PropertyType);
 
