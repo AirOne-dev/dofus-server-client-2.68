@@ -45,7 +45,14 @@ namespace Giny.World.Managers.Alliances
         [StartupInvoke("OneAir Alliances Schema Migration", StartupInvokePriority.Initial)]
         public static void EnsureSchema()
         {
-            // 1. Migration ALTER TABLE guilds (colonnes ajoutées OneAir).
+            // 1. Migration ALTER TABLE guilds. Inclut les colonnes que le ORM
+            //    Giny attend mais qui n'ont jamais été créées en DB (Ranks,
+            //    Bulletin, GlobalActivities, ChestActivities → ajoutées au
+            //    code source upstream sans migration).
+            AddColumnIfMissing("guilds", "Ranks", "BLOB NULL");
+            AddColumnIfMissing("guilds", "Bulletin", "BLOB NULL");
+            AddColumnIfMissing("guilds", "GlobalActivities", "BLOB NULL");
+            AddColumnIfMissing("guilds", "ChestActivities", "BLOB NULL");
             AddColumnIfMissing("guilds", "AllianceId", "BIGINT NOT NULL DEFAULT 0");
             AddColumnIfMissing("guilds", "Recruitment", "BLOB NULL");
 
