@@ -790,6 +790,11 @@ namespace Giny.World.Managers.Entities.Characters
         {
             this.OpenDialog(new GuildCreationDialog(this));
         }
+        // OneAir : mirror du dialog de création de guilde pour les alliances.
+        public void OpenAllianceCreationDialog()
+        {
+            this.OpenDialog(new AllianceCreationDialog(this));
+        }
         public void OpenZaapi(MapElement element)
         {
             this.OpenDialog(new ZaapiDialog(this, element));
@@ -1999,6 +2004,8 @@ namespace Giny.World.Managers.Entities.Characters
         public void OnAllianceCreate(byte result)
         {
             Client.Send(new Giny.Protocol.Messages.AllianceCreationResultMessage(result));
+            if (result == Giny.World.Managers.Alliances.OneAirAllianceManager.CREATION_OK && Dialog is AllianceCreationDialog)
+                Dialog.Close();
         }
 
         public void OnAllianceJoined(Giny.World.Managers.Alliances.Alliance alliance)

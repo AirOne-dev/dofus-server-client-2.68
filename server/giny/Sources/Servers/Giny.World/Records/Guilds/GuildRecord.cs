@@ -106,6 +106,15 @@ namespace Giny.World.Records.Guilds
             set;
         }
 
+        // OneAir : paramètres de recrutement (onglet Recrutement de l'UI).
+        [Update]
+        [Blob]
+        public GuildRecruitmentRecord Recruitment
+        {
+            get;
+            set;
+        }
+
         public static bool Exists(string guildName)
         {
             return Guilds.Values.Any(x => x.Name == guildName);

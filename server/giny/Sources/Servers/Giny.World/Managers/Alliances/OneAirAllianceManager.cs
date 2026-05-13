@@ -45,29 +45,9 @@ namespace Giny.World.Managers.Alliances
         [StartupInvoke("OneAir Alliances Schema Migration", StartupInvokePriority.Initial)]
         public static void EnsureSchema()
         {
-            // 1. Migration ALTER TABLE guilds.
-            try
-            {
-                using var c = OpenConnection();
-                bool hasCol;
-                using (var check = c.CreateCommand())
-                {
-                    check.CommandText = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS " +
-                                        "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'guilds' AND COLUMN_NAME = 'AllianceId'";
-                    hasCol = System.Convert.ToInt32(check.ExecuteScalar()) > 0;
-                }
-                if (!hasCol)
-                {
-                    using var alter = c.CreateCommand();
-                    alter.CommandText = "ALTER TABLE guilds ADD COLUMN AllianceId BIGINT NOT NULL DEFAULT 0";
-                    alter.ExecuteNonQuery();
-                    Logger.Write("[OneAir/Alliance] guilds.AllianceId column added", Channels.Info);
-                }
-            }
-            catch (Exception e)
-            {
-                Logger.Write("[OneAir/Alliance] guilds.AllianceId migration failed: " + e.Message, Channels.Warning);
-            }
+            // 1. Migration ALTER TABLE guilds (colonnes ajoutées OneAir).
+            AddColumnIfMissing("guilds", "AllianceId", "BIGINT NOT NULL DEFAULT 0");
+            AddColumnIfMissing("guilds", "Recruitment", "BLOB NULL");
 
             // 2. Tables custom OneAir. Schéma aligné sur ce que le DatabaseManager
             //    aurait généré pour OneAirFriendsBookRecord / AllianceRecord.
@@ -284,6 +264,32 @@ CREATE TABLE IF NOT EXISTS alliances (
         // -----------------------------------------------------------------
         // Misc
         // -----------------------------------------------------------------
+
+        private static void AddColumnIfMissing(string table, string column, string sqlType)
+        {
+            try
+            {
+                using var c = OpenConnection();
+                bool hasCol;
+                using (var check = c.CreateCommand())
+                {
+                    check.CommandText = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS " +
+                                        "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @t AND COLUMN_NAME = @c";
+                    check.Parameters.AddWithValue("@t", table);
+                    check.Parameters.AddWithValue("@c", column);
+                    hasCol = System.Convert.ToInt32(check.ExecuteScalar()) > 0;
+                }
+                if (hasCol) return;
+                using var alter = c.CreateCommand();
+                alter.CommandText = $"ALTER TABLE `{table}` ADD COLUMN `{column}` {sqlType}";
+                alter.ExecuteNonQuery();
+                Logger.Write($"[OneAir/Alliance] {table}.{column} column added", Channels.Info);
+            }
+            catch (Exception e)
+            {
+                Logger.Write($"[OneAir/Alliance] {table}.{column} migration failed: {e.Message}", Channels.Warning);
+            }
+        }
 
         private static MySqlConnection OpenConnection()
         {

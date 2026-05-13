@@ -249,18 +249,14 @@ namespace Giny.World.Managers.Chat
             client.Character.OpenGuildCreationDialog();
         }
 
-        // Création d'alliance. Le joueur doit être chef d'une guilde.
+        // Ouvre le dialog vanilla de création d'alliance (équivalent Pacte
+        // d'alliance). Le perso saisit nom + tag + emblème via l'UI Dofus.
         [ChatCommand("alliancecreate", ServerRoleEnum.Administrator)]
-        public static void AllianceCreateCommand(WorldClient client, string tag, string name)
+        public static void AllianceCreateCommand(WorldClient client)
         {
-            var emblem = new Giny.World.Records.Alliances.AllianceEmblemRecord((short)1, 0x000000, (byte)1, 0xFFFFFF);
-            byte result = Giny.World.Managers.Alliances.OneAirAllianceManager.Instance.CreateAlliance(client.Character, name, tag, emblem);
-            client.Character.OnAllianceCreate(result);
-
-            if (result == Giny.World.Managers.Alliances.OneAirAllianceManager.CREATION_OK)
-                client.Character.Reply("Alliance « " + name + " » [" + tag + "] créée.");
-            else
-                client.Character.ReplyError("Création d'alliance impossible (code=" + result + ").");
+            if (!client.Character.HasGuild) { client.Character.ReplyError("Vous devez être dans une guilde."); return; }
+            if (client.Character.Guild.Record.AllianceId != 0) { client.Character.ReplyError("Votre guilde est déjà dans une alliance."); return; }
+            client.Character.OpenAllianceCreationDialog();
         }
 
         private static string JsonEscape(string s)
