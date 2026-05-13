@@ -383,17 +383,17 @@ namespace Giny.World.Managers.Maps.Instances
                     }
                     else
                     {
-                        Giny.World.Managers.Chat.OneAirUnhandledLogger.LogInteractiveError(character, elemId, skillInstanceUid); character.Client.Send(new InteractiveUseErrorMessage(elemId, skillInstanceUid));
+                        Giny.World.Managers.Web.OneAirUnhandledLogger.LogInteractiveError(character, elemId, skillInstanceUid); character.Client.Send(new InteractiveUseErrorMessage(elemId, skillInstanceUid));
                     }
                 }
                 else
                 {
-                    Giny.World.Managers.Chat.OneAirUnhandledLogger.LogInteractiveError(character, elemId, skillInstanceUid); character.Client.Send(new InteractiveUseErrorMessage(elemId, skillInstanceUid));
+                    Giny.World.Managers.Web.OneAirUnhandledLogger.LogInteractiveError(character, elemId, skillInstanceUid); character.Client.Send(new InteractiveUseErrorMessage(elemId, skillInstanceUid));
                 }
             }
             else
             {
-                Giny.World.Managers.Chat.OneAirUnhandledLogger.LogInteractiveError(character, elemId, skillInstanceUid); character.Client.Send(new InteractiveUseErrorMessage(elemId, skillInstanceUid));
+                Giny.World.Managers.Web.OneAirUnhandledLogger.LogInteractiveError(character, elemId, skillInstanceUid); character.Client.Send(new InteractiveUseErrorMessage(elemId, skillInstanceUid));
             }
         }
 

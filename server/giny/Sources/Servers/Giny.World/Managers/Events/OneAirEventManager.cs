@@ -4,7 +4,7 @@ using Giny.Core;
 using Giny.Core.IO.Configuration;
 using MySql.Data.MySqlClient;
 
-namespace Giny.World.Managers.Chat
+namespace Giny.World.Managers.Events
 {
     public static class OneAirEventManager
     {

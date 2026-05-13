@@ -111,7 +111,7 @@ namespace Giny.World.Handlers.Maps
             if (client.Character.IsMoving)
             {
                 client.Character.EndMove();
-                client.Send(new BasicNoOperationMessage()); Giny.World.Managers.Chat.OneAirHavenBagPatch.OnMovementConfirmed(client.Character);
+                client.Send(new BasicNoOperationMessage()); Giny.World.Managers.HavenBag.OneAirHavenBagPatch.OnMovementConfirmed(client.Character);
             }
         }
         [MessageHandler]

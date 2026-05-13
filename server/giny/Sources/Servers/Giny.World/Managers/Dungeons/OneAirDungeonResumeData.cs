@@ -5,7 +5,7 @@
 //   python3 tools/emit_dungeon_dialogs_cs.py /tmp/dungeon_dialogs.json
 using System.Collections.Generic;
 
-namespace Giny.World.Managers.Chat
+namespace Giny.World.Managers.Dungeons
 {
     // Per-dungeon dialog metadata: which vanilla NPC template lives at the
     // entrance, and which messageId/replyIds the client's d2o whitelists for it.

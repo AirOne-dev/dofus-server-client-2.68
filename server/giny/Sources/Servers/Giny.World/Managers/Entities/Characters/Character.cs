@@ -639,7 +639,7 @@ namespace Giny.World.Managers.Entities.Characters
                     Record.Kamas = Inventory.MaximumKamas;
                 }
                 else
-                    value = (long)(value * Giny.World.Managers.Chat.OneAirEventManager.KamasMultiplier); Record.Kamas += value;
+                    value = (long)(value * Giny.World.Managers.Events.OneAirEventManager.KamasMultiplier); Record.Kamas += value;
 
                 Inventory.RefreshKamas();
                 return true;
@@ -1053,7 +1053,7 @@ namespace Giny.World.Managers.Entities.Characters
                     this.Direction = (DirectionsEnum)PathReader.GetDirection(keyMovements.Last());
                     this.MovedCell = PathReader.ReadCell(keyMovements.Last());
                     this.IsMoving = true;
-                    this.MovementKeys = keyMovements; Giny.World.Managers.Chat.OneAirRegenManager.OnMovementStarted(this);
+                    this.MovementKeys = keyMovements; Giny.World.Managers.Regen.OneAirRegenManager.OnMovementStarted(this);
                     this.SendMap(new GameMapMovementMessage(keyMovements, 0, this.Id));
                 }
                 else
@@ -1098,7 +1098,7 @@ namespace Giny.World.Managers.Entities.Characters
         }
         public void PlayEmote(short emoteId)
         {
-            EmoteRecord template = EmoteRecord.GetEmote(emoteId); Giny.World.Managers.Chat.OneAirRegenManager.OnEmotePlayed(this, emoteId);
+            EmoteRecord template = EmoteRecord.GetEmote(emoteId); Giny.World.Managers.Regen.OneAirRegenManager.OnEmotePlayed(this, emoteId);
 
             if (!ChangeMap)
             {
@@ -1211,7 +1211,7 @@ namespace Giny.World.Managers.Entities.Characters
                 }
             }
 
-            this.Reply(ConfigManager<WorldConfig>.Instance.WelcomeMessage, Color.CornflowerBlue); Giny.World.Managers.Chat.OneAirEventManager.SendStatusTo(this.Client);
+            this.Reply(ConfigManager<WorldConfig>.Instance.WelcomeMessage, Color.CornflowerBlue); Giny.World.Managers.Events.OneAirEventManager.SendStatusTo(this.Client);
             CheckSoldItems();
             Guild?.OnConnected(this);
         }
@@ -1263,7 +1263,7 @@ namespace Giny.World.Managers.Entities.Characters
             {
                 this.Map.Instance.AddEntity(this);
 
-                this.Map.Instance.SendMapComplementary(Client); Giny.World.Managers.Chat.OneAirHavenBagPatch.OnAfterEnterMap(this); Giny.World.Managers.Chat.OneAirDungeonResume.OnEnterMap(this);
+                this.Map.Instance.SendMapComplementary(Client); Giny.World.Managers.HavenBag.OneAirHavenBagPatch.OnAfterEnterMap(this); Giny.World.Managers.Dungeons.OneAirDungeonResume.OnEnterMap(this);
                 this.Map.Instance.SendMapFightCount(Client);
 
                 foreach (Character current in this.Map.Instance.GetEntities<Character>())
@@ -1500,7 +1500,7 @@ namespace Giny.World.Managers.Entities.Characters
         }
         public void AddExperience(long value, bool notify = true)
         {
-            value = (long)(value * Giny.World.Managers.Chat.OneAirEventManager.XpMultiplier); long _oaOldXp = Experience; SetExperience(Experience + value); Giny.World.Managers.Chat.OneAirActivityFeed.OnExperienceGained(this, _oaOldXp, Experience);
+            value = (long)(value * Giny.World.Managers.Events.OneAirEventManager.XpMultiplier); long _oaOldXp = Experience; SetExperience(Experience + value); Giny.World.Managers.Web.OneAirActivityFeed.OnExperienceGained(this, _oaOldXp, Experience);
 
             if (notify)
             {
@@ -1793,7 +1793,7 @@ namespace Giny.World.Managers.Entities.Characters
                 }
                 // OneAir : si le combat était dans un donjon, tp à l'entrée
                 // (mapId = map du combat, fournie par Fight.RejoinMap).
-                else if (Giny.World.Managers.Chat.OneAirDeathManager.TryRespawnAtDungeonEntrance(this, mapId))
+                else if (Giny.World.Managers.Dungeons.OneAirDungeonRespawn.TryRespawnAtDungeonEntrance(this, mapId))
                 {
                 }
                 else
@@ -1915,7 +1915,7 @@ namespace Giny.World.Managers.Entities.Characters
 
             this.CurrentMapMessage(Map.Id);
 
-            this.Map.Instance.SendMapComplementary(Client); Giny.World.Managers.Chat.OneAirHavenBagPatch.OnAfterEnterMap(this);
+            this.Map.Instance.SendMapComplementary(Client); Giny.World.Managers.HavenBag.OneAirHavenBagPatch.OnAfterEnterMap(this);
 
             Fighter = FightManager.Instance.GetConnectedFighter(this);
 

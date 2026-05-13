@@ -19,7 +19,7 @@ using Giny.Protocol.Messages;
 using Giny.World.Managers.Entities.Characters;
 using Giny.World.Network;
 
-namespace Giny.World.Managers.Chat
+namespace Giny.World.Managers.Regen
 {
     public static class OneAirRegenManager
     {

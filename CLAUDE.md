@@ -242,7 +242,7 @@ Progression persistée dans `dungeon_progress (CharacterId, DungeonId,
 LastRoomMapId, UpdatedAt)`. Sauvegardée à chaque entrée dans une salle
 listée dans `DungeonRecord.Rooms`. Purgée à l'entrée sur la map
 `ExitMapId`. Conservée si défaite + respawn entrée (cf.
-`OneAirDeathManager.TryRespawnAtDungeonEntrance`).
+`Managers/Dungeons/OneAirDungeonRespawn.TryRespawnAtDungeonEntrance`).
 
 ## Havre-sac
 

@@ -23,7 +23,7 @@ namespace Giny.World.Managers.Maps.Instances
 
         public override MapComplementaryInformationsDataMessage GetMapComplementaryInformationsDataMessage(Character character)
         {
-            return Giny.World.Managers.Chat.OneAirHavenBagPatch.MaybeUpgradeToHavenBag(character, new MapComplementaryInformationsDataMessage(character.Map.SubareaId, Record.Id, GetHousesInformations(), GetGameRolePlayActorsInformations(character),
+            return Giny.World.Managers.HavenBag.OneAirHavenBagPatch.MaybeUpgradeToHavenBag(character, new MapComplementaryInformationsDataMessage(character.Map.SubareaId, Record.Id, GetHousesInformations(), GetGameRolePlayActorsInformations(character),
               GetInteractiveElements(character), GetStatedElements(), GetMapObstacles(), GetFightsCommonInformations(), HasAgressiveMonsters(),
               GetFightStartingPositions()));
         }

@@ -36,7 +36,7 @@ using Giny.World.Records.Maps;
 using Giny.World.Records.Npcs;
 using MySql.Data.MySqlClient;
 
-namespace Giny.World.Managers.Chat
+namespace Giny.World.Managers.Dungeons
 {
     public static class OneAirDungeonResume
     {

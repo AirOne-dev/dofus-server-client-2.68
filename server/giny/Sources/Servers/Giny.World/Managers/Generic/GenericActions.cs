@@ -34,7 +34,7 @@ namespace Giny.World.Managers.Generic
         [GenericActionHandler(GenericActionEnum.Unhandled)]
         public static void HandleUnhandled(Character character, IGenericAction parameter)
         {
-            MapInteractiveElement element = parameter as MapInteractiveElement; Giny.World.Managers.Chat.OneAirUnhandledLogger.LogInteractive(character, element);
+            MapInteractiveElement element = parameter as MapInteractiveElement; Giny.World.Managers.Web.OneAirUnhandledLogger.LogInteractive(character, element);
 
             if (element != null)
             {
@@ -91,11 +91,11 @@ namespace Giny.World.Managers.Generic
             short cellId = -1;
             if (short.TryParse(parameter.Param2, out cellId))
             {
-                Giny.World.Managers.Chat.OneAirHavenBagPatch.HandleTeleportInteraction(character, parameter as MapElement, int.Parse(parameter.Param1), cellId, true);
+                Giny.World.Managers.HavenBag.OneAirHavenBagPatch.HandleTeleportInteraction(character, parameter as MapElement, int.Parse(parameter.Param1), cellId, true);
             }
             else
             {
-                Giny.World.Managers.Chat.OneAirHavenBagPatch.HandleTeleportInteraction(character, parameter as MapElement, int.Parse(parameter.Param1), (short)0, false);
+                Giny.World.Managers.HavenBag.OneAirHavenBagPatch.HandleTeleportInteraction(character, parameter as MapElement, int.Parse(parameter.Param1), (short)0, false);
             }
         }
         [GenericActionHandler(GenericActionEnum.OpenBank)]
@@ -124,7 +124,7 @@ namespace Giny.World.Managers.Generic
         [GenericActionHandler(GenericActionEnum.Zaap)]
         public static void HandleZaap(Character character, IGenericAction parameter)
         {
-            Giny.World.Managers.Chat.OneAirHavenBagPatch.HandleZaapInteraction(character, (MapElement)parameter);
+            Giny.World.Managers.HavenBag.OneAirHavenBagPatch.HandleZaapInteraction(character, (MapElement)parameter);
         }
         [GenericActionHandler(GenericActionEnum.Zaapi)]
         public static void HandleZaapi(Character character, IGenericAction parameter)

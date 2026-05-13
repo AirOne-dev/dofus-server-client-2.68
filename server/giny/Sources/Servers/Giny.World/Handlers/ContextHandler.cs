@@ -29,7 +29,7 @@ namespace Giny.World.Handlers
             else
             {
                 client.Character.CreateContext(GameContextEnum.ROLE_PLAY);
-                Giny.World.Managers.Chat.OneAirHavenBagPatch.RedirectIfHavenBagSpawn(client.Character); client.Character.Teleport(client.Character.Record.MapId, client.Character.Record.CellId);
+                Giny.World.Managers.HavenBag.OneAirHavenBagPatch.RedirectIfHavenBagSpawn(client.Character); client.Character.Teleport(client.Character.Record.MapId, client.Character.Record.CellId);
                 client.Character.RefreshStats();
             }
         }

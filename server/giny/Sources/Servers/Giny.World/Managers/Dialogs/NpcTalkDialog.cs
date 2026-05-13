@@ -69,7 +69,7 @@ namespace Giny.World.Managers.Dialogs
             // d2o du template NPC (cf. OneAirDungeonResume.ManualOverrides /
             // OneAirDungeonResumeData), donc le client les rend correctement à
             // côté des autres replies vanilla.
-            replies.AddRange(Giny.World.Managers.Chat.OneAirDungeonResume.GetExtraRepliesForNpcTalk(Character, Npc));
+            replies.AddRange(Giny.World.Managers.Dungeons.OneAirDungeonResume.GetExtraRepliesForNpcTalk(Character, Npc));
             Character.Client.Send(new NpcDialogQuestionMessage(MessageId, new string[] { "0" }, replies.Distinct().ToArray()));
         }
         public override void Close()
@@ -80,7 +80,7 @@ namespace Giny.World.Managers.Dialogs
         public void Reply(int replyId)
         {
             // OneAir : intercepte la reply "Reprendre" avant le routage vanilla.
-            if (Giny.World.Managers.Chat.OneAirDungeonResume.TryHandleExtraReply(Character, Npc, replyId))
+            if (Giny.World.Managers.Dungeons.OneAirDungeonResume.TryHandleExtraReply(Character, Npc, replyId))
             {
                 this.Close();
                 return;
