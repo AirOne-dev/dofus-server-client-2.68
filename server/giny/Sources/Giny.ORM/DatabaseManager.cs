@@ -89,7 +89,17 @@ namespace Giny.ORM
             var reader = new DatabaseReader(type);
             var tableName = reader.TableName;
             OnStartLoadTable?.Invoke(type, tableName);
-            reader.Select(this.UseProvider());
+            try
+            {
+                reader.Select(this.UseProvider());
+            }
+            catch (Exception ex)
+            {
+                // OneAir : enrobe l'exception avec le nom de la table pour
+                // pouvoir débogguer (sinon le stacktrace ne mentionne aucune
+                // table et on cherche à l'aveugle).
+                throw new Exception($"Failed to load table '{tableName}': {ex.Message}", ex);
+            }
             OnEndLoadTable?.Invoke(type, tableName);
         }
         public void LoadTable<T>() where T : IRecord
