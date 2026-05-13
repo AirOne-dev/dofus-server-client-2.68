@@ -188,7 +188,10 @@ namespace Giny.World.Managers.Guilds
 
         public Guild GetGuild(long guildId)
         {
-            return Guilds[guildId];
+            // OneAir : safe lookup. Vanilla utilisait l'indexer qui throw
+            // KeyNotFoundException si un perso avait Record.GuildId pointant
+            // sur une guilde supprimée — crashait CharacterSelection.
+            return Guilds.TryGetValue(guildId, out var guild) ? guild : null;
         }
         [Annotation]
         public void OnCharacterDeleted(CharacterRecord character)

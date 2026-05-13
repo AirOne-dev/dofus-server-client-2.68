@@ -686,12 +686,27 @@ namespace Giny.World.Managers.Entities.Characters
 
         public void RefreshGuild()
         {
-            if (HasGuild)
+            if (!HasGuild) return;
+
+            Guild = GuildsManager.Instance.GetGuild(Record.GuildId);
+            // OneAir : si la guilde a été supprimée entre 2 sessions (DB orphelin),
+            // on nettoie le character pour éviter les NullRef en cascade côté UI.
+            if (Guild == null)
             {
-                Guild = GuildsManager.Instance.GetGuild(Record.GuildId);
-                GuildMember = Guild.Record.GetMember(Id);
-                SendGuildMembership();
+                Record.GuildId = 0;
+                GuildMember = null;
+                return;
             }
+
+            GuildMember = Guild.Record.GetMember(Id);
+            // Idem si le membre n'est plus dans la liste (race conditions).
+            if (GuildMember == null)
+            {
+                Record.GuildId = 0;
+                Guild = null;
+                return;
+            }
+            SendGuildMembership();
         }
 
         public void SendKnownZaapList()
