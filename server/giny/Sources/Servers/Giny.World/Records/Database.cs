@@ -27,6 +27,12 @@ namespace Giny.World.Records
             DatabaseManager.Instance.Initialize(Assembly.GetExecutingAssembly(), config.SQLHost,
                config.SQLDBName, config.SQLUser, config.SQLPassword);
 
+            // OneAir : sur fresh deploy, crée toutes les tables Giny manquantes
+            // en CREATE TABLE IF NOT EXISTS avant le SELECT. Sinon Giny passe
+            // par AskForStructureRebuild qui lit Console.ReadLine() — bloque
+            // indéfiniment en container sans stdin.
+            DatabaseManager.Instance.CreateAllTablesIfNotExists();
+
             DatabaseManager.Instance.LoadTables();
 
             ProgressLogger.Flush();

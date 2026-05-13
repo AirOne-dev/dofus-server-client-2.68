@@ -37,27 +37,16 @@ namespace Giny.World.Managers.Alliances
         private readonly ConcurrentDictionary<long, Alliance> Alliances = new ConcurrentDictionary<long, Alliance>();
         private UniqueIdProvider UniqueIdProvider;
 
-        // À jouer avant le LoadTables ORM (SecondPass), sinon le SELECT *
-        // FROM guilds crasherait si la colonne AllianceId manquait sur un
-        // serveur déjà déployé. On crée aussi les tables friends_book et
-        // alliances, le DatabaseManager Giny ne fait pas de CREATE TABLE
-        // automatique au boot (il demande interactivement un rebuild).
-        [StartupInvoke("OneAir Alliances Schema Migration", StartupInvokePriority.Initial)]
+        // Crée les tables custom OneAir (friends_book, alliances) avec un
+        // schéma explicite : TINYINT pour les bool et MEDIUMTEXT pour les
+        // strings longues, ce que Giny.ORM.CreateTableIfNotExists ne saurait
+        // pas générer (il sort MEDIUMTEXT pour bool et VARCHAR(255) pour
+        // string). Ordre des colonnes = ordre MetadataToken des propriétés
+        // du record correspondant, indispensable car les INSERT Giny sont
+        // positionnels.
+        [StartupInvoke("OneAir Alliances Schema", StartupInvokePriority.Initial)]
         public static void EnsureSchema()
         {
-            // 1. Migration ALTER TABLE guilds. Inclut les colonnes que le ORM
-            //    Giny attend mais qui n'ont jamais été créées en DB (Ranks,
-            //    Bulletin, GlobalActivities, ChestActivities → ajoutées au
-            //    code source upstream sans migration).
-            AddColumnIfMissing("guilds", "Ranks", "BLOB NULL");
-            AddColumnIfMissing("guilds", "Bulletin", "BLOB NULL");
-            AddColumnIfMissing("guilds", "GlobalActivities", "BLOB NULL");
-            AddColumnIfMissing("guilds", "ChestActivities", "BLOB NULL");
-            AddColumnIfMissing("guilds", "AllianceId", "BIGINT NOT NULL DEFAULT 0");
-            AddColumnIfMissing("guilds", "Recruitment", "BLOB NULL");
-
-            // 2. Tables custom OneAir. Schéma aligné sur ce que le DatabaseManager
-            //    aurait généré pour OneAirFriendsBookRecord / AllianceRecord.
             try
             {
                 using var c = OpenConnection();
@@ -271,32 +260,6 @@ CREATE TABLE IF NOT EXISTS alliances (
         // -----------------------------------------------------------------
         // Misc
         // -----------------------------------------------------------------
-
-        private static void AddColumnIfMissing(string table, string column, string sqlType)
-        {
-            try
-            {
-                using var c = OpenConnection();
-                bool hasCol;
-                using (var check = c.CreateCommand())
-                {
-                    check.CommandText = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS " +
-                                        "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @t AND COLUMN_NAME = @c";
-                    check.Parameters.AddWithValue("@t", table);
-                    check.Parameters.AddWithValue("@c", column);
-                    hasCol = System.Convert.ToInt32(check.ExecuteScalar()) > 0;
-                }
-                if (hasCol) return;
-                using var alter = c.CreateCommand();
-                alter.CommandText = $"ALTER TABLE `{table}` ADD COLUMN `{column}` {sqlType}";
-                alter.ExecuteNonQuery();
-                Logger.Write($"[OneAir/Alliance] {table}.{column} column added", Channels.Info);
-            }
-            catch (Exception e)
-            {
-                Logger.Write($"[OneAir/Alliance] {table}.{column} migration failed: {e.Message}", Channels.Warning);
-            }
-        }
 
         private static MySqlConnection OpenConnection()
         {

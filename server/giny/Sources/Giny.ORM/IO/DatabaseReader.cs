@@ -66,26 +66,17 @@ namespace Giny.ORM.IO
                             return null;
                         }
                         var obj = new object[this.Properties.Length];
-                        var nameToOrdinal = new Dictionary<string, int>(System.StringComparer.OrdinalIgnoreCase);
-                        for (int c = 0; c < this.m_reader.FieldCount; c++)
-                            nameToOrdinal[this.m_reader.GetName(c)] = c;
 
                         if (m_reader.Read())
                         {
                             for (var i = 0; i < this.Properties.Length; i++)
-                            {
-                                if (nameToOrdinal.TryGetValue(Properties[i].Name, out int ord))
-                                    obj[i] = ConvertObject(this.m_reader[ord], Properties[i]);
-                            }
+                                obj[i] = ConvertObject(this.m_reader[i], Properties[i]);
                         }
 
                         var irecord = (IRecord)Activator.CreateInstance(Type); // expressions?
 
                         for (int i = 0; i < Properties.Length; i++)
                         {
-                            if (obj[i] == null && Properties[i].PropertyType.IsValueType
-                                && System.Nullable.GetUnderlyingType(Properties[i].PropertyType) == null)
-                                continue;
                             Properties[i].SetValue(irecord, obj[i]);
                         }
 
@@ -123,33 +114,17 @@ namespace Giny.ORM.IO
 
                     double n = 0;
 
-                    // OneAir : match column-by-name plutôt que par index. Le matching
-                    // positional cassait dès qu'on faisait un ALTER TABLE ADD COLUMN
-                    // (la nouvelle colonne se retrouve en fin, mais le record l'a
-                    // déclarée au milieu via MetadataToken → mismatch types).
-                    var nameToOrdinal = new Dictionary<string, int>(System.StringComparer.OrdinalIgnoreCase);
-                    for (int c = 0; c < this.m_reader.FieldCount; c++)
-                        nameToOrdinal[this.m_reader.GetName(c)] = c;
-
                     while (this.m_reader.Read())
                     {
                         var obj = new object[this.Properties.Length];
 
                         for (var i = 0; i < this.Properties.Length; i++)
-                        {
-                            if (nameToOrdinal.TryGetValue(Properties[i].Name, out int ord))
-                                obj[i] = ConvertObject(this.m_reader[ord], Properties[i]);
-                            // Colonne absente : laisse obj[i] à null (la SetValue
-                            // ci-dessous écrira le default du type).
-                        }
+                            obj[i] = ConvertObject(this.m_reader[i], Properties[i]);
 
                         var irecord = (IRecord)Activator.CreateInstance(Type); // expressions?
 
                         for (int i = 0; i < Properties.Length; i++)
                         {
-                            if (obj[i] == null && Properties[i].PropertyType.IsValueType
-                                && System.Nullable.GetUnderlyingType(Properties[i].PropertyType) == null)
-                                continue; // skip : valeur par défaut conservée
                             Properties[i].SetValue(irecord, obj[i]);
                         }
 
@@ -204,20 +179,8 @@ namespace Giny.ORM.IO
         /* Maybe store all properties info instead of calling .NET reflection methods? */
         private object ConvertObject(object obj, PropertyInfo property)
         {
-            // OneAir : DBNull universel. Sans ça, Convert.ChangeType throw sur
-            // toute colonne nullable côté DB (typique pour DateTime, int?, …).
-            if (obj is DBNull) return null;
-            // String vide → DateTime : Convert.ChangeType throw FormatException.
-            // On retourne null pour que le caller skipe SetValue et garde le
-            // default DateTime.MinValue. Limité aux types qui plantent vraiment :
-            // List<int> attend obj.ToString().Split() et fonctionne sur "".
-            if (obj is string s && s.Length == 0)
-            {
-                var t = System.Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
-                if (t == typeof(DateTime) || t == typeof(int) || t == typeof(long) || t == typeof(short)
-                    || t == typeof(byte) || t == typeof(double) || t == typeof(float) || t == typeof(bool))
-                    return null;
-            }
+
+
 
             MethodInfo deserializationMethod = TableManager.Instance.GetDeserializationMethods(property.PropertyType);
 

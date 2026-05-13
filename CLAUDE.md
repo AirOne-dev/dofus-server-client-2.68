@@ -280,12 +280,13 @@ liste vide pour ne pas geler l'UI. Coffre/paddocks pareil.
 agrège des guildes (pas des personnages). Modèle :
 - Table `alliances` (Id, Name, Tag, Emblem, CreationDate, Motd, Bulletin,
   LeaderCharacterId, Guilds=List<AllianceGuildLinkRecord>).
-- Colonne `guilds.AllianceId` ajoutée via `EnsureSchema()` au startup
-  `Initial` (avant `LoadTables`).
-- Le DatabaseManager Giny ne fait pas de CREATE TABLE auto au boot ; les
-  tables `alliances` et `friends_book` sont créées manuellement par
-  `OneAirAllianceManager.EnsureSchema()` (SQL natif), idem pour la
-  migration `ALTER TABLE guilds ADD COLUMN AllianceId`.
+- Colonne `guilds.AllianceId` : déclarée sur `GuildRecord` (cf. `[Update] public long AllianceId`).
+  Le fresh deploy la crée via `DatabaseManager.CreateAllTablesIfNotExists()` (appelé
+  dans `Database.InitializeDatabase` avant `LoadTables`).
+- Les tables `alliances` et `friends_book` sont créées par
+  `OneAirAllianceManager.EnsureSchema()` (SQL natif) car elles ont besoin de
+  types que Giny.ORM ne sait pas générer (TINYINT pour les bool, MEDIUMTEXT
+  pour Bulletin).
 - Création : commande chat `.alliancecreate <tag> <nom>` (le joueur doit
   être chef de sa guilde). Pas de hook sur l'item "Pacte d'alliance" vanilla
   côté Giny (l'enum `GenericActionEnum` n'a pas de `CreateAlliance`).
