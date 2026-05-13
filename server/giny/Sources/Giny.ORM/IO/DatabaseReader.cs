@@ -66,17 +66,26 @@ namespace Giny.ORM.IO
                             return null;
                         }
                         var obj = new object[this.Properties.Length];
+                        var nameToOrdinal = new Dictionary<string, int>(System.StringComparer.OrdinalIgnoreCase);
+                        for (int c = 0; c < this.m_reader.FieldCount; c++)
+                            nameToOrdinal[this.m_reader.GetName(c)] = c;
 
                         if (m_reader.Read())
                         {
                             for (var i = 0; i < this.Properties.Length; i++)
-                                obj[i] = ConvertObject(this.m_reader[i], Properties[i]);
+                            {
+                                if (nameToOrdinal.TryGetValue(Properties[i].Name, out int ord))
+                                    obj[i] = ConvertObject(this.m_reader[ord], Properties[i]);
+                            }
                         }
 
                         var irecord = (IRecord)Activator.CreateInstance(Type); // expressions?
 
                         for (int i = 0; i < Properties.Length; i++)
                         {
+                            if (obj[i] == null && Properties[i].PropertyType.IsValueType
+                                && System.Nullable.GetUnderlyingType(Properties[i].PropertyType) == null)
+                                continue;
                             Properties[i].SetValue(irecord, obj[i]);
                         }
 
@@ -114,17 +123,33 @@ namespace Giny.ORM.IO
 
                     double n = 0;
 
+                    // OneAir : match column-by-name plutôt que par index. Le matching
+                    // positional cassait dès qu'on faisait un ALTER TABLE ADD COLUMN
+                    // (la nouvelle colonne se retrouve en fin, mais le record l'a
+                    // déclarée au milieu via MetadataToken → mismatch types).
+                    var nameToOrdinal = new Dictionary<string, int>(System.StringComparer.OrdinalIgnoreCase);
+                    for (int c = 0; c < this.m_reader.FieldCount; c++)
+                        nameToOrdinal[this.m_reader.GetName(c)] = c;
+
                     while (this.m_reader.Read())
                     {
                         var obj = new object[this.Properties.Length];
 
                         for (var i = 0; i < this.Properties.Length; i++)
-                            obj[i] = ConvertObject(this.m_reader[i], Properties[i]);
+                        {
+                            if (nameToOrdinal.TryGetValue(Properties[i].Name, out int ord))
+                                obj[i] = ConvertObject(this.m_reader[ord], Properties[i]);
+                            // Colonne absente : laisse obj[i] à null (la SetValue
+                            // ci-dessous écrira le default du type).
+                        }
 
                         var irecord = (IRecord)Activator.CreateInstance(Type); // expressions?
 
                         for (int i = 0; i < Properties.Length; i++)
                         {
+                            if (obj[i] == null && Properties[i].PropertyType.IsValueType
+                                && System.Nullable.GetUnderlyingType(Properties[i].PropertyType) == null)
+                                continue; // skip : valeur par défaut conservée
                             Properties[i].SetValue(irecord, obj[i]);
                         }
 
