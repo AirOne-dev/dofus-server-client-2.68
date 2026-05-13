@@ -405,7 +405,8 @@
       </header>
 
       <div class="card">
-        <button id="backup-trigger">+ Déclencher une sauvegarde maintenant</button>
+        <button id="backup-flush-trigger" title="Force le serveur de jeu à flusher la mémoire vers la DB avant le dump (recommandé avant restart)">⚡ Sauvegarder le world + dump SQL</button>
+        <button id="backup-trigger" style="margin-left:8px;">+ Dump SQL seul (sans flush)</button>
         <div class="table-wrap" style="margin-top:12px;">
           <table id="backups-table">
             <thead><tr><th>Nom</th><th>Taille</th><th>Date</th><th class="actions-col">Actions</th></tr></thead>

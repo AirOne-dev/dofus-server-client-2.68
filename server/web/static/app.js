@@ -870,6 +870,16 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (e) { toast("Échec : " + e.message, "err"); }
   };
 
+  const flushBtn = $("#backup-flush-trigger");
+  if (flushBtn) flushBtn.onclick = async () => {
+    toast("Flush world → DB → dump (peut prendre ~15s)…");
+    try {
+      await api("/api/backups", { method: "POST", body: JSON.stringify({ action: "flush_and_trigger" })});
+      toast("World sauvegardé + backup créé", "ok");
+      loaders.backups();
+    } catch (e) { toast("Échec : " + e.message, "err"); }
+  };
+
 });
 
 // --- INVENTORY : paperdoll + bag --------------------------------------------

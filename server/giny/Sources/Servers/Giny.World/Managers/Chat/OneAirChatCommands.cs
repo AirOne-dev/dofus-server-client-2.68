@@ -240,6 +240,25 @@ namespace Giny.World.Managers.Chat
             OneAirHavenBagPatch.RegisterInteractive(client.Character, type, elemId);
         }
 
+        // Ouvre le dialog vanilla de création de guilde (équivalent Guildalogemme).
+        // Le perso peut ensuite saisir nom + emblème via l'UI Dofus normale.
+        [ChatCommand("guildcreate", ServerRoleEnum.Administrator)]
+        public static void GuildCreateCommand(WorldClient client)
+        {
+            if (client.Character.HasGuild) { client.Character.ReplyError("Vous êtes déjà dans une guilde."); return; }
+            client.Character.OpenGuildCreationDialog();
+        }
+
+        // Ouvre le dialog vanilla de création d'alliance (équivalent Pacte
+        // d'alliance). Le perso saisit nom + tag + emblème via l'UI Dofus.
+        [ChatCommand("alliancecreate", ServerRoleEnum.Administrator)]
+        public static void AllianceCreateCommand(WorldClient client)
+        {
+            if (!client.Character.HasGuild) { client.Character.ReplyError("Vous devez être dans une guilde."); return; }
+            if (client.Character.Guild.Record.AllianceId != 0) { client.Character.ReplyError("Votre guilde est déjà dans une alliance."); return; }
+            client.Character.OpenAllianceCreationDialog();
+        }
+
         private static string JsonEscape(string s)
         {
             if (string.IsNullOrEmpty(s)) return "";

@@ -233,6 +233,14 @@ namespace Giny.World.Handlers.Roleplay.Guilds
             }
         }
 
+        // OneAir : sauvegarde des paramètres de recrutement modifiés depuis l'UI.
+        [MessageHandler]
+        public static void HandleUpdateRecruitmentInformation(UpdateRecruitmentInformationMessage message, WorldClient client)
+        {
+            if (!client.Character.HasGuild) return;
+            client.Character.Guild.SetRecruitmentInformation(client.Character, message.recruitmentData);
+        }
+
         [MessageHandler]
         public static void HandleGuildInvitation(GuildInvitationMessage message, WorldClient client)
         {

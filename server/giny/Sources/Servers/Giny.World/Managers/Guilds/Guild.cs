@@ -360,6 +360,8 @@ namespace Giny.World.Managers.Guilds
         {
             return OnlineMembers.Values.FirstOrDefault(x => x.Name == name);
         }
+        // OneAir : exposé pour les broadcasts d'alliance.
+        public IEnumerable<Character> GetOnlineMembers() => OnlineMembers.Values;
 
         public void SetBulletin(Character source, string content)
         {
@@ -589,23 +591,41 @@ namespace Giny.World.Managers.Guilds
 
         public GuildRecruitmentInformation GetGuildRecruitmentInformation()
         {
+            // OneAir : si le record n'a pas encore de Recruitment (guilde
+            // créée avant cette feature), on renvoie une valeur neutre vide.
+            if (Record.Recruitment != null) return Record.Recruitment.ToProtocol((int)Id);
+
             return new GuildRecruitmentInformation()
             {
                 socialId = (int)Id,
-                recruitmentType = (byte)SocialRecruitmentTypeEnum.AUTOMATIC,
-                recruitmentTitle = "TEST",
-                recruitmentText = "TEST TEST",
+                recruitmentType = (byte)SocialRecruitmentTypeEnum.DISABLED,
+                recruitmentTitle = "",
+                recruitmentText = "",
                 selectedLanguages = new int[0],
                 selectedCriterion = new int[0],
-                minLevel = 100,
-                minLevelFacultative = false,
-                minSuccess = 100,
-                minSuccessFacultative = false,
+                minLevel = 0,
+                minLevelFacultative = true,
+                minSuccess = 0,
+                minSuccessFacultative = true,
                 invalidatedByModeration = false,
-                lastEditPlayerName = "Davidax",
+                lastEditPlayerName = "",
                 lastEditDate = 0,
                 recruitmentAutoLocked = false
             };
+        }
+
+        // OneAir : sauvegarde des paramètres de recrutement saisis depuis l'UI.
+        public void SetRecruitmentInformation(Character editor, GuildRecruitmentInformation info)
+        {
+            if (!editor.GuildMember.HasRight(GuildRightsEnum.RIGHT_MANAGE_RECRUITMENT, this))
+                return;
+
+            double now = DateTime.Now.GetUnixTimeStamp();
+            Record.Recruitment = GuildRecruitmentRecord.FromProtocol(info, editor.Name, now);
+            Record.UpdateLater();
+
+            // Refresh l'onglet de tous les membres connectés qui regardent.
+            Send(GetRecruitmentInformationMessage());
         }
 
 

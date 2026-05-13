@@ -9,13 +9,27 @@ clients macOS et Windows).
 `restart`, `up -d --force-recreate` sur n'importe quel `giny-*` :
 
 ```bash
-docker exec giny-mysql sh -c 'mysqldump --single-transaction --databases \
-  giny_auth giny_world -u root -p"$MYSQL_ROOT_PASSWORD" | gzip' \
-  > server/backups/manual-$(date +%Y%m%d-%H%M%S).sql.gz
+./scripts/save-world.sh              # flush in-memory → DB + mysqldump
+./scripts/save-world.sh --no-flush   # uniquement si giny-world est freezé
 ```
 
-Le service `backup` boucle un dump toutes les minutes (rotation 20), mais ne
-pas s'y fier pour un restart imminent — la fenêtre de perte est trop grande.
+C'est le **seul moyen recommandé** : le script insère une action `save_now`
+dans la table `actions`, attend que le `OneAirActionPoller` côté World la
+consomme (qui appelle `WorldSaveManager.PerformSave()`, ~1.5s), puis lance
+le mysqldump vers `server/backups/manual-YYYYMMDD-HHMMSS.sql.gz`.
+
+Tout passe par `docker exec giny-mysql` — pas besoin de credentials admin,
+pas d'appel HTTP. **Sans le flush**, le dump rate les modifs des 5
+dernières minutes (`SaveIntervalMinutes` par défaut), car les écritures
+ORM sont batchées par `CyclicSaveTask`.
+
+Variante UI : bouton « ⚡ Sauvegarder le world + dump SQL » dans
+`/admin#backups` (équivalent HTTP : `POST /api/backups`
+`{"action":"flush_and_trigger"}`).
+
+Le service `backup` boucle un dump toutes les minutes (rotation 20), mais
+ne pas s'y fier pour un restart imminent — la fenêtre de perte est trop
+grande, et il n'appelle pas `save_now`.
 
 **2. Rebuild auto du `web` après modif `server/web/`.** Tout ce qui est sous
 ce dossier est embarqué via `go:embed`, pas de hot-reload :
@@ -243,6 +257,58 @@ LastRoomMapId, UpdatedAt)`. Sauvegardée à chaque entrée dans une salle
 listée dans `DungeonRecord.Rooms`. Purgée à l'entrée sur la map
 `ExitMapId`. Conservée si défaite + respawn entrée (cf.
 `Managers/Dungeons/OneAirDungeonRespawn.TryRespawnAtDungeonEntrance`).
+
+## Social (Amis / Guildes / Alliances)
+
+**Amis** — protocole Ankama complet, persisté côté serveur dans
+`friends_book (AccountId, FriendAccountIds, IgnoredAccountIds, WarnOnConnection,
+WarnOnLevelGain, StatusShared)`. La liste suit l'account (pas le perso). Code
+dans `Managers/Social/OneAirFriendsManager.cs` + `Records/Social/
+OneAirFriendsBookRecord.cs` + `Handlers/Roleplay/Social/FriendsHandler.cs`.
+Pas de tags (`#1234` Ankama) — on dérive un tag stable `AccountId:D4` depuis
+l'accountId. `PlayerSearchTagInformation` n'est pas supporté côté lookup,
+seulement `PlayerSearchCharacterNameInformation`.
+
+**Guildes** — moteur Giny vanilla déjà fonctionnel (création via Guildalogemme
+1575 → `GenericActionEnum.CreateGuild` → `OpenGuildCreationDialog`, invitation,
+motd, ranks, kick). On a ajouté la commande chat `.guildcreate <nom>` pour
+contourner l'item. Applications (`GuildSubmitApplicationMessage`, etc.) ne sont
+PAS implémentées : stubs no-op dans `OneAirNoopHandlers.cs` qui renvoient une
+liste vide pour ne pas geler l'UI. Coffre/paddocks pareil.
+
+**Alliances** — entièrement OneAir, pas de code Giny vanilla. Une alliance
+agrège des guildes (pas des personnages). Modèle :
+- Table `alliances` (Id, Name, Tag, Emblem, CreationDate, Motd, Bulletin,
+  LeaderCharacterId, Guilds=List<AllianceGuildLinkRecord>).
+- Colonne `guilds.AllianceId` : déclarée sur `GuildRecord` (cf. `[Update] public long AllianceId`).
+  Le fresh deploy la crée via `DatabaseManager.CreateAllTablesIfNotExists()` (appelé
+  dans `Database.InitializeDatabase` avant `LoadTables`).
+- Les tables `alliances` et `friends_book` sont créées par
+  `OneAirAllianceManager.EnsureSchema()` (SQL natif) car elles ont besoin de
+  types que Giny.ORM ne sait pas générer (TINYINT pour les bool, MEDIUMTEXT
+  pour Bulletin).
+- Création : commande chat `.alliancecreate <tag> <nom>` (le joueur doit
+  être chef de sa guilde). Pas de hook sur l'item "Pacte d'alliance" vanilla
+  côté Giny (l'enum `GenericActionEnum` n'a pas de `CreateAlliance`).
+- Pas de KoH/prismes : `AllianceInsiderInfoMessage` est envoyé avec
+  `prisms[]` et `taxCollectors[]` vides (sinon le panneau Alliance plante
+  à l'ouverture).
+- Ranks : on n'envoie pas de `AllianceRanksMessage` peuplé — deux rangs
+  conceptuels (`RANK_FOUNDER`=1, `RANK_MEMBER`=2), le client retombe sur
+  ses textes par défaut.
+- Invitations : pattern `RequestBox` comme les guildes
+  (`AllianceInvitationRequest.cs`). Seul un chef d'une guilde en alliance
+  peut inviter une autre guilde, et seul le chef de la guilde ciblée peut
+  accepter.
+
+Cycle de vie `Character.Alliance` :
+- Au login (post `Guild?.OnConnected`) → `OneAirAllianceManager.OnCharacterConnected`
+  résout l'alliance via `Guild.AllianceId` et envoie `AllianceMembership`.
+- Quand un joueur quitte sa guilde (`OnGuildKick`) → `OnCharacterLeftGuild`
+  nettoie aussi l'alliance.
+- Quand une guilde devient vide → `GuildsManager.RemoveGuild` ne purge pas
+  l'alliance (à câbler si besoin ; en pratique on s'en fout, la guilde
+  reste référencée mais n'a plus de membres en ligne).
 
 ## Havre-sac
 
