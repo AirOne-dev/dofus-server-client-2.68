@@ -9,13 +9,28 @@ clients macOS et Windows).
 `restart`, `up -d --force-recreate` sur n'importe quel `giny-*` :
 
 ```bash
+./scripts/save-world.sh   # flush in-memory → DB puis mysqldump (recommandé)
+```
+
+Le script déclenche l'action `save_now` côté World (qui flush via
+`WorldSaveManager.PerformSave()`), attend que le poller la traite (~1.5s),
+puis lance le mysqldump. **Sans ce flush**, le dump rate les modifs des
+5 dernières minutes (`SaveIntervalMinutes` par défaut).
+
+Variante UI : bouton « ⚡ Sauvegarder le world + dump SQL » dans
+`/admin#backups` (POST `/api/backups` `{"action":"flush_and_trigger"}`).
+
+Dump SQL seul (urgence, World freezé) :
+
+```bash
 docker exec giny-mysql sh -c 'mysqldump --single-transaction --databases \
   giny_auth giny_world -u root -p"$MYSQL_ROOT_PASSWORD" | gzip' \
   > server/backups/manual-$(date +%Y%m%d-%H%M%S).sql.gz
 ```
 
-Le service `backup` boucle un dump toutes les minutes (rotation 20), mais ne
-pas s'y fier pour un restart imminent — la fenêtre de perte est trop grande.
+Le service `backup` boucle un dump toutes les minutes (rotation 20), mais
+ne pas s'y fier pour un restart imminent — la fenêtre de perte est trop
+grande.
 
 **2. Rebuild auto du `web` après modif `server/web/`.** Tout ce qui est sous
 ce dossier est embarqué via `go:embed`, pas de hot-reload :

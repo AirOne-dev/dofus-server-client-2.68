@@ -618,6 +618,25 @@ func apiBackups(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			writeJSON(w, map[string]string{"ok": "1"})
+		case "flush_and_trigger":
+			// OneAir : flush in-memory world → DB (via action save_now,
+			// consommée par le ActionPoller côté World) puis mysqldump.
+			// Sans ce flush, le dump rate les modifs des 5 dernières minutes
+			// (SaveIntervalMinutes par défaut).
+			actionId, err := queueActionWithId("save_now", "")
+			if err != nil {
+				httpErr(w, err)
+				return
+			}
+			if err := waitForActionProcessed(actionId, 15*time.Second); err != nil {
+				httpErr(w, fmt.Errorf("save_now not processed: %w", err))
+				return
+			}
+			if err := triggerBackupNow(); err != nil {
+				httpErr(w, err)
+				return
+			}
+			writeJSON(w, map[string]string{"ok": "1"})
 		case "delete":
 			if !strings.HasSuffix(req.Name, ".sql.gz") || strings.Contains(req.Name, "/") {
 				http.Error(w, "nom invalide", 400)
@@ -696,6 +715,37 @@ func ensureActionsTable() error {
 func queueAction(typ, payload string) {
 	_ = ensureActionsTable()
 	_, _ = db.Exec(`INSERT INTO `+cfg.WorldDB+`.actions (Type, Payload) VALUES (?, ?)`, typ, payload)
+}
+
+// queueActionWithId : variante qui retourne le LAST_INSERT_ID pour pouvoir
+// poll ProcessedAt et savoir quand le World a consommé l'action.
+func queueActionWithId(typ, payload string) (int64, error) {
+	if err := ensureActionsTable(); err != nil {
+		return 0, err
+	}
+	res, err := db.Exec(`INSERT INTO `+cfg.WorldDB+`.actions (Type, Payload) VALUES (?, ?)`, typ, payload)
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
+}
+
+// waitForActionProcessed : poll ProcessedAt jusqu'à ce que l'action soit
+// marquée traitée par le ActionPoller (côté serveur de jeu, toutes les 1.5s).
+func waitForActionProcessed(id int64, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		var processed sql.NullTime
+		err := db.QueryRow(`SELECT ProcessedAt FROM `+cfg.WorldDB+`.actions WHERE Id = ?`, id).Scan(&processed)
+		if err != nil {
+			return err
+		}
+		if processed.Valid {
+			return nil
+		}
+		time.Sleep(300 * time.Millisecond)
+	}
+	return fmt.Errorf("timeout waiting for action %d", id)
 }
 
 func apiBroadcast(w http.ResponseWriter, r *http.Request) {
