@@ -240,18 +240,13 @@ namespace Giny.World.Managers.Chat
             OneAirHavenBagPatch.RegisterInteractive(client.Character, type, elemId);
         }
 
-        // Création de guilde sans Guildalogemme.
-        [ChatCommand("guildcreate", ServerRoleEnum.Player)]
-        public static void GuildCreateCommand(WorldClient client, string name)
+        // Ouvre le dialog vanilla de création de guilde (équivalent Guildalogemme).
+        // Le perso peut ensuite saisir nom + emblème via l'UI Dofus normale.
+        [ChatCommand("guildcreate", ServerRoleEnum.Administrator)]
+        public static void GuildCreateCommand(WorldClient client)
         {
             if (client.Character.HasGuild) { client.Character.ReplyError("Vous êtes déjà dans une guilde."); return; }
-            if (string.IsNullOrWhiteSpace(name) || name.Length < 3 || name.Length > 30)
-            { client.Character.ReplyError("Nom de guilde invalide (3-30 caractères)."); return; }
-
-            // Emblème par défaut neutre (à modifier plus tard via l'UI vanilla).
-            var emblem = new Giny.Protocol.Types.SocialEmblem((short)1, 0x000000, (byte)1, 0xFFFFFF);
-            var result = Giny.World.Managers.Guilds.GuildsManager.Instance.CreateGuild(client.Character, name, emblem);
-            client.Character.OnGuildCreate(result);
+            client.Character.OpenGuildCreationDialog();
         }
 
         // Création d'alliance. Le joueur doit être chef d'une guilde.

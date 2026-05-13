@@ -26,6 +26,19 @@ namespace Giny.World.Handlers.OneAir
         [MessageHandler]
         public static void HandleClientKeyMessage(ClientKeyMessage message, WorldClient client) { }
 
+        // Recrutement guilde (l'UI envoie ça quand on clique "Valider" dans l'onglet
+        // Recrutement) : pas de feature OneAir, on swallow pour éviter le warning.
+        [MessageHandler]
+        public static void HandleUpdateRecruitmentInformation(UpdateRecruitmentInformationMessage message, WorldClient client) { }
+
+        // Coffre de guilde (l'UI s'abonne aux changements quand on ouvre l'onglet) :
+        // pas de feature OneAir.
+        [MessageHandler]
+        public static void HandleStartListenGuildChestStructure(StartListenGuildChestStructureMessage message, WorldClient client) { }
+
+        [MessageHandler]
+        public static void HandleStopListenGuildChestStructure(StopListenGuildChestStructureMessage message, WorldClient client) { }
+
         // Guild applications : pas de support OneAir, l'UI tape "aucune candidature".
         [MessageHandler]
         public static void HandleGuildListApplicationRequest(GuildListApplicationRequestMessage message, WorldClient client)
