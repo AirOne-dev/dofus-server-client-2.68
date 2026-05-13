@@ -66,8 +66,13 @@ namespace Giny.World.Managers.Generic
         [GenericActionHandler(GenericActionEnum.RemoveItem)]
         public static void HandleRemoveItem(Character character, IGenericAction parameter)
         {
-            short itemId = short.Parse(parameter.Param1);
-            int quantity = int.Parse(parameter.Param2);
+            // OneAir : le dump initial seed certaines rows RemoveItem avec Param1
+            // vide (ex: reply "Utiliser le trousseau de clefs" sur Klasmor où
+            // l'item attendu n'a pas été renseigné). On no-op au lieu de crasher
+            // tout le routage de la reply ; les autres actions de la même reply
+            // (Teleport) restent appliquées.
+            if (string.IsNullOrWhiteSpace(parameter.Param1) || !short.TryParse(parameter.Param1, out short itemId) || itemId <= 0) return;
+            if (!int.TryParse(parameter.Param2, out int quantity) || quantity <= 0) return;
 
             CharacterItemRecord item = character.Inventory.GetFirstItem(itemId, quantity);
 

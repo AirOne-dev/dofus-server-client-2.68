@@ -89,13 +89,13 @@ CREATE TABLE IF NOT EXISTS dungeon_progress (
         //   * id=31 Antre du Kralamoure Géant (Kokulte Géant n'a pas de dialog)
         private static readonly OneAirDungeonResumeEntry[] ManualOverrides = new[]
         {
-            new OneAirDungeonResumeEntry { DungeonId = 4L,  DungeonName = "Centre du Labyrinthe du Minotoror", EntranceMapId = 34473220L,  ExitMapId = 34476294L,  NpcTemplateId = 783,  NpcName = "Lorkos",         QuestionMessageId = 3212,  EnterReplyId = 2844, ResumeReplyId = 8925, ExitReplyId = 2834 },
-            new OneAirDungeonResumeEntry { DungeonId = 8L,  DungeonName = "Grange du Tournesol Affamé",        EntranceMapId = 192937992L, ExitMapId = 192937992L, NpcTemplateId = 780,  NpcName = "Mawy Ingalsse",  QuestionMessageId = 3178,  EnterReplyId = 386714, ResumeReplyId = 0,      ExitReplyId = 366337 },
-            new OneAirDungeonResumeEntry { DungeonId = 25L, DungeonName = "Grotte Hesque",                     EntranceMapId = 161295L,    ExitMapId = 161295L,    NpcTemplateId = 941,  NpcName = "Tina Montini",   QuestionMessageId = 4190,  EnterReplyId = 378799, ResumeReplyId = 0,      ExitReplyId = 767068 },
-            new OneAirDungeonResumeEntry { DungeonId = 39L, DungeonName = "Cale de l'Arche d'Otomaï",          EntranceMapId = 22546944L,  ExitMapId = 22546944L,  NpcTemplateId = 942,  NpcName = "Capitaine Flams",QuestionMessageId = 4195,  EnterReplyId = 28043,  ResumeReplyId = 29584,  ExitReplyId = 767079 },
-            new OneAirDungeonResumeEntry { DungeonId = 42L, DungeonName = "Garde-manger du Rat Blanc",         EntranceMapId = 216402698L, ExitMapId = 218632194L, NpcTemplateId = 6612, NpcName = "Rat Blanc",      QuestionMessageId = 50024, EnterReplyId = 0,      ResumeReplyId = 0,      ExitReplyId = 925429 },
-            new OneAirDungeonResumeEntry { DungeonId = 53L, DungeonName = "Salle du Minotot",                  EntranceMapId = 34473476L,  ExitMapId = 34476294L,  NpcTemplateId = 783,  NpcName = "Lorkos",         QuestionMessageId = 3213,  EnterReplyId = 2844, ResumeReplyId = 8927, ExitReplyId = 2835 },
-            new OneAirDungeonResumeEntry { DungeonId = 58L, DungeonName = "Tanière Givrefoux",                 EntranceMapId = 59510784L,  ExitMapId = 60031488L,  NpcTemplateId = 1385, NpcName = "Givrihaltès",    QuestionMessageId = 8293,  EnterReplyId = 20456,  ResumeReplyId = 26974,  ExitReplyId = 20464 },
+            new OneAirDungeonResumeEntry { DungeonId = 4L,  DungeonName = "Centre du Labyrinthe du Minotoror", EntranceMapId = 34473220L,  ExitMapId = 34476294L,  NpcTemplateId = 783,  NpcName = "Lorkos",         QuestionMessageId = 3212,  EnterReplyId = 2844, ResumeReplyId = 8925, ExitReplyId = 2834, TrousseauReplyId = 6610 },
+            new OneAirDungeonResumeEntry { DungeonId = 8L,  DungeonName = "Grange du Tournesol Affamé",        EntranceMapId = 192937992L, ExitMapId = 192937992L, NpcTemplateId = 780,  NpcName = "Mawy Ingalsse",  QuestionMessageId = 3178,  EnterReplyId = 386714, ResumeReplyId = 0,      ExitReplyId = 366337, TrousseauReplyId = 0 },
+            new OneAirDungeonResumeEntry { DungeonId = 25L, DungeonName = "Grotte Hesque",                     EntranceMapId = 161295L,    ExitMapId = 161295L,    NpcTemplateId = 941,  NpcName = "Tina Montini",   QuestionMessageId = 4190,  EnterReplyId = 378799, ResumeReplyId = 0,      ExitReplyId = 767068, TrousseauReplyId = 6620 },
+            new OneAirDungeonResumeEntry { DungeonId = 39L, DungeonName = "Cale de l'Arche d'Otomaï",          EntranceMapId = 22546944L,  ExitMapId = 22546944L,  NpcTemplateId = 942,  NpcName = "Capitaine Flams",QuestionMessageId = 4195,  EnterReplyId = 28043,  ResumeReplyId = 29584,  ExitReplyId = 767079, TrousseauReplyId = 8936 },
+            new OneAirDungeonResumeEntry { DungeonId = 42L, DungeonName = "Garde-manger du Rat Blanc",         EntranceMapId = 216402698L, ExitMapId = 218632194L, NpcTemplateId = 6612, NpcName = "Rat Blanc",      QuestionMessageId = 50024, EnterReplyId = 0,      ResumeReplyId = 0,      ExitReplyId = 925429, TrousseauReplyId = 0 },
+            new OneAirDungeonResumeEntry { DungeonId = 53L, DungeonName = "Salle du Minotot",                  EntranceMapId = 34473476L,  ExitMapId = 34476294L,  NpcTemplateId = 783,  NpcName = "Lorkos",         QuestionMessageId = 3213,  EnterReplyId = 2844, ResumeReplyId = 8927, ExitReplyId = 2835, TrousseauReplyId = 6610 },
+            new OneAirDungeonResumeEntry { DungeonId = 58L, DungeonName = "Tanière Givrefoux",                 EntranceMapId = 59510784L,  ExitMapId = 60031488L,  NpcTemplateId = 1385, NpcName = "Givrihaltès",    QuestionMessageId = 8293,  EnterReplyId = 20456,  ResumeReplyId = 26974,  ExitReplyId = 20464, TrousseauReplyId = 0 },
         };
 
         // Table merge (ByEntrance + ManualOverrides) calculée une fois.
@@ -378,6 +378,64 @@ ON DUPLICATE KEY UPDATE LastRoomMapId=@r, UpdatedAt=CURRENT_TIMESTAMP";
         // re-seeder sans accumuler de doublons si la table baked change.
         private const string SeedMarker = "OneAirSeed";
 
+        // Fix les npc_replies vanilla mal seedées dans le dump initial :
+        //   * supprime les rows RemoveItem avec Param1 vide (data corrompue
+        //     qui crashe HandleRemoveItem côté Int16.Parse).
+        //   * ajoute le Criteria "PO=<itemId>" aux rows RemoveItem qui ont un
+        //     itemId valide mais pas de Criteria — ET propage le même critère
+        //     sur les autres rows de la même (NpcSpawnId, ReplyId) pour que
+        //     la reply complète disparaisse du dialog quand le joueur n'a pas
+        //     l'item (sinon vanilla NpcTalkDialog la garde et fire Teleport).
+        public static void FixVanillaReplies()
+        {
+            int dropped = 0, criteriaSet = 0;
+            try
+            {
+                using var c = OpenConn();
+                using (var cmd = c.CreateCommand())
+                {
+                    cmd.CommandText = "DELETE FROM npc_replies WHERE ActionIdentifier='RemoveItem' AND (Param1='' OR Param1 IS NULL)";
+                    dropped = cmd.ExecuteNonQuery();
+                }
+                // Build the list of (spawnId, replyId, itemId) qui ont une row
+                // RemoveItem avec un Param1 valide mais Criteria vide partout.
+                var targets = new List<(long spawn, int reply, string item)>();
+                using (var cmd = c.CreateCommand())
+                {
+                    cmd.CommandText = @"
+SELECT NpcSpawnId, ReplyId, MIN(Param1) FROM npc_replies
+WHERE ActionIdentifier='RemoveItem' AND Param1<>'' AND Param1 IS NOT NULL
+  AND (Criteria='' OR Criteria IS NULL)
+GROUP BY NpcSpawnId, ReplyId";
+                    using var r = cmd.ExecuteReader();
+                    while (r.Read())
+                        targets.Add((r.GetInt64(0), r.GetInt32(1), r.GetString(2)));
+                }
+                foreach (var (spawn, reply, item) in targets)
+                {
+                    using var cmd = c.CreateCommand();
+                    cmd.CommandText = @"
+UPDATE npc_replies SET Criteria=@cr
+WHERE NpcSpawnId=@s AND ReplyId=@r AND (Criteria='' OR Criteria IS NULL)";
+                    cmd.Parameters.AddWithValue("@cr", "PO=" + item);
+                    cmd.Parameters.AddWithValue("@s", spawn);
+                    cmd.Parameters.AddWithValue("@r", reply);
+                    criteriaSet += cmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.Write("[OneAir] FixVanillaReplies failed: " + e.Message, Channels.Warning);
+            }
+            // Recharge in-memory container pour refléter DELETE + UPDATE.
+            DatabaseManager.Instance.Reload<NpcReplyRecord>();
+            foreach (var sp in NpcSpawnRecord.GetNpcSpawns())
+            {
+                sp.Actions = NpcActionRecord.GetNpcActions(sp.Id).ToList();
+            }
+            Logger.Write($"[OneAir] FixVanillaReplies : {dropped} broken RemoveItem rows dropped, {criteriaSet} rows criteria-patched (hide button when item missing)", Channels.Info);
+        }
+
         // Pour chaque NPC d'entrée qu'on a spawné mais qui n'a pas de TALK action
         // vanilla, seed npc_actions + npc_replies pour qu'il propose un dialog
         // fonctionnel (Donner la clef et entrer / Sortir). La reply "Reprendre"
@@ -470,10 +528,15 @@ ON DUPLICATE KEY UPDATE LastRoomMapId=@r, UpdatedAt=CURRENT_TIMESTAMP";
                             var dungeon = DungeonRecord.GetDungeonRecords().FirstOrDefault(d => d.Id == entry.DungeonId);
                             if (dungeon?.Rooms != null && dungeon.Rooms.Count > 0) firstRoom = dungeon.Rooms[0].MapId;
 
-                            if (entry.EnterReplyId > 0 && firstRoom > 0)
+                            short enterCell = 0;
+                            if (firstRoom > 0)
                             {
                                 var firstRoomMap = MapRecord.GetMap(firstRoom);
-                                short enterCell = firstRoomMap != null ? firstRoomMap.RandomWalkableCell().Id : (short)0;
+                                if (firstRoomMap != null) enterCell = firstRoomMap.RandomWalkableCell().Id;
+                            }
+
+                            if (entry.EnterReplyId > 0 && firstRoom > 0)
+                            {
                                 var enterReply = new NpcReplyRecord
                                 {
                                     Id = NpcReplyRecord.PopNextId(),
@@ -487,6 +550,26 @@ ON DUPLICATE KEY UPDATE LastRoomMapId=@r, UpdatedAt=CURRENT_TIMESTAMP";
                                     Criteria = "",
                                 };
                                 enterReply.AddNow();
+                                seededReplies++;
+                            }
+                            // Trousseau de clefs : même action que Enter (tp 1ère salle),
+                            // option distincte ; le client la rend si le replyId est dans
+                            // les dialogReplies du template.
+                            if (entry.TrousseauReplyId > 0 && firstRoom > 0)
+                            {
+                                var trousseauReply = new NpcReplyRecord
+                                {
+                                    Id = NpcReplyRecord.PopNextId(),
+                                    ReplyId = entry.TrousseauReplyId,
+                                    NpcSpawnId = spawnId,
+                                    MessageId = msgId,
+                                    ActionIdentifier = GenericActionEnum.Teleport,
+                                    Param1 = firstRoom.ToString(),
+                                    Param2 = enterCell.ToString(),
+                                    Param3 = SeedMarker,
+                                    Criteria = "",
+                                };
+                                trousseauReply.AddNow();
                                 seededReplies++;
                             }
                             if (entry.ExitReplyId > 0)

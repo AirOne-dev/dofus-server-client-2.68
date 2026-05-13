@@ -23,6 +23,7 @@ namespace Giny.World.Managers.Chat
         public int EnterReplyId;
         public int ResumeReplyId;
         public int ExitReplyId;
+        public int TrousseauReplyId;
     }
 
     public static class OneAirDungeonResumeData
@@ -35,345 +36,345 @@ namespace Giny.World.Managers.Chat
         public static readonly Dictionary<long, List<OneAirDungeonResumeEntry>> ByEntrance = new Dictionary<long, List<OneAirDungeonResumeEntry>>
         {
             { 139784L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 30L, DungeonName = "Caverne du Koulosse", EntranceMapId = 139784L, ExitMapId = 139265L, NpcTemplateId = 754, NpcName = "Gardien Koalak", QuestionMessageId = 3119, EnterReplyId = 2742, ResumeReplyId = 8915, ExitReplyId = 8914 },
+                new OneAirDungeonResumeEntry { DungeonId = 30L, DungeonName = "Caverne du Koulosse", EntranceMapId = 139784L, ExitMapId = 139265L, NpcTemplateId = 754, NpcName = "Gardien Koalak", QuestionMessageId = 3119, EnterReplyId = 2742, ResumeReplyId = 8915, ExitReplyId = 8914, TrousseauReplyId = 6607 },
             } },
             { 25693696L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 28L, DungeonName = "Canopée du Kimbo", EntranceMapId = 25693696L, ExitMapId = 25693696L, NpcTemplateId = 946, NpcName = "Chachka", QuestionMessageId = 4206, EnterReplyId = 8909, ResumeReplyId = 8911, ExitReplyId = 3686 },
+                new OneAirDungeonResumeEntry { DungeonId = 28L, DungeonName = "Canopée du Kimbo", EntranceMapId = 25693696L, ExitMapId = 25693696L, NpcTemplateId = 946, NpcName = "Chachka", QuestionMessageId = 4206, EnterReplyId = 8909, ResumeReplyId = 8911, ExitReplyId = 3686, TrousseauReplyId = 8909 },
             } },
             { 54159661L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 62L, DungeonName = "Donjon de la mine de Sakaï", EntranceMapId = 54159661L, ExitMapId = 54159661L, NpcTemplateId = 1363, NpcName = "Hywan Kenoby", QuestionMessageId = 8153, EnterReplyId = 8145, ResumeReplyId = 8989, ExitReplyId = 8147 },
+                new OneAirDungeonResumeEntry { DungeonId = 62L, DungeonName = "Donjon de la mine de Sakaï", EntranceMapId = 54159661L, ExitMapId = 54159661L, NpcTemplateId = 1363, NpcName = "Hywan Kenoby", QuestionMessageId = 8153, EnterReplyId = 8145, ResumeReplyId = 8989, ExitReplyId = 8147, TrousseauReplyId = 0 },
             } },
             { 54163796L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 56L, DungeonName = "Épave du Grolandais violent", EntranceMapId = 54163796L, ExitMapId = 54165334L, NpcTemplateId = 1357, NpcName = "Fantômahawk", QuestionMessageId = 8107, EnterReplyId = 8214, ResumeReplyId = 8968, ExitReplyId = 8216 },
+                new OneAirDungeonResumeEntry { DungeonId = 56L, DungeonName = "Épave du Grolandais violent", EntranceMapId = 54163796L, ExitMapId = 54165334L, NpcTemplateId = 1357, NpcName = "Fantômahawk", QuestionMessageId = 8107, EnterReplyId = 8214, ResumeReplyId = 8968, ExitReplyId = 8216, TrousseauReplyId = 8215 },
             } },
             { 54164293L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 60L, DungeonName = "Cavernes du Kolosso", EntranceMapId = 54164293L, ExitMapId = 54164807L, NpcTemplateId = 1393, NpcName = "Professeur Xa", QuestionMessageId = 8457, EnterReplyId = 8474, ResumeReplyId = 8976, ExitReplyId = 8478 },
+                new OneAirDungeonResumeEntry { DungeonId = 60L, DungeonName = "Cavernes du Kolosso", EntranceMapId = 54164293L, ExitMapId = 54164807L, NpcTemplateId = 1393, NpcName = "Professeur Xa", QuestionMessageId = 8457, EnterReplyId = 8474, ResumeReplyId = 8976, ExitReplyId = 8478, TrousseauReplyId = 8475 },
             } },
             { 54176049L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 54L, DungeonName = "Serre du Royalmouth", EntranceMapId = 54176049L, ExitMapId = 54175024L, NpcTemplateId = 1285, NpcName = "Truffo", QuestionMessageId = 7685, EnterReplyId = 7702, ResumeReplyId = 8964, ExitReplyId = 7712 },
+                new OneAirDungeonResumeEntry { DungeonId = 54L, DungeonName = "Serre du Royalmouth", EntranceMapId = 54176049L, ExitMapId = 54175024L, NpcTemplateId = 1285, NpcName = "Truffo", QuestionMessageId = 7685, EnterReplyId = 7702, ResumeReplyId = 8964, ExitReplyId = 7712, TrousseauReplyId = 7703 },
             } },
             { 55836672L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 55L, DungeonName = "Excavation du Mansot Royal", EntranceMapId = 55836672L, ExitMapId = 55836672L, NpcTemplateId = 1300, NpcName = "Waldos FieldChester Potcobble", QuestionMessageId = 7834, EnterReplyId = 7848, ResumeReplyId = 8966, ExitReplyId = 7851 },
+                new OneAirDungeonResumeEntry { DungeonId = 55L, DungeonName = "Excavation du Mansot Royal", EntranceMapId = 55836672L, ExitMapId = 55836672L, NpcTemplateId = 1300, NpcName = "Waldos FieldChester Potcobble", QuestionMessageId = 7834, EnterReplyId = 7848, ResumeReplyId = 8966, ExitReplyId = 7851, TrousseauReplyId = 0 },
             } },
             { 56890883L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 57L, DungeonName = "Hypogée de l'Obsidiantre", EntranceMapId = 56890883L, ExitMapId = 54170450L, NpcTemplateId = 1358, NpcName = "Lave Azza", QuestionMessageId = 8109, EnterReplyId = 8218, ResumeReplyId = 8970, ExitReplyId = 8220 },
+                new OneAirDungeonResumeEntry { DungeonId = 57L, DungeonName = "Hypogée de l'Obsidiantre", EntranceMapId = 56890883L, ExitMapId = 54170450L, NpcTemplateId = 1358, NpcName = "Lave Azza", QuestionMessageId = 8109, EnterReplyId = 8218, ResumeReplyId = 8970, ExitReplyId = 8220, TrousseauReplyId = 8219 },
             } },
             { 60036612L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 59L, DungeonName = "Antre du Korriandre", EntranceMapId = 60036612L, ExitMapId = 60036612L, NpcTemplateId = 1391, NpcName = "Sylvie Barbe", QuestionMessageId = 8427, EnterReplyId = 8449, ResumeReplyId = 8974, ExitReplyId = 8451 },
+                new OneAirDungeonResumeEntry { DungeonId = 59L, DungeonName = "Antre du Korriandre", EntranceMapId = 60036612L, ExitMapId = 60036612L, NpcTemplateId = 1391, NpcName = "Sylvie Barbe", QuestionMessageId = 8427, EnterReplyId = 8449, ResumeReplyId = 8974, ExitReplyId = 8451, TrousseauReplyId = 0 },
             } },
             { 62129672L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 61L, DungeonName = "Antichambre des Gloursons", EntranceMapId = 62129672L, ExitMapId = 54165323L, NpcTemplateId = 930, NpcName = "Docteur Nauh", QuestionMessageId = 4154, EnterReplyId = 3789, ResumeReplyId = 594918, ExitReplyId = 0 },
+                new OneAirDungeonResumeEntry { DungeonId = 61L, DungeonName = "Antichambre des Gloursons", EntranceMapId = 62129672L, ExitMapId = 54165323L, NpcTemplateId = 930, NpcName = "Docteur Nauh", QuestionMessageId = 4154, EnterReplyId = 3789, ResumeReplyId = 594918, ExitReplyId = 0, TrousseauReplyId = 0 },
             } },
             { 63310595L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 46L, DungeonName = "Repaire de Skeunk", EntranceMapId = 63310595L, ExitMapId = 63310595L, NpcTemplateId = 758, NpcName = "Kakolak", QuestionMessageId = 3138, EnterReplyId = 2762, ResumeReplyId = 8953, ExitReplyId = 8952 },
+                new OneAirDungeonResumeEntry { DungeonId = 46L, DungeonName = "Repaire de Skeunk", EntranceMapId = 63310595L, ExitMapId = 63310595L, NpcTemplateId = 758, NpcName = "Kakolak", QuestionMessageId = 3138, EnterReplyId = 2762, ResumeReplyId = 8953, ExitReplyId = 8952, TrousseauReplyId = 2762 },
             } },
             { 63964672L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 51L, DungeonName = "Laboratoire du Tynril", EntranceMapId = 63964672L, ExitMapId = 63964672L, NpcTemplateId = 943, NpcName = "Mulèze", QuestionMessageId = 4197, EnterReplyId = 8960, ResumeReplyId = 8962, ExitReplyId = 3679 },
+                new OneAirDungeonResumeEntry { DungeonId = 51L, DungeonName = "Laboratoire du Tynril", EntranceMapId = 63964672L, ExitMapId = 63964672L, NpcTemplateId = 943, NpcName = "Mulèze", QuestionMessageId = 4197, EnterReplyId = 8960, ResumeReplyId = 8962, ExitReplyId = 3679, TrousseauReplyId = 0 },
             } },
             { 66060545L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 38L, DungeonName = "Maison du Papa Nowel", EntranceMapId = 66060545L, ExitMapId = 66060545L, NpcTemplateId = 393, NpcName = "Yova Etna", QuestionMessageId = 1640, EnterReplyId = 2574, ResumeReplyId = 667090, ExitReplyId = 667329 },
+                new OneAirDungeonResumeEntry { DungeonId = 38L, DungeonName = "Maison du Papa Nowel", EntranceMapId = 66060545L, ExitMapId = 66060545L, NpcTemplateId = 393, NpcName = "Yova Etna", QuestionMessageId = 1640, EnterReplyId = 2574, ResumeReplyId = 667090, ExitReplyId = 667329, TrousseauReplyId = 0 },
             } },
             { 66061569L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 36L, DungeonName = "Donjon de Nowel", EntranceMapId = 66061569L, ExitMapId = 66061569L, NpcTemplateId = 795, NpcName = "Hector Nowel", QuestionMessageId = 3254, EnterReplyId = 4613, ResumeReplyId = 8931, ExitReplyId = 2898 },
+                new OneAirDungeonResumeEntry { DungeonId = 36L, DungeonName = "Donjon de Nowel", EntranceMapId = 66061569L, ExitMapId = 66061569L, NpcTemplateId = 795, NpcName = "Hector Nowel", QuestionMessageId = 3254, EnterReplyId = 4613, ResumeReplyId = 8931, ExitReplyId = 2898, TrousseauReplyId = 8730 },
             } },
             { 66192641L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 37L, DungeonName = "Caverne de Nowel", EntranceMapId = 66192641L, ExitMapId = 66192641L, NpcTemplateId = 393, NpcName = "Yova Etna", QuestionMessageId = 1640, EnterReplyId = 2574, ResumeReplyId = 667038, ExitReplyId = 667329 },
+                new OneAirDungeonResumeEntry { DungeonId = 37L, DungeonName = "Caverne de Nowel", EntranceMapId = 66192641L, ExitMapId = 66192641L, NpcTemplateId = 393, NpcName = "Yova Etna", QuestionMessageId = 1640, EnterReplyId = 2574, ResumeReplyId = 667038, ExitReplyId = 667329, TrousseauReplyId = 0 },
             } },
             { 72221696L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 6L, DungeonName = "Antre du Dragon Cochon", EntranceMapId = 72221696L, ExitMapId = 72221696L, NpcTemplateId = 784, NpcName = "Fwoued", QuestionMessageId = 3216, EnterReplyId = 2856, ResumeReplyId = 8881, ExitReplyId = 2854 },
+                new OneAirDungeonResumeEntry { DungeonId = 6L, DungeonName = "Antre du Dragon Cochon", EntranceMapId = 72221696L, ExitMapId = 72221696L, NpcTemplateId = 784, NpcName = "Fwoued", QuestionMessageId = 3216, EnterReplyId = 2856, ResumeReplyId = 8881, ExitReplyId = 2854, TrousseauReplyId = 0 },
             } },
             { 84411397L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 116L, DungeonName = "Épreuve de Draegnerys", EntranceMapId = 84411397L, ExitMapId = 84411397L, NpcTemplateId = 4946, NpcName = "Dicton Karly", QuestionMessageId = 35586, EnterReplyId = 47029, ResumeReplyId = 47026, ExitReplyId = 47025 },
+                new OneAirDungeonResumeEntry { DungeonId = 116L, DungeonName = "Épreuve de Draegnerys", EntranceMapId = 84411397L, ExitMapId = 84411397L, NpcTemplateId = 4946, NpcName = "Dicton Karly", QuestionMessageId = 35586, EnterReplyId = 47029, ResumeReplyId = 47026, ExitReplyId = 47025, TrousseauReplyId = 0 },
             } },
             { 84411905L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 115L, DungeonName = "Repaire du Kharnozor", EntranceMapId = 84411905L, ExitMapId = 199495682L, NpcTemplateId = 4975, NpcName = "Léo Seumeurly", QuestionMessageId = 35686, EnterReplyId = 47159, ResumeReplyId = 47156, ExitReplyId = 47155 },
+                new OneAirDungeonResumeEntry { DungeonId = 115L, DungeonName = "Repaire du Kharnozor", EntranceMapId = 84411905L, ExitMapId = 199495682L, NpcTemplateId = 4975, NpcName = "Léo Seumeurly", QuestionMessageId = 35686, EnterReplyId = 47159, ResumeReplyId = 47156, ExitReplyId = 47155, TrousseauReplyId = 47162 },
             } },
             { 87032320L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 47L, DungeonName = "Donjon des Squelettes", EntranceMapId = 87032320L, ExitMapId = 82314753L, NpcTemplateId = 1163, NpcName = "Klik Klak", QuestionMessageId = 7070, EnterReplyId = 6634, ResumeReplyId = 8955, ExitReplyId = 8954 },
+                new OneAirDungeonResumeEntry { DungeonId = 47L, DungeonName = "Donjon des Squelettes", EntranceMapId = 87032320L, ExitMapId = 82314753L, NpcTemplateId = 1163, NpcName = "Klik Klak", QuestionMessageId = 7070, EnterReplyId = 6634, ResumeReplyId = 8955, ExitReplyId = 8954, TrousseauReplyId = 6635 },
             } },
             { 88080387L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 45L, DungeonName = "Donjon des Scarafeuilles", EntranceMapId = 88080387L, ExitMapId = 88080899L, NpcTemplateId = 781, NpcName = "El Scarador", QuestionMessageId = 3179, EnterReplyId = 2803, ResumeReplyId = 8951, ExitReplyId = 8950 },
+                new OneAirDungeonResumeEntry { DungeonId = 45L, DungeonName = "Donjon des Scarafeuilles", EntranceMapId = 88080387L, ExitMapId = 88080899L, NpcTemplateId = 781, NpcName = "El Scarador", QuestionMessageId = 3179, EnterReplyId = 2803, ResumeReplyId = 8951, ExitReplyId = 8950, TrousseauReplyId = 6614 },
             } },
             { 88086786L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 21L, DungeonName = "Donjon des Forgerons", EntranceMapId = 88086786L, ExitMapId = 88086786L, NpcTemplateId = 1162, NpcName = "Pavu Papry", QuestionMessageId = 7069, EnterReplyId = 6632, ResumeReplyId = 8891, ExitReplyId = 8890 },
+                new OneAirDungeonResumeEntry { DungeonId = 21L, DungeonName = "Donjon des Forgerons", EntranceMapId = 88086786L, ExitMapId = 88086786L, NpcTemplateId = 1162, NpcName = "Pavu Papry", QuestionMessageId = 7069, EnterReplyId = 6632, ResumeReplyId = 8891, ExitReplyId = 8890, TrousseauReplyId = 6633 },
             } },
             { 89916416L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 41L, DungeonName = "Goulet du Rasboul", EntranceMapId = 89916416L, ExitMapId = 89916416L, NpcTemplateId = 945, NpcName = "Razbitume", QuestionMessageId = 4203, EnterReplyId = 8941, ResumeReplyId = 8943, ExitReplyId = 3683 },
+                new OneAirDungeonResumeEntry { DungeonId = 41L, DungeonName = "Goulet du Rasboul", EntranceMapId = 89916416L, ExitMapId = 89916416L, NpcTemplateId = 945, NpcName = "Razbitume", QuestionMessageId = 4203, EnterReplyId = 8941, ResumeReplyId = 8943, ExitReplyId = 3683, TrousseauReplyId = 0 },
             } },
             { 96338944L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 48L, DungeonName = "Donjon des Tofus", EntranceMapId = 96338944L, ExitMapId = 88082705L, NpcTemplateId = 777, NpcName = "Kourk Ingalsse", QuestionMessageId = 3174, EnterReplyId = 2797, ResumeReplyId = 8957, ExitReplyId = 8956 },
-                new OneAirDungeonResumeEntry { DungeonId = 50L, DungeonName = "Tofulailler Royal", EntranceMapId = 96338944L, ExitMapId = 10231814L, NpcTemplateId = 778, NpcName = "Kazy Ingalsse", QuestionMessageId = 3176, EnterReplyId = 2798, ResumeReplyId = 13403, ExitReplyId = 13402 },
+                new OneAirDungeonResumeEntry { DungeonId = 48L, DungeonName = "Donjon des Tofus", EntranceMapId = 96338944L, ExitMapId = 88082705L, NpcTemplateId = 777, NpcName = "Kourk Ingalsse", QuestionMessageId = 3174, EnterReplyId = 2797, ResumeReplyId = 8957, ExitReplyId = 8956, TrousseauReplyId = 6608 },
+                new OneAirDungeonResumeEntry { DungeonId = 50L, DungeonName = "Tofulailler Royal", EntranceMapId = 96338944L, ExitMapId = 10231814L, NpcTemplateId = 778, NpcName = "Kazy Ingalsse", QuestionMessageId = 3176, EnterReplyId = 2798, ResumeReplyId = 13403, ExitReplyId = 13402, TrousseauReplyId = 0 },
             } },
             { 96993793L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 33L, DungeonName = "Donjon des Larves", EntranceMapId = 96993793L, ExitMapId = 185862148L, NpcTemplateId = 766, NpcName = "Fidji Merline", QuestionMessageId = 3151, EnterReplyId = 2773, ResumeReplyId = 578882, ExitReplyId = 26096 },
+                new OneAirDungeonResumeEntry { DungeonId = 33L, DungeonName = "Donjon des Larves", EntranceMapId = 96993793L, ExitMapId = 185862148L, NpcTemplateId = 766, NpcName = "Fidji Merline", QuestionMessageId = 3151, EnterReplyId = 2773, ResumeReplyId = 578882, ExitReplyId = 26096, TrousseauReplyId = 0 },
             } },
             { 99614979L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 52L, DungeonName = "Château du Wa Wabbit", EntranceMapId = 99614979L, ExitMapId = 99614979L, NpcTemplateId = 1439, NpcName = "Powte-clef", QuestionMessageId = 8886, EnterReplyId = 18853, ResumeReplyId = 8982, ExitReplyId = 8981 },
+                new OneAirDungeonResumeEntry { DungeonId = 52L, DungeonName = "Château du Wa Wabbit", EntranceMapId = 99614979L, ExitMapId = 99614979L, NpcTemplateId = 1439, NpcName = "Powte-clef", QuestionMessageId = 8886, EnterReplyId = 18853, ResumeReplyId = 8982, ExitReplyId = 8981, TrousseauReplyId = 0 },
             } },
             { 101187584L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 66L, DungeonName = "Potager d'Halouine", EntranceMapId = 101187584L, ExitMapId = 101187584L, NpcTemplateId = 1768, NpcName = "Disciple d'Asid", QuestionMessageId = 12671, EnterReplyId = 14423, ResumeReplyId = 14427, ExitReplyId = 14426 },
+                new OneAirDungeonResumeEntry { DungeonId = 66L, DungeonName = "Potager d'Halouine", EntranceMapId = 101187584L, ExitMapId = 101187584L, NpcTemplateId = 1768, NpcName = "Disciple d'Asid", QuestionMessageId = 12671, EnterReplyId = 14423, ResumeReplyId = 14427, ExitReplyId = 14426, TrousseauReplyId = 14425 },
             } },
             { 101714451L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 44L, DungeonName = "Repaire de Sphincter Cell", EntranceMapId = 101714451L, ExitMapId = 101714451L, NpcTemplateId = 818, NpcName = "Aperirel", QuestionMessageId = 3415, EnterReplyId = 3032, ResumeReplyId = 8949, ExitReplyId = 3033 },
+                new OneAirDungeonResumeEntry { DungeonId = 44L, DungeonName = "Repaire de Sphincter Cell", EntranceMapId = 101714451L, ExitMapId = 101714451L, NpcTemplateId = 818, NpcName = "Aperirel", QuestionMessageId = 3415, EnterReplyId = 3032, ResumeReplyId = 8949, ExitReplyId = 3033, TrousseauReplyId = 0 },
             } },
             { 104071939L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 138L, DungeonName = "Akadémie des Gobs", EntranceMapId = 104071939L, ExitMapId = 104071939L, NpcTemplateId = 6674, NpcName = "Gobmélia", QuestionMessageId = 50515, EnterReplyId = 67773, ResumeReplyId = 67770, ExitReplyId = 67769 },
+                new OneAirDungeonResumeEntry { DungeonId = 138L, DungeonName = "Akadémie des Gobs", EntranceMapId = 104071939L, ExitMapId = 104071939L, NpcTemplateId = 6674, NpcName = "Gobmélia", QuestionMessageId = 50515, EnterReplyId = 67773, ResumeReplyId = 67770, ExitReplyId = 67769, TrousseauReplyId = 0 },
             } },
             { 104862211L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 13L, DungeonName = "Donjon des Bworks", EntranceMapId = 104862211L, ExitMapId = 104862211L, NpcTemplateId = 775, NpcName = "Bowork", QuestionMessageId = 3172, EnterReplyId = 2794, ResumeReplyId = 8862, ExitReplyId = 8861 },
+                new OneAirDungeonResumeEntry { DungeonId = 13L, DungeonName = "Donjon des Bworks", EntranceMapId = 104862211L, ExitMapId = 104862211L, NpcTemplateId = 775, NpcName = "Bowork", QuestionMessageId = 3172, EnterReplyId = 2794, ResumeReplyId = 8862, ExitReplyId = 8861, TrousseauReplyId = 0 },
             } },
             { 106694158L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 17L, DungeonName = "Terrier du Wa Wabbit", EntranceMapId = 106694158L, ExitMapId = 68420613L, NpcTemplateId = 147, NpcName = "Gawde Wabbit", QuestionMessageId = 333, EnterReplyId = 18909, ResumeReplyId = 8868, ExitReplyId = 8867 },
+                new OneAirDungeonResumeEntry { DungeonId = 17L, DungeonName = "Terrier du Wa Wabbit", EntranceMapId = 106694158L, ExitMapId = 68420613L, NpcTemplateId = 147, NpcName = "Gawde Wabbit", QuestionMessageId = 333, EnterReplyId = 18909, ResumeReplyId = 8868, ExitReplyId = 8867, TrousseauReplyId = 18909 },
             } },
             { 108793118L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 67L, DungeonName = "Transporteur de Sylargh", EntranceMapId = 108793118L, ExitMapId = 108793118L, NpcTemplateId = 2005, NpcName = "Hiroze", QuestionMessageId = 14522, EnterReplyId = 16968, ResumeReplyId = 16971, ExitReplyId = 16970 },
+                new OneAirDungeonResumeEntry { DungeonId = 67L, DungeonName = "Transporteur de Sylargh", EntranceMapId = 108793118L, ExitMapId = 108793118L, NpcTemplateId = 2005, NpcName = "Hiroze", QuestionMessageId = 14522, EnterReplyId = 16968, ResumeReplyId = 16971, ExitReplyId = 16970, TrousseauReplyId = 16969 },
             } },
             { 108794630L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 70L, DungeonName = "Laboratoire de Nileza", EntranceMapId = 108794630L, ExitMapId = 108794630L, NpcTemplateId = 2004, NpcName = "André Vauld", QuestionMessageId = 14520, EnterReplyId = 16963, ResumeReplyId = 16966, ExitReplyId = 16965 },
+                new OneAirDungeonResumeEntry { DungeonId = 70L, DungeonName = "Laboratoire de Nileza", EntranceMapId = 108794630L, ExitMapId = 108794630L, NpcTemplateId = 2004, NpcName = "André Vauld", QuestionMessageId = 14520, EnterReplyId = 16963, ResumeReplyId = 16966, ExitReplyId = 16965, TrousseauReplyId = 0 },
             } },
             { 108925717L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 68L, DungeonName = "Salons privés de Klime", EntranceMapId = 108925717L, ExitMapId = 108925717L, NpcTemplateId = 2006, NpcName = "Domie Natrix", QuestionMessageId = 14524, EnterReplyId = 16973, ResumeReplyId = 16976, ExitReplyId = 16975 },
+                new OneAirDungeonResumeEntry { DungeonId = 68L, DungeonName = "Salons privés de Klime", EntranceMapId = 108925717L, ExitMapId = 108925717L, NpcTemplateId = 2006, NpcName = "Domie Natrix", QuestionMessageId = 14524, EnterReplyId = 16973, ResumeReplyId = 16976, ExitReplyId = 16975, TrousseauReplyId = 16974 },
             } },
             { 108927238L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 69L, DungeonName = "Forgefroide de Missiz Frizz", EntranceMapId = 108927238L, ExitMapId = 108927238L, NpcTemplateId = 2007, NpcName = "Noo", QuestionMessageId = 14528, EnterReplyId = 16983, ResumeReplyId = 16986, ExitReplyId = 16985 },
+                new OneAirDungeonResumeEntry { DungeonId = 69L, DungeonName = "Forgefroide de Missiz Frizz", EntranceMapId = 108927238L, ExitMapId = 108927238L, NpcTemplateId = 2007, NpcName = "Noo", QuestionMessageId = 14528, EnterReplyId = 16983, ResumeReplyId = 16986, ExitReplyId = 16985, TrousseauReplyId = 0 },
             } },
             { 112460048L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 71L, DungeonName = "Donjon du Comte Harebourg", EntranceMapId = 112460048L, ExitMapId = 112460048L, NpcTemplateId = 2008, NpcName = "Dorléans", QuestionMessageId = 15157, EnterReplyId = 17821, ResumeReplyId = 17824, ExitReplyId = 17823 },
+                new OneAirDungeonResumeEntry { DungeonId = 71L, DungeonName = "Donjon du Comte Harebourg", EntranceMapId = 112460048L, ExitMapId = 112460048L, NpcTemplateId = 2008, NpcName = "Dorléans", QuestionMessageId = 15157, EnterReplyId = 17821, ResumeReplyId = 17824, ExitReplyId = 17823, TrousseauReplyId = 0 },
             } },
             { 117706767L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 73L, DungeonName = "Aquadôme de Merkator", EntranceMapId = 117706767L, ExitMapId = 117706767L, NpcTemplateId = 2196, NpcName = "Théo Dolith", QuestionMessageId = 16404, EnterReplyId = 19519, ResumeReplyId = 19537, ExitReplyId = 19525 },
+                new OneAirDungeonResumeEntry { DungeonId = 73L, DungeonName = "Aquadôme de Merkator", EntranceMapId = 117706767L, ExitMapId = 117706767L, NpcTemplateId = 2196, NpcName = "Théo Dolith", QuestionMessageId = 16404, EnterReplyId = 19519, ResumeReplyId = 19537, ExitReplyId = 19525, TrousseauReplyId = 19520 },
             } },
             { 117965057L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 72L, DungeonName = "Théâtre de Dramak", EntranceMapId = 117965057L, ExitMapId = 117965057L, NpcTemplateId = 2175, NpcName = "Otto Rhino", QuestionMessageId = 16317, EnterReplyId = 19373, ResumeReplyId = 19376, ExitReplyId = 19375 },
+                new OneAirDungeonResumeEntry { DungeonId = 72L, DungeonName = "Théâtre de Dramak", EntranceMapId = 117965057L, ExitMapId = 117965057L, NpcTemplateId = 2175, NpcName = "Otto Rhino", QuestionMessageId = 16317, EnterReplyId = 19373, ResumeReplyId = 19376, ExitReplyId = 19375, TrousseauReplyId = 19374 },
             } },
             { 120063489L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 1L, DungeonName = "Cour du Bouftou Royal", EntranceMapId = 120063489L, ExitMapId = 120063489L, NpcTemplateId = 173, NpcName = "Rotabla le berger", QuestionMessageId = 646, EnterReplyId = 10529, ResumeReplyId = 10532, ExitReplyId = 10531 },
+                new OneAirDungeonResumeEntry { DungeonId = 1L, DungeonName = "Cour du Bouftou Royal", EntranceMapId = 120063489L, ExitMapId = 120063489L, NpcTemplateId = 173, NpcName = "Rotabla le berger", QuestionMessageId = 646, EnterReplyId = 10529, ResumeReplyId = 10532, ExitReplyId = 10531, TrousseauReplyId = 10530 },
             } },
             { 121636870L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 74L, DungeonName = "Pyramide d'Ombre", EntranceMapId = 121636870L, ExitMapId = 121636870L, NpcTemplateId = 2215, NpcName = "Vhé", QuestionMessageId = 16553, EnterReplyId = 374836, ResumeReplyId = 19718, ExitReplyId = 19710 },
+                new OneAirDungeonResumeEntry { DungeonId = 74L, DungeonName = "Pyramide d'Ombre", EntranceMapId = 121636870L, ExitMapId = 121636870L, NpcTemplateId = 2215, NpcName = "Vhé", QuestionMessageId = 16553, EnterReplyId = 374836, ResumeReplyId = 19718, ExitReplyId = 19710, TrousseauReplyId = 0 },
             } },
             { 125829633L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 75L, DungeonName = "Grotte de Kanigroula", EntranceMapId = 125829633L, ExitMapId = 125829633L, NpcTemplateId = 2314, NpcName = "Kanish", QuestionMessageId = 17316, EnterReplyId = 425217, ResumeReplyId = 20722, ExitReplyId = 20721 },
+                new OneAirDungeonResumeEntry { DungeonId = 75L, DungeonName = "Grotte de Kanigroula", EntranceMapId = 125829633L, ExitMapId = 125829633L, NpcTemplateId = 2314, NpcName = "Kanish", QuestionMessageId = 17316, EnterReplyId = 425217, ResumeReplyId = 20722, ExitReplyId = 20721, TrousseauReplyId = 20724 },
             } },
             { 129499136L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 76L, DungeonName = "Palais du roi Nidas", EntranceMapId = 129499136L, ExitMapId = 129236992L, NpcTemplateId = 2351, NpcName = "Léonard", QuestionMessageId = 17885, EnterReplyId = 425055, ResumeReplyId = 21432, ExitReplyId = 21431 },
+                new OneAirDungeonResumeEntry { DungeonId = 76L, DungeonName = "Palais du roi Nidas", EntranceMapId = 129499136L, ExitMapId = 129236992L, NpcTemplateId = 2351, NpcName = "Léonard", QuestionMessageId = 17885, EnterReplyId = 425055, ResumeReplyId = 21432, ExitReplyId = 21431, TrousseauReplyId = 0 },
             } },
             { 130285568L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 77L, DungeonName = "Fabrique de Malléfisk", EntranceMapId = 130285568L, ExitMapId = 129368578L, NpcTemplateId = 2353, NpcName = "Inès Karcel", QuestionMessageId = 17637, EnterReplyId = 21143, ResumeReplyId = 21150, ExitReplyId = 21149 },
+                new OneAirDungeonResumeEntry { DungeonId = 77L, DungeonName = "Fabrique de Malléfisk", EntranceMapId = 130285568L, ExitMapId = 129368578L, NpcTemplateId = 2353, NpcName = "Inès Karcel", QuestionMessageId = 17637, EnterReplyId = 21143, ResumeReplyId = 21150, ExitReplyId = 21149, TrousseauReplyId = 0 },
             } },
             { 130547712L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 79L, DungeonName = "Galerie du Phossile", EntranceMapId = 130547712L, ExitMapId = 129238529L, NpcTemplateId = 2352, NpcName = "Dyane Phossé", QuestionMessageId = 17710, EnterReplyId = 21222, ResumeReplyId = 21219, ExitReplyId = 21218 },
+                new OneAirDungeonResumeEntry { DungeonId = 79L, DungeonName = "Galerie du Phossile", EntranceMapId = 130547712L, ExitMapId = 129238529L, NpcTemplateId = 2352, NpcName = "Dyane Phossé", QuestionMessageId = 17710, EnterReplyId = 21222, ResumeReplyId = 21219, ExitReplyId = 21218, TrousseauReplyId = 0 },
             } },
             { 133171202L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 80L, DungeonName = "Volière de la Haute Truche", EntranceMapId = 133171202L, ExitMapId = 133171202L, NpcTemplateId = 2436, NpcName = "Orno Tolig", QuestionMessageId = 17976, EnterReplyId = 21570, ResumeReplyId = 21567, ExitReplyId = 21565 },
+                new OneAirDungeonResumeEntry { DungeonId = 80L, DungeonName = "Volière de la Haute Truche", EntranceMapId = 133171202L, ExitMapId = 133171202L, NpcTemplateId = 2436, NpcName = "Orno Tolig", QuestionMessageId = 17976, EnterReplyId = 21570, ResumeReplyId = 21567, ExitReplyId = 21565, TrousseauReplyId = 0 },
             } },
             { 136056074L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 83L, DungeonName = "Trône de la Cour Sombre", EntranceMapId = 136056074L, ExitMapId = 136056074L, NpcTemplateId = 2446, NpcName = "Chambelle", QuestionMessageId = 18289, EnterReplyId = 456634, ResumeReplyId = 21904, ExitReplyId = 21903 },
+                new OneAirDungeonResumeEntry { DungeonId = 83L, DungeonName = "Trône de la Cour Sombre", EntranceMapId = 136056074L, ExitMapId = 136056074L, NpcTemplateId = 2446, NpcName = "Chambelle", QuestionMessageId = 18289, EnterReplyId = 456634, ResumeReplyId = 21904, ExitReplyId = 21903, TrousseauReplyId = 0 },
             } },
             { 136577024L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 81L, DungeonName = "Ring du Capitaine Ekarlatte", EntranceMapId = 136577024L, ExitMapId = 134221826L, NpcTemplateId = 2444, NpcName = "Guy Cheutié", QuestionMessageId = 18286, EnterReplyId = 21902, ResumeReplyId = 21899, ExitReplyId = 21898 },
+                new OneAirDungeonResumeEntry { DungeonId = 81L, DungeonName = "Ring du Capitaine Ekarlatte", EntranceMapId = 136577024L, ExitMapId = 134221826L, NpcTemplateId = 2444, NpcName = "Guy Cheutié", QuestionMessageId = 18286, EnterReplyId = 21902, ResumeReplyId = 21899, ExitReplyId = 21898, TrousseauReplyId = 0 },
             } },
             { 136839168L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 82L, DungeonName = "Cave du Toxoliath", EntranceMapId = 136839168L, ExitMapId = 135269891L, NpcTemplateId = 2445, NpcName = "Starchy Tropeur", QuestionMessageId = 18285, EnterReplyId = 21912, ResumeReplyId = 21909, ExitReplyId = 21897 },
+                new OneAirDungeonResumeEntry { DungeonId = 82L, DungeonName = "Cave du Toxoliath", EntranceMapId = 136839168L, ExitMapId = 135269891L, NpcTemplateId = 2445, NpcName = "Starchy Tropeur", QuestionMessageId = 18285, EnterReplyId = 21912, ResumeReplyId = 21909, ExitReplyId = 21897, TrousseauReplyId = 0 },
             } },
             { 139723265L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 34L, DungeonName = "Maison Fantôme", EntranceMapId = 139723265L, ExitMapId = 139723265L, NpcTemplateId = 1387, NpcName = "Gentil Organisateur Chafer", QuestionMessageId = 8319, EnterReplyId = 8358, ResumeReplyId = 8921, ExitReplyId = 8355 },
+                new OneAirDungeonResumeEntry { DungeonId = 34L, DungeonName = "Maison Fantôme", EntranceMapId = 139723265L, ExitMapId = 139723265L, NpcTemplateId = 1387, NpcName = "Gentil Organisateur Chafer", QuestionMessageId = 8319, EnterReplyId = 8358, ResumeReplyId = 8921, ExitReplyId = 8355, TrousseauReplyId = 0 },
             } },
             { 140641537L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 84L, DungeonName = "Ventre de la Baleine", EntranceMapId = 140641537L, ExitMapId = 140641537L, NpcTemplateId = 2636, NpcName = "Mathilde Oualtgniz", QuestionMessageId = 19017, EnterReplyId = 22747, ResumeReplyId = 22746, ExitReplyId = 22745 },
+                new OneAirDungeonResumeEntry { DungeonId = 84L, DungeonName = "Ventre de la Baleine", EntranceMapId = 140641537L, ExitMapId = 140641537L, NpcTemplateId = 2636, NpcName = "Mathilde Oualtgniz", QuestionMessageId = 19017, EnterReplyId = 22747, ResumeReplyId = 22746, ExitReplyId = 22745, TrousseauReplyId = 22753 },
             } },
             { 144445702L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 87L, DungeonName = "Œil de Vortex", EntranceMapId = 144445702L, ExitMapId = 144445702L, NpcTemplateId = 2662, NpcName = "Tessie Oude", QuestionMessageId = 19539, EnterReplyId = 477674, ResumeReplyId = 23351, ExitReplyId = 23350 },
+                new OneAirDungeonResumeEntry { DungeonId = 87L, DungeonName = "Œil de Vortex", EntranceMapId = 144445702L, ExitMapId = 144445702L, NpcTemplateId = 2662, NpcName = "Tessie Oude", QuestionMessageId = 19539, EnterReplyId = 477674, ResumeReplyId = 23351, ExitReplyId = 23350, TrousseauReplyId = 0 },
             } },
             { 144707846L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 86L, DungeonName = "Horologium de XLII", EntranceMapId = 144707846L, ExitMapId = 144707846L, NpcTemplateId = 2660, NpcName = "Gardien de l'Horologium", QuestionMessageId = 19397, EnterReplyId = 23144, ResumeReplyId = 23141, ExitReplyId = 23140 },
+                new OneAirDungeonResumeEntry { DungeonId = 86L, DungeonName = "Horologium de XLII", EntranceMapId = 144707846L, ExitMapId = 144707846L, NpcTemplateId = 2660, NpcName = "Gardien de l'Horologium", QuestionMessageId = 19397, EnterReplyId = 23144, ResumeReplyId = 23141, ExitReplyId = 23140, TrousseauReplyId = 0 },
             } },
             { 144969990L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 85L, DungeonName = "Mégalithe de Fraktale", EntranceMapId = 144969990L, ExitMapId = 144969990L, NpcTemplateId = 2661, NpcName = "Hypéria Gritch", QuestionMessageId = 19557, EnterReplyId = 477735, ResumeReplyId = 23373, ExitReplyId = 23372 },
+                new OneAirDungeonResumeEntry { DungeonId = 85L, DungeonName = "Mégalithe de Fraktale", EntranceMapId = 144969990L, ExitMapId = 144969990L, NpcTemplateId = 2661, NpcName = "Hypéria Gritch", QuestionMessageId = 19557, EnterReplyId = 477735, ResumeReplyId = 23373, ExitReplyId = 23372, TrousseauReplyId = 0 },
             } },
             { 146676736L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 88L, DungeonName = "Cache de Kankreblath", EntranceMapId = 146676736L, ExitMapId = 103549440L, NpcTemplateId = 2766, NpcName = "Cloportier", QuestionMessageId = 19697, EnterReplyId = 23589, ResumeReplyId = 23585, ExitReplyId = 23593 },
+                new OneAirDungeonResumeEntry { DungeonId = 88L, DungeonName = "Cache de Kankreblath", EntranceMapId = 146676736L, ExitMapId = 103549440L, NpcTemplateId = 2766, NpcName = "Cloportier", QuestionMessageId = 19697, EnterReplyId = 23589, ResumeReplyId = 23585, ExitReplyId = 23593, TrousseauReplyId = 23591 },
             } },
             { 147851777L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 9L, DungeonName = "Domaine Ancestral", EntranceMapId = 147851777L, ExitMapId = 147851777L, NpcTemplateId = 1619, NpcName = "Tronkny Baussope", QuestionMessageId = 11970, EnterReplyId = 13461, ResumeReplyId = 13464, ExitReplyId = 13463 },
+                new OneAirDungeonResumeEntry { DungeonId = 9L, DungeonName = "Domaine Ancestral", EntranceMapId = 147851777L, ExitMapId = 147851777L, NpcTemplateId = 1619, NpcName = "Tronkny Baussope", QuestionMessageId = 11970, EnterReplyId = 13461, ResumeReplyId = 13464, ExitReplyId = 13463, TrousseauReplyId = 0 },
             } },
             { 149159936L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 89L, DungeonName = "Antre de la Reine Nyée", EntranceMapId = 149159936L, ExitMapId = 147853312L, NpcTemplateId = 2845, NpcName = "Saule", QuestionMessageId = 20453, EnterReplyId = 24473, ResumeReplyId = 24470, ExitReplyId = 24469 },
+                new OneAirDungeonResumeEntry { DungeonId = 89L, DungeonName = "Antre de la Reine Nyée", EntranceMapId = 149159936L, ExitMapId = 147853312L, NpcTemplateId = 2845, NpcName = "Saule", QuestionMessageId = 20453, EnterReplyId = 24473, ResumeReplyId = 24470, ExitReplyId = 24469, TrousseauReplyId = 0 },
             } },
             { 149422080L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 10L, DungeonName = "Clairière du Chêne Mou", EntranceMapId = 149422080L, ExitMapId = 149422080L, NpcTemplateId = 797, NpcName = "Josette Taplane", QuestionMessageId = 3271, EnterReplyId = 2927, ResumeReplyId = 8852, ExitReplyId = 2929 },
+                new OneAirDungeonResumeEntry { DungeonId = 10L, DungeonName = "Clairière du Chêne Mou", EntranceMapId = 149422080L, ExitMapId = 149422080L, NpcTemplateId = 797, NpcName = "Josette Taplane", QuestionMessageId = 3271, EnterReplyId = 2927, ResumeReplyId = 8852, ExitReplyId = 2929, TrousseauReplyId = 6605 },
             } },
             { 153881600L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 90L, DungeonName = "Crypte de Kardorim", EntranceMapId = 153881600L, ExitMapId = 153881600L, NpcTemplateId = 2907, NpcName = "Klasmor le fossoyeur", QuestionMessageId = 20830, EnterReplyId = 24970, ResumeReplyId = 24967, ExitReplyId = 24966 },
+                new OneAirDungeonResumeEntry { DungeonId = 90L, DungeonName = "Crypte de Kardorim", EntranceMapId = 153881600L, ExitMapId = 153881600L, NpcTemplateId = 2907, NpcName = "Klasmor le fossoyeur", QuestionMessageId = 20830, EnterReplyId = 24970, ResumeReplyId = 24967, ExitReplyId = 24966, TrousseauReplyId = 24973 },
             } },
             { 156499968L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 92L, DungeonName = "Arbre de Moon", EntranceMapId = 156499968L, ExitMapId = 156499968L, NpcTemplateId = 3007, NpcName = "Servante de Moon", QuestionMessageId = 21820, EnterReplyId = 26240, ResumeReplyId = 26237, ExitReplyId = 26236 },
+                new OneAirDungeonResumeEntry { DungeonId = 92L, DungeonName = "Arbre de Moon", EntranceMapId = 156499968L, ExitMapId = 156499968L, NpcTemplateId = 3007, NpcName = "Servante de Moon", QuestionMessageId = 21820, EnterReplyId = 26240, ResumeReplyId = 26237, ExitReplyId = 26236, TrousseauReplyId = 26243 },
             } },
             { 156499971L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 27L, DungeonName = "Village Kanniboul", EntranceMapId = 156499971L, ExitMapId = 156499971L, NpcTemplateId = 1384, NpcName = "Gentil Organisateur Kanniboul", QuestionMessageId = 8271, EnterReplyId = 8306, ResumeReplyId = 8904, ExitReplyId = 8307 },
+                new OneAirDungeonResumeEntry { DungeonId = 27L, DungeonName = "Village Kanniboul", EntranceMapId = 156499971L, ExitMapId = 156499971L, NpcTemplateId = 1384, NpcName = "Gentil Organisateur Kanniboul", QuestionMessageId = 8271, EnterReplyId = 8306, ResumeReplyId = 8904, ExitReplyId = 8307, TrousseauReplyId = 0 },
             } },
             { 158078976L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 91L, DungeonName = "Bateau du Chouque", EntranceMapId = 158078976L, ExitMapId = 158078976L, NpcTemplateId = 3008, NpcName = "Jack Martel", QuestionMessageId = 21818, EnterReplyId = 579287, ResumeReplyId = 26246, ExitReplyId = 26245 },
+                new OneAirDungeonResumeEntry { DungeonId = 91L, DungeonName = "Bateau du Chouque", EntranceMapId = 158078976L, ExitMapId = 158078976L, NpcTemplateId = 3008, NpcName = "Jack Martel", QuestionMessageId = 21818, EnterReplyId = 579287, ResumeReplyId = 26246, ExitReplyId = 26245, TrousseauReplyId = 26252 },
             } },
             { 158334976L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 3L, DungeonName = "Bibliothèque du Maître Corbac", EntranceMapId = 158334976L, ExitMapId = 158334976L, NpcTemplateId = 774, NpcName = "Virgil", QuestionMessageId = 3166, EnterReplyId = 2829, ResumeReplyId = 8872, ExitReplyId = 2810 },
+                new OneAirDungeonResumeEntry { DungeonId = 3L, DungeonName = "Bibliothèque du Maître Corbac", EntranceMapId = 158334976L, ExitMapId = 158334976L, NpcTemplateId = 774, NpcName = "Virgil", QuestionMessageId = 3166, EnterReplyId = 2829, ResumeReplyId = 8872, ExitReplyId = 2810, TrousseauReplyId = 6611 },
             } },
             { 160565248L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 95L, DungeonName = "Défi du Chalœil", EntranceMapId = 160565248L, ExitMapId = 160432128L, NpcTemplateId = 3099, NpcName = "Filouface", QuestionMessageId = 22696, EnterReplyId = 27295, ResumeReplyId = 27292, ExitReplyId = 27291 },
+                new OneAirDungeonResumeEntry { DungeonId = 95L, DungeonName = "Défi du Chalœil", EntranceMapId = 160565248L, ExitMapId = 160432128L, NpcTemplateId = 3099, NpcName = "Filouface", QuestionMessageId = 22696, EnterReplyId = 27295, ResumeReplyId = 27292, ExitReplyId = 27291, TrousseauReplyId = 0 },
             } },
             { 160960771L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 94L, DungeonName = "Plateau de Ush", EntranceMapId = 160960771L, ExitMapId = 162006016L, NpcTemplateId = 3103, NpcName = "Chalfred", QuestionMessageId = 22678, EnterReplyId = 27276, ResumeReplyId = 27273, ExitReplyId = 27272 },
+                new OneAirDungeonResumeEntry { DungeonId = 94L, DungeonName = "Plateau de Ush", EntranceMapId = 160960771L, ExitMapId = 162006016L, NpcTemplateId = 3103, NpcName = "Chalfred", QuestionMessageId = 22678, EnterReplyId = 27276, ResumeReplyId = 27273, ExitReplyId = 27272, TrousseauReplyId = 0 },
             } },
             { 161742848L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 93L, DungeonName = "Miausolée du Pounicheur", EntranceMapId = 161742848L, ExitMapId = 161744896L, NpcTemplateId = 3097, NpcName = "Caporal Tomonte", QuestionMessageId = 22674, EnterReplyId = 617618, ResumeReplyId = 27267, ExitReplyId = 27266 },
+                new OneAirDungeonResumeEntry { DungeonId = 93L, DungeonName = "Miausolée du Pounicheur", EntranceMapId = 161742848L, ExitMapId = 161744896L, NpcTemplateId = 3097, NpcName = "Caporal Tomonte", QuestionMessageId = 22674, EnterReplyId = 617618, ResumeReplyId = 27267, ExitReplyId = 27266, TrousseauReplyId = 0 },
             } },
             { 166985728L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 11L, DungeonName = "Clos des Blops", EntranceMapId = 166985728L, ExitMapId = 166985728L, NpcTemplateId = 1034, NpcName = "Bibiblop", QuestionMessageId = 5402, EnterReplyId = 4531, ResumeReplyId = 8854, ExitReplyId = 4540 },
-                new OneAirDungeonResumeEntry { DungeonId = 49L, DungeonName = "Antre du Blop Multicolore Royal", EntranceMapId = 166985728L, ExitMapId = 166985728L, NpcTemplateId = 1034, NpcName = "Bibiblop", QuestionMessageId = 5402, EnterReplyId = 4531, ResumeReplyId = 8856, ExitReplyId = 4540 },
+                new OneAirDungeonResumeEntry { DungeonId = 11L, DungeonName = "Clos des Blops", EntranceMapId = 166985728L, ExitMapId = 166985728L, NpcTemplateId = 1034, NpcName = "Bibiblop", QuestionMessageId = 5402, EnterReplyId = 4531, ResumeReplyId = 8854, ExitReplyId = 4540, TrousseauReplyId = 6624 },
+                new OneAirDungeonResumeEntry { DungeonId = 49L, DungeonName = "Antre du Blop Multicolore Royal", EntranceMapId = 166985728L, ExitMapId = 166985728L, NpcTemplateId = 1034, NpcName = "Bibiblop", QuestionMessageId = 5402, EnterReplyId = 4531, ResumeReplyId = 8856, ExitReplyId = 4540, TrousseauReplyId = 6624 },
             } },
             { 168560640L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 98L, DungeonName = "Temple de Koutoulou", EntranceMapId = 168560640L, ExitMapId = 168560640L, NpcTemplateId = 3259, NpcName = "Sanazero", QuestionMessageId = 24312, EnterReplyId = 29210, ResumeReplyId = 29207, ExitReplyId = 29206 },
+                new OneAirDungeonResumeEntry { DungeonId = 98L, DungeonName = "Temple de Koutoulou", EntranceMapId = 168560640L, ExitMapId = 168560640L, NpcTemplateId = 3259, NpcName = "Sanazero", QuestionMessageId = 24312, EnterReplyId = 29210, ResumeReplyId = 29207, ExitReplyId = 29206, TrousseauReplyId = 0 },
             } },
             { 168820736L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 99L, DungeonName = "Palais de Dantinéa", EntranceMapId = 168820736L, ExitMapId = 168820736L, NpcTemplateId = 3255, NpcName = "Kruchula", QuestionMessageId = 24326, EnterReplyId = 29231, ResumeReplyId = 29228, ExitReplyId = 29227 },
+                new OneAirDungeonResumeEntry { DungeonId = 99L, DungeonName = "Palais de Dantinéa", EntranceMapId = 168820736L, ExitMapId = 168820736L, NpcTemplateId = 3255, NpcName = "Kruchula", QuestionMessageId = 24326, EnterReplyId = 29231, ResumeReplyId = 29228, ExitReplyId = 29227, TrousseauReplyId = 29234 },
             } },
             { 169084930L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 97L, DungeonName = "Vaisseau du Capitaine Meno", EntranceMapId = 169084930L, ExitMapId = 169084930L, NpcTemplateId = 3256, NpcName = "Nora Nax", QuestionMessageId = 23764, EnterReplyId = 654013, ResumeReplyId = 28551, ExitReplyId = 28550 },
+                new OneAirDungeonResumeEntry { DungeonId = 97L, DungeonName = "Vaisseau du Capitaine Meno", EntranceMapId = 169084930L, ExitMapId = 169084930L, NpcTemplateId = 3256, NpcName = "Nora Nax", QuestionMessageId = 23764, EnterReplyId = 654013, ResumeReplyId = 28551, ExitReplyId = 28550, TrousseauReplyId = 28557 },
             } },
             { 171706891L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 15L, DungeonName = "Tanière du Meulou", EntranceMapId = 171706891L, ExitMapId = 171706891L, NpcTemplateId = 3947, NpcName = "Lemik Ilmister", QuestionMessageId = 27552, EnterReplyId = 33069, ResumeReplyId = 33066, ExitReplyId = 33065 },
+                new OneAirDungeonResumeEntry { DungeonId = 15L, DungeonName = "Tanière du Meulou", EntranceMapId = 171706891L, ExitMapId = 171706891L, NpcTemplateId = 3947, NpcName = "Lemik Ilmister", QuestionMessageId = 27552, EnterReplyId = 33069, ResumeReplyId = 33066, ExitReplyId = 33065, TrousseauReplyId = 33072 },
             } },
             { 172493057L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 14L, DungeonName = "Grotte du Bworker", EntranceMapId = 172493057L, ExitMapId = 172493057L, NpcTemplateId = 712, NpcName = "Bworkie", QuestionMessageId = 2960, EnterReplyId = 2594, ResumeReplyId = 8864, ExitReplyId = 2593 },
+                new OneAirDungeonResumeEntry { DungeonId = 14L, DungeonName = "Grotte du Bworker", EntranceMapId = 172493057L, ExitMapId = 172493057L, NpcTemplateId = 712, NpcName = "Bworkie", QuestionMessageId = 2960, EnterReplyId = 2594, ResumeReplyId = 8864, ExitReplyId = 2593, TrousseauReplyId = 6637 },
             } },
             { 173280513L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 100L, DungeonName = "Cimetière des Mastodontes", EntranceMapId = 173280513L, ExitMapId = 173280513L, NpcTemplateId = 3646, NpcName = "Carl Os", QuestionMessageId = 26005, EnterReplyId = 31181, ResumeReplyId = 31179, ExitReplyId = 31180 },
+                new OneAirDungeonResumeEntry { DungeonId = 100L, DungeonName = "Cimetière des Mastodontes", EntranceMapId = 173280513L, ExitMapId = 173280513L, NpcTemplateId = 3646, NpcName = "Carl Os", QuestionMessageId = 26005, EnterReplyId = 31181, ResumeReplyId = 31179, ExitReplyId = 31180, TrousseauReplyId = 31184 },
             } },
             { 173540352L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 101L, DungeonName = "Caverne d'El Piko", EntranceMapId = 173540352L, ExitMapId = 173540352L, NpcTemplateId = 3657, NpcName = "Enubie", QuestionMessageId = 26148, EnterReplyId = 31381, ResumeReplyId = 31378, ExitReplyId = 31377 },
+                new OneAirDungeonResumeEntry { DungeonId = 101L, DungeonName = "Caverne d'El Piko", EntranceMapId = 173540352L, ExitMapId = 173540352L, NpcTemplateId = 3657, NpcName = "Enubie", QuestionMessageId = 26148, EnterReplyId = 31381, ResumeReplyId = 31378, ExitReplyId = 31377, TrousseauReplyId = 31384 },
             } },
             { 174850048L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 102L, DungeonName = "Boyau du Père Ver", EntranceMapId = 174850048L, ExitMapId = 174850048L, NpcTemplateId = 3679, NpcName = "Goba Fett", QuestionMessageId = 26439, EnterReplyId = 31731, ResumeReplyId = 31728, ExitReplyId = 31727 },
+                new OneAirDungeonResumeEntry { DungeonId = 102L, DungeonName = "Boyau du Père Ver", EntranceMapId = 174850048L, ExitMapId = 174850048L, NpcTemplateId = 3679, NpcName = "Goba Fett", QuestionMessageId = 26439, EnterReplyId = 31731, ResumeReplyId = 31728, ExitReplyId = 31727, TrousseauReplyId = 31734 },
             } },
             { 175637504L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 103L, DungeonName = "Chambre de Tal Kasha", EntranceMapId = 175637504L, ExitMapId = 175637504L, NpcTemplateId = 3686, NpcName = "Drol Novranrac", QuestionMessageId = 26444, EnterReplyId = 31742, ResumeReplyId = 31739, ExitReplyId = 31738 },
+                new OneAirDungeonResumeEntry { DungeonId = 103L, DungeonName = "Chambre de Tal Kasha", EntranceMapId = 175637504L, ExitMapId = 175637504L, NpcTemplateId = 3686, NpcName = "Drol Novranrac", QuestionMessageId = 26444, EnterReplyId = 31742, ResumeReplyId = 31739, ExitReplyId = 31738, TrousseauReplyId = 31745 },
             } },
             { 177079296L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 35L, DungeonName = "Laboratoire de Brumen Tinctorias", EntranceMapId = 177079296L, ExitMapId = 177079296L, NpcTemplateId = 1410, NpcName = "Tassa", QuestionMessageId = 8666, EnterReplyId = 8705, ResumeReplyId = 8929, ExitReplyId = 8928 },
+                new OneAirDungeonResumeEntry { DungeonId = 35L, DungeonName = "Laboratoire de Brumen Tinctorias", EntranceMapId = 177079296L, ExitMapId = 177079296L, NpcTemplateId = 1410, NpcName = "Tassa", QuestionMessageId = 8666, EnterReplyId = 8705, ResumeReplyId = 8929, ExitReplyId = 8928, TrousseauReplyId = 0 },
             } },
             { 179438082L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 104L, DungeonName = "Camp du Comte Razof", EntranceMapId = 179438082L, ExitMapId = 179438082L, NpcTemplateId = 3747, NpcName = "Dédé", QuestionMessageId = 26892, EnterReplyId = 32330, ResumeReplyId = 32327, ExitReplyId = 32326 },
+                new OneAirDungeonResumeEntry { DungeonId = 104L, DungeonName = "Camp du Comte Razof", EntranceMapId = 179438082L, ExitMapId = 179438082L, NpcTemplateId = 3747, NpcName = "Dédé", QuestionMessageId = 26892, EnterReplyId = 32330, ResumeReplyId = 32327, ExitReplyId = 32326, TrousseauReplyId = 32333 },
             } },
             { 179831808L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 106L, DungeonName = "Manoir des Katrepat", EntranceMapId = 179831808L, ExitMapId = 179831808L, NpcTemplateId = 3962, NpcName = "Bozime", QuestionMessageId = 27635, EnterReplyId = 33173, ResumeReplyId = 33170, ExitReplyId = 33169 },
+                new OneAirDungeonResumeEntry { DungeonId = 106L, DungeonName = "Manoir des Katrepat", EntranceMapId = 179831808L, ExitMapId = 179831808L, NpcTemplateId = 3962, NpcName = "Bozime", QuestionMessageId = 27635, EnterReplyId = 33173, ResumeReplyId = 33170, ExitReplyId = 33169, TrousseauReplyId = 33176 },
             } },
             { 181146624L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 22L, DungeonName = "Temple du Grand Ougah", EntranceMapId = 181146624L, ExitMapId = 181146624L, NpcTemplateId = 1036, NpcName = "Ernesto Rouste", QuestionMessageId = 5471, EnterReplyId = 4580, ResumeReplyId = 8893, ExitReplyId = 4598 },
+                new OneAirDungeonResumeEntry { DungeonId = 22L, DungeonName = "Temple du Grand Ougah", EntranceMapId = 181146624L, ExitMapId = 181146624L, NpcTemplateId = 1036, NpcName = "Ernesto Rouste", QuestionMessageId = 5471, EnterReplyId = 4580, ResumeReplyId = 8893, ExitReplyId = 4598, TrousseauReplyId = 0 },
             } },
             { 181797888L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 105L, DungeonName = "Chapiteau des Magik Riktus", EntranceMapId = 181797888L, ExitMapId = 181797888L, NpcTemplateId = 3966, NpcName = "Guichetière du Magik Riktus", QuestionMessageId = 27617, EnterReplyId = 33150, ResumeReplyId = 33147, ExitReplyId = 33146 },
+                new OneAirDungeonResumeEntry { DungeonId = 105L, DungeonName = "Chapiteau des Magik Riktus", EntranceMapId = 181797888L, ExitMapId = 181797888L, NpcTemplateId = 3966, NpcName = "Guichetière du Magik Riktus", QuestionMessageId = 27617, EnterReplyId = 33150, ResumeReplyId = 33147, ExitReplyId = 33146, TrousseauReplyId = 0 },
             } },
             { 182452224L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 96L, DungeonName = "Temple Maudit d'Araknas", EntranceMapId = 182452224L, ExitMapId = 172757504L, NpcTemplateId = 3212, NpcName = "Disciple d'Araknas", QuestionMessageId = 23442, EnterReplyId = 28170, ResumeReplyId = 28172, ExitReplyId = 28171 },
+                new OneAirDungeonResumeEntry { DungeonId = 96L, DungeonName = "Temple Maudit d'Araknas", EntranceMapId = 182452224L, ExitMapId = 172757504L, NpcTemplateId = 3212, NpcName = "Disciple d'Araknas", QuestionMessageId = 23442, EnterReplyId = 28170, ResumeReplyId = 28172, ExitReplyId = 28171, TrousseauReplyId = 0 },
             } },
             { 183108098L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 109L, DungeonName = "Tour de Solar", EntranceMapId = 183108098L, ExitMapId = 183108098L, NpcTemplateId = 4188, NpcName = "Tourier Calciné", QuestionMessageId = 30308, EnterReplyId = 36503, ResumeReplyId = 36500, ExitReplyId = 36499 },
+                new OneAirDungeonResumeEntry { DungeonId = 109L, DungeonName = "Tour de Solar", EntranceMapId = 183108098L, ExitMapId = 183108098L, NpcTemplateId = 4188, NpcName = "Tourier Calciné", QuestionMessageId = 30308, EnterReplyId = 36503, ResumeReplyId = 36500, ExitReplyId = 36499, TrousseauReplyId = 36506 },
             } },
             { 183501836L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 107L, DungeonName = "Belvédère d'Ilyzaelle", EntranceMapId = 183501836L, ExitMapId = 183501836L, NpcTemplateId = 4058, NpcName = "Gardien du Jour sans fin", QuestionMessageId = 28770, EnterReplyId = 34507, ResumeReplyId = 34504, ExitReplyId = 34503 },
+                new OneAirDungeonResumeEntry { DungeonId = 107L, DungeonName = "Belvédère d'Ilyzaelle", EntranceMapId = 183501836L, ExitMapId = 183501836L, NpcTemplateId = 4058, NpcName = "Gardien du Jour sans fin", QuestionMessageId = 28770, EnterReplyId = 34507, ResumeReplyId = 34504, ExitReplyId = 34503, TrousseauReplyId = 34510 },
             } },
             { 185861122L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 32L, DungeonName = "Nid du Kwakwa", EntranceMapId = 185861122L, ExitMapId = 185861122L, NpcTemplateId = 1404, NpcName = "Gentil Organisateur Kwakerbak", QuestionMessageId = 8507, EnterReplyId = 8554, ResumeReplyId = 8917, ExitReplyId = 8555 },
+                new OneAirDungeonResumeEntry { DungeonId = 32L, DungeonName = "Nid du Kwakwa", EntranceMapId = 185861122L, ExitMapId = 185861122L, NpcTemplateId = 1404, NpcName = "Gentil Organisateur Kwakerbak", QuestionMessageId = 8507, EnterReplyId = 8554, ResumeReplyId = 8917, ExitReplyId = 8555, TrousseauReplyId = 8554 },
             } },
             { 185861634L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 18L, DungeonName = "Pitons Rocheux des Craqueleurs", EntranceMapId = 185861634L, ExitMapId = 185861634L, NpcTemplateId = 772, NpcName = "Krakotte", QuestionMessageId = 3162, EnterReplyId = 2781, ResumeReplyId = 8874, ExitReplyId = 8873 },
+                new OneAirDungeonResumeEntry { DungeonId = 18L, DungeonName = "Pitons Rocheux des Craqueleurs", EntranceMapId = 185861634L, ExitMapId = 185861634L, NpcTemplateId = 772, NpcName = "Krakotte", QuestionMessageId = 3162, EnterReplyId = 2781, ResumeReplyId = 8874, ExitReplyId = 8873, TrousseauReplyId = 6612 },
             } },
             { 186384896L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 108L, DungeonName = "Tour de Bethel", EntranceMapId = 186384896L, ExitMapId = 186384896L, NpcTemplateId = 4189, NpcName = "Tourier Submergé", QuestionMessageId = 30312, EnterReplyId = 36512, ResumeReplyId = 36509, ExitReplyId = 36508 },
+                new OneAirDungeonResumeEntry { DungeonId = 108L, DungeonName = "Tour de Bethel", EntranceMapId = 186384896L, ExitMapId = 186384896L, NpcTemplateId = 4189, NpcName = "Tourier Submergé", QuestionMessageId = 30312, EnterReplyId = 36512, ResumeReplyId = 36509, ExitReplyId = 36508, TrousseauReplyId = 36515 },
             } },
             { 190056961L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 19L, DungeonName = "Château Ensablé", EntranceMapId = 190056961L, ExitMapId = 190056961L, NpcTemplateId = 798, NpcName = "Capitaine Igloute", QuestionMessageId = 3281, EnterReplyId = 2944, ResumeReplyId = 8885, ExitReplyId = 8884 },
+                new OneAirDungeonResumeEntry { DungeonId = 19L, DungeonName = "Château Ensablé", EntranceMapId = 190056961L, ExitMapId = 190056961L, NpcTemplateId = 798, NpcName = "Capitaine Igloute", QuestionMessageId = 3281, EnterReplyId = 2944, ResumeReplyId = 8885, ExitReplyId = 8884, TrousseauReplyId = 6617 },
             } },
             { 194779138L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 110L, DungeonName = "Brasserie du roi Dazak", EntranceMapId = 194779138L, ExitMapId = 194779138L, NpcTemplateId = 4499, NpcName = "Triboulette", QuestionMessageId = 31789, EnterReplyId = 38444, ResumeReplyId = 38441, ExitReplyId = 38440 },
+                new OneAirDungeonResumeEntry { DungeonId = 110L, DungeonName = "Brasserie du roi Dazak", EntranceMapId = 194779138L, ExitMapId = 194779138L, NpcTemplateId = 4499, NpcName = "Triboulette", QuestionMessageId = 31789, EnterReplyId = 38444, ResumeReplyId = 38441, ExitReplyId = 38440, TrousseauReplyId = 38447 },
             } },
             { 196346371L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 113L, DungeonName = "Fonderie des Waddicts", EntranceMapId = 196346371L, ExitMapId = 196346371L, NpcTemplateId = 4819, NpcName = "Contwemaîtwe Mihop", QuestionMessageId = 33781, EnterReplyId = 43399, ResumeReplyId = 43398, ExitReplyId = 43402 },
+                new OneAirDungeonResumeEntry { DungeonId = 113L, DungeonName = "Fonderie des Waddicts", EntranceMapId = 196346371L, ExitMapId = 196346371L, NpcTemplateId = 4819, NpcName = "Contwemaîtwe Mihop", QuestionMessageId = 33781, EnterReplyId = 43399, ResumeReplyId = 43398, ExitReplyId = 43402, TrousseauReplyId = 43400 },
             } },
             { 197133314L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 111L, DungeonName = "Temple du dieu Kao", EntranceMapId = 197133314L, ExitMapId = 197133314L, NpcTemplateId = 4818, NpcName = "Adorateur de Kao", QuestionMessageId = 33783, EnterReplyId = 43391, ResumeReplyId = 43390, ExitReplyId = 43389 },
+                new OneAirDungeonResumeEntry { DungeonId = 111L, DungeonName = "Temple du dieu Kao", EntranceMapId = 197133314L, ExitMapId = 197133314L, NpcTemplateId = 4818, NpcName = "Adorateur de Kao", QuestionMessageId = 33783, EnterReplyId = 43391, ResumeReplyId = 43390, ExitReplyId = 43389, TrousseauReplyId = 43392 },
             } },
             { 197526528L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 112L, DungeonName = "Croquanterie", EntranceMapId = 197526528L, ExitMapId = 197526528L, NpcTemplateId = 4817, NpcName = "Jeanne Nœud-Os", QuestionMessageId = 33782, EnterReplyId = 43408, ResumeReplyId = 43407, ExitReplyId = 43411 },
+                new OneAirDungeonResumeEntry { DungeonId = 112L, DungeonName = "Croquanterie", EntranceMapId = 197526528L, ExitMapId = 197526528L, NpcTemplateId = 4817, NpcName = "Jeanne Nœud-Os", QuestionMessageId = 33782, EnterReplyId = 43408, ResumeReplyId = 43407, ExitReplyId = 43411, TrousseauReplyId = 43409 },
             } },
             { 197918722L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 114L, DungeonName = "Sanctuaire de Torkélonia", EntranceMapId = 197918722L, ExitMapId = 197918722L, NpcTemplateId = 4976, NpcName = "Porte-clefs de Torkélonia", QuestionMessageId = 35704, EnterReplyId = 47194, ResumeReplyId = 47191, ExitReplyId = 47190 },
+                new OneAirDungeonResumeEntry { DungeonId = 114L, DungeonName = "Sanctuaire de Torkélonia", EntranceMapId = 197918722L, ExitMapId = 197918722L, NpcTemplateId = 4976, NpcName = "Porte-clefs de Torkélonia", QuestionMessageId = 35704, EnterReplyId = 47194, ResumeReplyId = 47191, ExitReplyId = 47190, TrousseauReplyId = 47197 },
             } },
             { 198967296L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 7L, DungeonName = "Antre de Crocabulia", EntranceMapId = 198967296L, ExitMapId = 86248450L, NpcTemplateId = 789, NpcName = "Ziho", QuestionMessageId = 3236, EnterReplyId = 47058, ResumeReplyId = 8985, ExitReplyId = 2893 },
+                new OneAirDungeonResumeEntry { DungeonId = 7L, DungeonName = "Antre de Crocabulia", EntranceMapId = 198967296L, ExitMapId = 86248450L, NpcTemplateId = 789, NpcName = "Ziho", QuestionMessageId = 3236, EnterReplyId = 47058, ResumeReplyId = 8985, ExitReplyId = 2893, TrousseauReplyId = 47061 },
             } },
             { 201328640L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 117L, DungeonName = "Arbre de Mort", EntranceMapId = 201328640L, ExitMapId = 201328640L, NpcTemplateId = 5367, NpcName = "Rafflesia la Fétide", QuestionMessageId = 39057, EnterReplyId = 50857, ResumeReplyId = 50862, ExitReplyId = 50861 },
+                new OneAirDungeonResumeEntry { DungeonId = 117L, DungeonName = "Arbre de Mort", EntranceMapId = 201328640L, ExitMapId = 201328640L, NpcTemplateId = 5367, NpcName = "Rafflesia la Fétide", QuestionMessageId = 39057, EnterReplyId = 50857, ResumeReplyId = 50862, ExitReplyId = 50861, TrousseauReplyId = 0 },
             } },
             { 201591809L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 120L, DungeonName = "Trône de Sang", EntranceMapId = 201591809L, ExitMapId = 201591809L, NpcTemplateId = 5325, NpcName = "Kapelache", QuestionMessageId = 39011, EnterReplyId = 50793, ResumeReplyId = 50798, ExitReplyId = 50797 },
+                new OneAirDungeonResumeEntry { DungeonId = 120L, DungeonName = "Trône de Sang", EntranceMapId = 201591809L, ExitMapId = 201591809L, NpcTemplateId = 5325, NpcName = "Kapelache", QuestionMessageId = 39011, EnterReplyId = 50793, ResumeReplyId = 50798, ExitReplyId = 50797, TrousseauReplyId = 50793 },
             } },
             { 201851392L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 119L, DungeonName = "Sentence de la Balance", EntranceMapId = 201851392L, ExitMapId = 201851392L, NpcTemplateId = 5363, NpcName = "Bree Caule", QuestionMessageId = 39334, EnterReplyId = 51194, ResumeReplyId = 51191, ExitReplyId = 51190 },
+                new OneAirDungeonResumeEntry { DungeonId = 119L, DungeonName = "Sentence de la Balance", EntranceMapId = 201851392L, ExitMapId = 201851392L, NpcTemplateId = 5363, NpcName = "Bree Caule", QuestionMessageId = 39334, EnterReplyId = 51194, ResumeReplyId = 51191, ExitReplyId = 51190, TrousseauReplyId = 51197 },
             } },
             { 202115584L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 118L, DungeonName = "Fers de la Tyrannie", EntranceMapId = 202115584L, ExitMapId = 202115584L, NpcTemplateId = 5319, NpcName = "Miradar", QuestionMessageId = 38913, EnterReplyId = 50661, ResumeReplyId = 50658, ExitReplyId = 50657 },
+                new OneAirDungeonResumeEntry { DungeonId = 118L, DungeonName = "Fers de la Tyrannie", EntranceMapId = 202115584L, ExitMapId = 202115584L, NpcTemplateId = 5319, NpcName = "Miradar", QuestionMessageId = 38913, EnterReplyId = 50661, ResumeReplyId = 50658, ExitReplyId = 50657, TrousseauReplyId = 0 },
             } },
             { 204604416L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 121L, DungeonName = "Tempête de l'Eliocalypse", EntranceMapId = 204604416L, ExitMapId = 204604416L, NpcTemplateId = 5469, NpcName = "Martalo", QuestionMessageId = 39975, EnterReplyId = 52033, ResumeReplyId = 52046, ExitReplyId = 52049 },
+                new OneAirDungeonResumeEntry { DungeonId = 121L, DungeonName = "Tempête de l'Eliocalypse", EntranceMapId = 204604416L, ExitMapId = 204604416L, NpcTemplateId = 5469, NpcName = "Martalo", QuestionMessageId = 39975, EnterReplyId = 52033, ResumeReplyId = 52046, ExitReplyId = 52049, TrousseauReplyId = 52033 },
             } },
             { 204999425L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 123L, DungeonName = "Vallée de la Dame des eaux", EntranceMapId = 204999425L, ExitMapId = 204999425L, NpcTemplateId = 5683, NpcName = "Kyhuri", QuestionMessageId = 41477, EnterReplyId = 53994, ResumeReplyId = 53991, ExitReplyId = 53990 },
+                new OneAirDungeonResumeEntry { DungeonId = 123L, DungeonName = "Vallée de la Dame des eaux", EntranceMapId = 204999425L, ExitMapId = 204999425L, NpcTemplateId = 5683, NpcName = "Kyhuri", QuestionMessageId = 41477, EnterReplyId = 53994, ResumeReplyId = 53991, ExitReplyId = 53990, TrousseauReplyId = 53997 },
             } },
             { 205260802L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 126L, DungeonName = "Atelier du Tanukouï San", EntranceMapId = 205260802L, ExitMapId = 205260802L, NpcTemplateId = 5733, NpcName = "Tanugu Asuo", QuestionMessageId = 41849, EnterReplyId = 54458, ResumeReplyId = 54455, ExitReplyId = 54454 },
+                new OneAirDungeonResumeEntry { DungeonId = 126L, DungeonName = "Atelier du Tanukouï San", EntranceMapId = 205260802L, ExitMapId = 205260802L, NpcTemplateId = 5733, NpcName = "Tanugu Asuo", QuestionMessageId = 41849, EnterReplyId = 54458, ResumeReplyId = 54455, ExitReplyId = 54454, TrousseauReplyId = 0 },
             } },
             { 205521925L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 125L, DungeonName = "Bambusaie de Damadrya", EntranceMapId = 205521925L, ExitMapId = 205521925L, NpcTemplateId = 5601, NpcName = "Vusi", QuestionMessageId = 41280, EnterReplyId = 53759, ResumeReplyId = 53749, ExitReplyId = 53748 },
+                new OneAirDungeonResumeEntry { DungeonId = 125L, DungeonName = "Bambusaie de Damadrya", EntranceMapId = 205521925L, ExitMapId = 205521925L, NpcTemplateId = 5601, NpcName = "Vusi", QuestionMessageId = 41280, EnterReplyId = 53759, ResumeReplyId = 53749, ExitReplyId = 53748, TrousseauReplyId = 53762 },
             } },
             { 206177797L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 124L, DungeonName = "Fabrique de foux d'artifice", EntranceMapId = 206177797L, ExitMapId = 206177797L, NpcTemplateId = 5646, NpcName = "Hinaba", QuestionMessageId = 40895, EnterReplyId = 53264, ResumeReplyId = 53261, ExitReplyId = 53260 },
+                new OneAirDungeonResumeEntry { DungeonId = 124L, DungeonName = "Fabrique de foux d'artifice", EntranceMapId = 206177797L, ExitMapId = 206177797L, NpcTemplateId = 5646, NpcName = "Hinaba", QuestionMessageId = 40895, EnterReplyId = 53264, ResumeReplyId = 53261, ExitReplyId = 53260, TrousseauReplyId = 0 },
             } },
             { 206832641L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 132L, DungeonName = "Tombe du Shogun Tofugawa", EntranceMapId = 206832641L, ExitMapId = 206832641L, NpcTemplateId = 5829, NpcName = "Yinchika", QuestionMessageId = 42762, EnterReplyId = 55694, ResumeReplyId = 55691, ExitReplyId = 55690 },
+                new OneAirDungeonResumeEntry { DungeonId = 132L, DungeonName = "Tombe du Shogun Tofugawa", EntranceMapId = 206832641L, ExitMapId = 206832641L, NpcTemplateId = 5829, NpcName = "Yinchika", QuestionMessageId = 42762, EnterReplyId = 55694, ResumeReplyId = 55691, ExitReplyId = 55690, TrousseauReplyId = 55697 },
             } },
             { 207095299L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 131L, DungeonName = "Demeure des Esprits", EntranceMapId = 207095299L, ExitMapId = 207095299L, NpcTemplateId = 5831, NpcName = "Jibakurei", QuestionMessageId = 42988, EnterReplyId = 56033, ResumeReplyId = 56030, ExitReplyId = 56029 },
+                new OneAirDungeonResumeEntry { DungeonId = 131L, DungeonName = "Demeure des Esprits", EntranceMapId = 207095299L, ExitMapId = 207095299L, NpcTemplateId = 5831, NpcName = "Jibakurei", QuestionMessageId = 42988, EnterReplyId = 56033, ResumeReplyId = 56030, ExitReplyId = 56029, TrousseauReplyId = 56036 },
             } },
             { 209191685L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 122L, DungeonName = "Dojo du Vent", EntranceMapId = 209191685L, ExitMapId = 209191685L, NpcTemplateId = 5734, NpcName = "Deshi", QuestionMessageId = 41845, EnterReplyId = 54449, ResumeReplyId = 54446, ExitReplyId = 54445 },
+                new OneAirDungeonResumeEntry { DungeonId = 122L, DungeonName = "Dojo du Vent", EntranceMapId = 209191685L, ExitMapId = 209191685L, NpcTemplateId = 5734, NpcName = "Deshi", QuestionMessageId = 41845, EnterReplyId = 54449, ResumeReplyId = 54446, ExitReplyId = 54445, TrousseauReplyId = 54452 },
             } },
             { 210633732L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 133L, DungeonName = "Mémoire d'Orukam", EntranceMapId = 210633732L, ExitMapId = 211552256L, NpcTemplateId = 6020, NpcName = "Kagikam", QuestionMessageId = 43961, EnterReplyId = 57815, ResumeReplyId = 57812, ExitReplyId = 877789 },
+                new OneAirDungeonResumeEntry { DungeonId = 133L, DungeonName = "Mémoire d'Orukam", EntranceMapId = 210633732L, ExitMapId = 211552256L, NpcTemplateId = 6020, NpcName = "Kagikam", QuestionMessageId = 43961, EnterReplyId = 57815, ResumeReplyId = 57812, ExitReplyId = 877789, TrousseauReplyId = 0 },
             } },
             { 210765572L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 134L, DungeonName = "Souvenir d'Imagiro", EntranceMapId = 210765572L, ExitMapId = 211552256L, NpcTemplateId = 6021, NpcName = "Imakagi", QuestionMessageId = 43960, EnterReplyId = 57821, ResumeReplyId = 57818, ExitReplyId = 57817 },
+                new OneAirDungeonResumeEntry { DungeonId = 134L, DungeonName = "Souvenir d'Imagiro", EntranceMapId = 210765572L, ExitMapId = 211552256L, NpcTemplateId = 6021, NpcName = "Imakagi", QuestionMessageId = 43960, EnterReplyId = 57821, ResumeReplyId = 57818, ExitReplyId = 57817, TrousseauReplyId = 0 },
             } },
             { 214961664L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 135L, DungeonName = "Rituel de Kabahal", EntranceMapId = 214961664L, ExitMapId = 214961664L, NpcTemplateId = 6214, NpcName = "Na'Hama", QuestionMessageId = 46457, EnterReplyId = 61576, ResumeReplyId = 61573, ExitReplyId = 61572 },
+                new OneAirDungeonResumeEntry { DungeonId = 135L, DungeonName = "Rituel de Kabahal", EntranceMapId = 214961664L, ExitMapId = 214961664L, NpcTemplateId = 6214, NpcName = "Na'Hama", QuestionMessageId = 46457, EnterReplyId = 61576, ResumeReplyId = 61573, ExitReplyId = 61572, TrousseauReplyId = 0 },
             } },
             { 216927751L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 43L, DungeonName = "Sousouricière du Rat Noir", EntranceMapId = 216927751L, ExitMapId = 218894338L, NpcTemplateId = 800, NpcName = "Rat Pido", QuestionMessageId = 3294, EnterReplyId = 2950, ResumeReplyId = 8947, ExitReplyId = 2962 },
+                new OneAirDungeonResumeEntry { DungeonId = 43L, DungeonName = "Sousouricière du Rat Noir", EntranceMapId = 216927751L, ExitMapId = 218894338L, NpcTemplateId = 800, NpcName = "Rat Pido", QuestionMessageId = 3294, EnterReplyId = 2950, ResumeReplyId = 8947, ExitReplyId = 2962, TrousseauReplyId = 6618 },
             } },
             { 219939328L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 136L, DungeonName = "Bataille de l'Aurore Pourpre", EntranceMapId = 219939328L, ExitMapId = 219939328L, NpcTemplateId = 6381, NpcName = "Horreur de l'Aurore", QuestionMessageId = 49299, EnterReplyId = 65826, ResumeReplyId = 65823, ExitReplyId = 65822 },
+                new OneAirDungeonResumeEntry { DungeonId = 136L, DungeonName = "Bataille de l'Aurore Pourpre", EntranceMapId = 219939328L, ExitMapId = 219939328L, NpcTemplateId = 6381, NpcName = "Horreur de l'Aurore", QuestionMessageId = 49299, EnterReplyId = 65826, ResumeReplyId = 65823, ExitReplyId = 65822, TrousseauReplyId = 0 },
             } },
             { 221250562L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 139L, DungeonName = "Tertre du long sommeil", EntranceMapId = 221250562L, ExitMapId = 221250562L, NpcTemplateId = 2217, NpcName = "Hell Mina", QuestionMessageId = 16750, EnterReplyId = 67836, ResumeReplyId = 67832, ExitReplyId = 67831 },
+                new OneAirDungeonResumeEntry { DungeonId = 139L, DungeonName = "Tertre du long sommeil", EntranceMapId = 221250562L, ExitMapId = 221250562L, NpcTemplateId = 2217, NpcName = "Hell Mina", QuestionMessageId = 16750, EnterReplyId = 67836, ResumeReplyId = 67832, ExitReplyId = 67831, TrousseauReplyId = 68022 },
             } },
             { 223350028L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 142L, DungeonName = "Refuge sylvestre", EntranceMapId = 223350028L, ExitMapId = 224137218L, NpcTemplateId = 6809, NpcName = "Don El Wolfo", QuestionMessageId = 51487, EnterReplyId = 69085, ResumeReplyId = 69082, ExitReplyId = 69081 },
+                new OneAirDungeonResumeEntry { DungeonId = 142L, DungeonName = "Refuge sylvestre", EntranceMapId = 223350028L, ExitMapId = 224137218L, NpcTemplateId = 6809, NpcName = "Don El Wolfo", QuestionMessageId = 51487, EnterReplyId = 69085, ResumeReplyId = 69082, ExitReplyId = 69081, TrousseauReplyId = 69088 },
             } },
             { 224660233L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 140L, DungeonName = "Chambre des maléfices", EntranceMapId = 224660233L, ExitMapId = 223875074L, NpcTemplateId = 6929, NpcName = "Bulbybell", QuestionMessageId = 51845, EnterReplyId = 69726, ResumeReplyId = 69729, ExitReplyId = 69728 },
+                new OneAirDungeonResumeEntry { DungeonId = 140L, DungeonName = "Chambre des maléfices", EntranceMapId = 224660233L, ExitMapId = 223875074L, NpcTemplateId = 6929, NpcName = "Bulbybell", QuestionMessageId = 51845, EnterReplyId = 69726, ResumeReplyId = 69729, ExitReplyId = 69728, TrousseauReplyId = 69735 },
             } },
             { 225313792L, new List<OneAirDungeonResumeEntry> {
-                new OneAirDungeonResumeEntry { DungeonId = 141L, DungeonName = "Bastion des Marteaux-Aigris", EntranceMapId = 225313792L, ExitMapId = 225185794L, NpcTemplateId = 6848, NpcName = "Pasmühr Aye", QuestionMessageId = 51545, EnterReplyId = 69167, ResumeReplyId = 69164, ExitReplyId = 69163 },
+                new OneAirDungeonResumeEntry { DungeonId = 141L, DungeonName = "Bastion des Marteaux-Aigris", EntranceMapId = 225313792L, ExitMapId = 225185794L, NpcTemplateId = 6848, NpcName = "Pasmühr Aye", QuestionMessageId = 51545, EnterReplyId = 69167, ResumeReplyId = 69164, ExitReplyId = 69163, TrousseauReplyId = 69170 },
             } },
         };
     }
