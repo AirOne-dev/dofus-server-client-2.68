@@ -206,6 +206,44 @@ Ajouter une catégorie : nouveau `LogXxx()` dans `OneAirUnhandledLogger.cs`
 Sources/...`) + ligne descriptive dans `formatUnhandledMarkdown` (`server/
 web/unhandled.go`).
 
+## Reprise de donjon
+
+Quand un joueur clique sur le PNJ d'entrée d'un donjon, on lui ouvre le **vrai**
+dialog Dofus natif (`NpcDialogQuestionMessage` + `NpcDialogReplyMessage`)
+avec replies : "Entrer", "Reprendre `<nom>` où vous l'avez quittée." (si
+progression sauvegardée), "Sortir". Pas de panneau SWF custom.
+
+Le client filtre les `replyId` par template NPC (`d2o.Npc.dialogReplies`)
+donc on doit absolument spawner le bon template à chaque entrée (Rat Pido
+pour Sousouricière, Virgil pour Bibliothèque, etc.). C'est ce que fait
+`OneAirDungeonResume.EnsureEntranceNpcs()` au boot : remplace les Gardiens
+fallback par le vrai template vanilla.
+
+Le mapping `entranceMapId → List<{dungeonId, npcTemplateId, questionMsgId,
+enterReplyId, resumeReplyId, exitReplyId}>` est baké dans
+`OneAirDungeonResumeData.cs` (généré une fois offline depuis les d2o du
+client Dofus 2.68). Plusieurs donjons peuvent partager une map
+(Tofus/Tofulailler) ou un NPC (Bibiblop → Clos des Blops + Antre du Blop
+Multicolore Royal).
+
+Les donjons que le matching auto ratait (phrasing exotique type
+"Reprendre votre exploration de…") sont câblés à la main dans
+`OneAirDungeonResume.ManualOverrides` (en haut du fichier, à côté du code
+qui les consomme). Le merge auto + manuels se fait au runtime via `Lazy<>`.
+
+122/124 donjons couverts ; les 2 exclus (Gelaxième Dimension, Antre du
+Kralamoure Géant) n'ont pas de NPC d'entrée vanilla avec dialog utilisable.
+
+Pas de fallback "tp direct" : `TryHandleNpcAction` retourne `false` si la
+paire (mapId, npcTemplateId) cliquée n'a pas d'entrée et c'est le système
+Giny vanilla qui gère.
+
+Progression persistée dans `dungeon_progress (CharacterId, DungeonId,
+LastRoomMapId, UpdatedAt)`. Sauvegardée à chaque entrée dans une salle
+listée dans `DungeonRecord.Rooms`. Purgée à l'entrée sur la map
+`ExitMapId`. Conservée si défaite + respawn entrée (cf.
+`Managers/Dungeons/OneAirDungeonRespawn.TryRespawnAtDungeonEntrance`).
+
 ## Havre-sac
 
 Map intérieure ID 162791424 (4 thèmes). `OneAirHavenBagHandler.cs` remplace

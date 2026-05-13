@@ -85,5 +85,10 @@ namespace Giny.World.Records.Npcs
         {
             return NpcReplies.Values;
         }
+        public static long PopNextId()
+        {
+            if (NpcReplies.Count == 0) return 1;
+            return NpcReplies.Keys.OrderByDescending(x => x).First() + 1;
+        }
     }
 }

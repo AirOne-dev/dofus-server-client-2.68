@@ -19,7 +19,7 @@ using Giny.World.Network;
 using Giny.World.Records.Items;
 using MySql.Data.MySqlClient;
 
-namespace Giny.World.Managers.Chat
+namespace Giny.World.Managers.Web
 {
     public static class OneAirUnhandledLogger
     {

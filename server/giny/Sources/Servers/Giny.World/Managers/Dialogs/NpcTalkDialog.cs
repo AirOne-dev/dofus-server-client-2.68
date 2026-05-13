@@ -62,7 +62,15 @@ namespace Giny.World.Managers.Dialogs
         }
         public void DialogQuestion()
         {
-            Character.Client.Send(new NpcDialogQuestionMessage(MessageId, new string[] { "0" }, Replies.Select(x => (int)x.ReplyId).Distinct().ToArray()));
+            var replies = Replies.Select(x => (int)x.ReplyId).ToList();
+            // OneAir : ajoute la reply "Reprendre <donjon> où vous l'avez quittée."
+            // quand le NPC est à l'entrée d'un donjon et que le joueur a une
+            // progression sauvegardée. Ces replyIds sont whitelistés dans le
+            // d2o du template NPC (cf. OneAirDungeonResume.ManualOverrides /
+            // OneAirDungeonResumeData), donc le client les rend correctement à
+            // côté des autres replies vanilla.
+            replies.AddRange(Giny.World.Managers.Dungeons.OneAirDungeonResume.GetExtraRepliesForNpcTalk(Character, Npc));
+            Character.Client.Send(new NpcDialogQuestionMessage(MessageId, new string[] { "0" }, replies.Distinct().ToArray()));
         }
         public override void Close()
         {
@@ -71,6 +79,13 @@ namespace Giny.World.Managers.Dialogs
         }
         public void Reply(int replyId)
         {
+            // OneAir : intercepte la reply "Reprendre" avant le routage vanilla.
+            if (Giny.World.Managers.Dungeons.OneAirDungeonResume.TryHandleExtraReply(Character, Npc, replyId))
+            {
+                this.Close();
+                return;
+            }
+
             IEnumerable<NpcReplyRecord> replies = Replies.Where(x => x.ReplyId == replyId);
 
             if (!replies.Any(x => x.ActionIdentifier == GenericActionEnum.ContinueDialog))

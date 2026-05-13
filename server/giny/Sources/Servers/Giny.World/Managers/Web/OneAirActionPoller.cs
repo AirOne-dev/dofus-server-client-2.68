@@ -10,6 +10,7 @@ using Giny.Protocol.Messages;
 using Giny.Protocol.Types;
 using Giny.World.Managers.Effects;
 using Giny.World.Managers.Entities.Characters;
+using Giny.World.Managers.Events;
 using Giny.World.Managers.Experiences;
 using Giny.World.Managers.Items;
 using Giny.World.Managers.Items.Collections;
@@ -17,7 +18,7 @@ using Giny.World.Network;
 using Giny.World.Records.Items;
 using MySql.Data.MySqlClient;
 
-namespace Giny.World.Managers.Chat
+namespace Giny.World.Managers.Web
 {
     public static class OneAirActionPoller
     {

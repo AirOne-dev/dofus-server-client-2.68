@@ -526,7 +526,7 @@ namespace Giny.World.Managers.Fights.Fighters
 
         public override void OnFightEnding()
         {
-            Giny.World.Managers.Chat.OneAirDeathManager.OnFightEnding(this); Giny.World.Managers.Chat.OneAirActivityFeed.OnFightEnding(this); AchievementManager.Instance.OnPlayerFightEnding(this);
+            Giny.World.Managers.Fights.OneAirFightEnd.OnFightEnding(this); Giny.World.Managers.Web.OneAirActivityFeed.OnFightEnding(this); AchievementManager.Instance.OnPlayerFightEnding(this);
 
             if (Fight.Winners != Team)
             {

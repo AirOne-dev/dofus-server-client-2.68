@@ -13,7 +13,7 @@ using Giny.World.Records.Maps;
 using Giny.World.Records.Npcs;
 using MySql.Data.MySqlClient;
 
-namespace Giny.World.Managers.Chat
+namespace Giny.World.Managers.Dungeons
 {
     public static class OneAirDungeons
     {
@@ -138,44 +138,11 @@ namespace Giny.World.Managers.Chat
                     }
                 }
 
-                // Gardien d'entrée : tp 1ère salle pour TOUS les NPCs sauf si un
-                // npc_replies Teleport vers cette salle existe déjà (vanilla OK).
-                var dungeon = DungeonRecord.GetDungeonRecords().FirstOrDefault(d => d.EntranceMapId == mapId);
-                if (dungeon != null && character.Map.Id == mapId)
-                {
-                    var npc = character.Map.Instance.GetEntity<Npc>((long)npcId);
-                    if (npc != null && npc.SpawnRecord != null)
-                    {
-                        long firstRoom = (dungeon.Rooms != null && dungeon.Rooms.Count > 0) ? dungeon.Rooms[0].MapId : 0;
-
-                        bool vanillaCanTp = false;
-                        if (firstRoom > 0)
-                        {
-                            try
-                            {
-                                vanillaCanTp = NpcReplyRecord.GetNpcReplies().Any(r =>
-                                    r.NpcSpawnId == npc.SpawnRecord.Id
-                                    && r.ActionIdentifier == GenericActionEnum.Teleport
-                                    && long.TryParse(r.Param1, out long m) && m == firstRoom);
-                            }
-                            catch { }
-                        }
-
-                        if (!vanillaCanTp)
-                        {
-                            if (firstRoom > 0)
-                            {
-                                character.Teleport(firstRoom);
-                                character.Reply("Bienvenue dans <b>" + dungeon.Name + "</b>.");
-                            }
-                            else
-                            {
-                                character.ReplyError("Aucune salle configurée pour ce donjon (" + dungeon.Id + ").");
-                            }
-                            return true;
-                        }
-                    }
-                }
+                // L'entrée de donjon : on ne fait RIEN ici. Le dialog vanilla
+                // (NpcTalkDialog, alimenté par npc_actions + npc_replies) gère
+                // tout. La reply "Reprendre <donjon> où vous l'avez quittée" est
+                // injectée dynamiquement dans NpcTalkDialog.DialogQuestion via
+                // OneAirDungeonResume.GetExtraRepliesForNpcTalk.
             }
             catch (Exception e) { Logger.Write("[OneAir] OneAirDungeons.TryHandleNpcAction failed: " + e.Message, Channels.Warning); }
             return false;

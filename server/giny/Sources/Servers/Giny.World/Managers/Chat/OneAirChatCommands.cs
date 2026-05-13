@@ -1,8 +1,10 @@
 using Giny.Protocol.Custom.Enums;
 using Giny.Protocol.Messages;
+using Giny.World.Managers.Dungeons;
 using Giny.World.Managers.Effects;
 using Giny.World.Managers.Entities.Characters;
 using Giny.World.Managers.Experiences;
+using Giny.World.Managers.HavenBag;
 using Giny.World.Network;
 using System.Collections.Generic;
 using System.Linq;

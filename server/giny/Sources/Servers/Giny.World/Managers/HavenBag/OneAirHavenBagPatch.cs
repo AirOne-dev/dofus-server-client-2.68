@@ -24,7 +24,7 @@ using Giny.World.Records.Maps;
 using Giny.World.Records.Npcs;
 using MySql.Data.MySqlClient;
 
-namespace Giny.World.Managers.Chat
+namespace Giny.World.Managers.HavenBag
 {
     public static class OneAirHavenBagPatch
     {

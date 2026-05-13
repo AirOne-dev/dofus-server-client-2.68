@@ -19,7 +19,7 @@ namespace Giny.World.Handlers.Roleplay.Maps.Npcs
         [MessageHandler]
         public static void HandleNpcGenericActionRequestMessage(NpcGenericActionRequestMessage message, WorldClient client)
         {
-            if (Giny.World.Managers.Chat.OneAirDungeons.TryHandleNpcAction(client.Character, message.npcId, message.npcMapId)) return; if (message.npcMapId == client.Character.Map.Id)
+            if (Giny.World.Managers.Dungeons.OneAirDungeons.TryHandleNpcAction(client.Character, message.npcId, message.npcMapId)) return; if (message.npcMapId == client.Character.Map.Id)
             {
                 if (client.Character.IsInDialog<Exchange>())
                 {

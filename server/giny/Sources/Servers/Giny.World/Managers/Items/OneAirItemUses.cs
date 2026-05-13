@@ -87,7 +87,7 @@ namespace Giny.World.Managers.Items
                     catch (Exception ex)
                     {
                         Logger.Write("Item usage (" + item.Record.Id + ") : " + ex, Channels.Warning);
-                        Giny.World.Managers.Chat.OneAirUnhandledLogger.LogItemUseError(character, item, ex);
+                        Giny.World.Managers.Web.OneAirUnhandledLogger.LogItemUseError(character, item, ex);
                     }
                 }
                 else
@@ -100,7 +100,7 @@ namespace Giny.World.Managers.Items
 
             if (anyMissing)
             {
-                Giny.World.Managers.Chat.OneAirUnhandledLogger.LogItemUse(character, item, "no_effect_handler");
+                Giny.World.Managers.Web.OneAirUnhandledLogger.LogItemUse(character, item, "no_effect_handler");
                 character.ReplyWarning("No method found to handle item usage");
             }
             return false;

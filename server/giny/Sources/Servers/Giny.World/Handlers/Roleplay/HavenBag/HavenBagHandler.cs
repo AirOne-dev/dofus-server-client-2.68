@@ -1,7 +1,7 @@
 // Toute la logique est dans OneAirHavenBagPatch ; ces handlers ne font que router.
 using Giny.Core.Network.Messages;
 using Giny.Protocol.Messages;
-using Giny.World.Managers.Chat;
+using Giny.World.Managers.HavenBag;
 using Giny.World.Network;
 
 namespace Giny.World.Handlers.Roleplay.HeavenBag

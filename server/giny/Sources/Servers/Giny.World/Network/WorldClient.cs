@@ -110,7 +110,7 @@ namespace Giny.World.Network
 
         public override void OnMessageUnhandled(NetworkMessage message)
         {
-            Giny.World.Managers.Chat.OneAirUnhandledLogger.LogNetMessage(this, message); if (ConfigManager<WorldConfig>.Instance.LogProtocol)
+            Giny.World.Managers.Web.OneAirUnhandledLogger.LogNetMessage(this, message); if (ConfigManager<WorldConfig>.Instance.LogProtocol)
                 Logger.Write(string.Format("No Handler: ({0}) {1}", message.MessageId, message.ToString()), Channels.Warning);
 
         }
@@ -118,7 +118,7 @@ namespace Giny.World.Network
         public override void OnHandlingError(NetworkMessage message, Delegate handler, Exception ex)
         {
             Logger.Write(string.Format("Unable to handle message {0} {1} : '{2}'", message.ToString(), handler.Method.Name, ex.ToString()), Channels.Warning);
-            LogManager.Instance.AppendError(this, message, ex); Giny.World.Managers.Chat.OneAirUnhandledLogger.LogNetError(this, message, ex);
+            LogManager.Instance.AppendError(this, message, ex); Giny.World.Managers.Web.OneAirUnhandledLogger.LogNetError(this, message, ex);
         }
 
         public void SendCharactersList()

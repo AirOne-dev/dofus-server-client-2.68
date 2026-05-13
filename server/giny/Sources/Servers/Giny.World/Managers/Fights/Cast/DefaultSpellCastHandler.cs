@@ -86,7 +86,7 @@ namespace Giny.World.Managers.Fights.Cast
                     }
                     else
                     {
-                        Giny.World.Managers.Chat.OneAirUnhandledLogger.LogSpellEffect((Cast.Source as Giny.World.Managers.Fights.Fighters.CharacterFighter)?.Character, effect, (int)Cast.SpellId, (int)(Cast.Spell?.Level?.Grade ?? 0)); Cast.Source.Fight.Warn("Unknown effect handler " + effect.EffectEnum);
+                        Giny.World.Managers.Web.OneAirUnhandledLogger.LogSpellEffect((Cast.Source as Giny.World.Managers.Fights.Fighters.CharacterFighter)?.Character, effect, (int)Cast.SpellId, (int)(Cast.Spell?.Level?.Grade ?? 0)); Cast.Source.Fight.Warn("Unknown effect handler " + effect.EffectEnum);
                     }
                 }
             }

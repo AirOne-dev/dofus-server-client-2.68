@@ -53,7 +53,7 @@ namespace Giny.World.Managers.Items
         {
             foreach (var effect in effects.OfType<EffectInteger>())
             {
-                if (!Handlers.ContainsKey(effect.EffectEnum)) Giny.World.Managers.Chat.OneAirUnhandledLogger.LogItemEffect(character, effect); if (Handlers.ContainsKey(effect.EffectEnum))
+                if (!Handlers.ContainsKey(effect.EffectEnum)) Giny.World.Managers.Web.OneAirUnhandledLogger.LogItemEffect(character, effect); if (Handlers.ContainsKey(effect.EffectEnum))
                 {
                     Handlers[effect.EffectEnum].Invoke(null, new object[] { character, effect.Value });
                 }

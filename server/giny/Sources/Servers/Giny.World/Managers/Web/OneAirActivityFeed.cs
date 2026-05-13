@@ -10,7 +10,7 @@ using Giny.World.Managers.Fights.Fighters;
 using Giny.World.Records.Maps;
 using MySql.Data.MySqlClient;
 
-namespace Giny.World.Managers.Chat
+namespace Giny.World.Managers.Web
 {
     public static class OneAirActivityFeed
     {

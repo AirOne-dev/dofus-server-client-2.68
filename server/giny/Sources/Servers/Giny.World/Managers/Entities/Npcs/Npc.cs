@@ -139,7 +139,7 @@ namespace Giny.World.Managers.Entities.Npcs
             }
             else
             {
-                Giny.World.Managers.Chat.OneAirUnhandledLogger.LogNpcAction(character, this.Id, actionType.ToString(), SpawnRecord.Id); character.ReplyWarning("No (" + actionType + ") action linked to this npc...(" + SpawnRecord.Id + ")");
+                Giny.World.Managers.Web.OneAirUnhandledLogger.LogNpcAction(character, this.Id, actionType.ToString(), SpawnRecord.Id); character.ReplyWarning("No (" + actionType + ") action linked to this npc...(" + SpawnRecord.Id + ")");
             }
         }
         public override GameRolePlayActorInformations GetActorInformations(Character target)

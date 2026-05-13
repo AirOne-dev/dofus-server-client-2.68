@@ -48,7 +48,7 @@ namespace Giny.World.Managers.Generic
             }
             else
             {
-                Giny.World.Managers.Chat.OneAirUnhandledLogger.LogGenericAction(character, parameter); character.ReplyWarning("Unknown action identifier: " + parameter.ActionIdentifier);
+                Giny.World.Managers.Web.OneAirUnhandledLogger.LogGenericAction(character, parameter); character.ReplyWarning("Unknown action identifier: " + parameter.ActionIdentifier);
                 return false;
             }
         }

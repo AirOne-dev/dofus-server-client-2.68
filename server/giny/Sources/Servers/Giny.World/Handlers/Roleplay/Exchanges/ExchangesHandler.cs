@@ -138,7 +138,7 @@ namespace Giny.World.Handlers.Roleplay.Exchanges
                     target.OpenRequestBox(new PlayerTradeRequestBox(client.Character, target));
                     break;
                 default:
-                    Giny.World.Managers.Chat.OneAirUnhandledLogger.LogExchangeRequest(client.Character, message.exchangeType, (long)message.target); client.Character.OnExchangeError(ExchangeErrorEnum.REQUEST_IMPOSSIBLE);
+                    Giny.World.Managers.Web.OneAirUnhandledLogger.LogExchangeRequest(client.Character, message.exchangeType, (long)message.target); client.Character.OnExchangeError(ExchangeErrorEnum.REQUEST_IMPOSSIBLE);
                     break;
 
             }

@@ -34,7 +34,7 @@ namespace Giny.World.Managers.Generic
         [GenericActionHandler(GenericActionEnum.Unhandled)]
         public static void HandleUnhandled(Character character, IGenericAction parameter)
         {
-            MapInteractiveElement element = parameter as MapInteractiveElement; Giny.World.Managers.Chat.OneAirUnhandledLogger.LogInteractive(character, element);
+            MapInteractiveElement element = parameter as MapInteractiveElement; Giny.World.Managers.Web.OneAirUnhandledLogger.LogInteractive(character, element);
 
             if (element != null)
             {
@@ -66,8 +66,13 @@ namespace Giny.World.Managers.Generic
         [GenericActionHandler(GenericActionEnum.RemoveItem)]
         public static void HandleRemoveItem(Character character, IGenericAction parameter)
         {
-            short itemId = short.Parse(parameter.Param1);
-            int quantity = int.Parse(parameter.Param2);
+            // OneAir : le dump initial seed certaines rows RemoveItem avec Param1
+            // vide (ex: reply "Utiliser le trousseau de clefs" sur Klasmor où
+            // l'item attendu n'a pas été renseigné). On no-op au lieu de crasher
+            // tout le routage de la reply ; les autres actions de la même reply
+            // (Teleport) restent appliquées.
+            if (string.IsNullOrWhiteSpace(parameter.Param1) || !short.TryParse(parameter.Param1, out short itemId) || itemId <= 0) return;
+            if (!int.TryParse(parameter.Param2, out int quantity) || quantity <= 0) return;
 
             CharacterItemRecord item = character.Inventory.GetFirstItem(itemId, quantity);
 
@@ -86,11 +91,11 @@ namespace Giny.World.Managers.Generic
             short cellId = -1;
             if (short.TryParse(parameter.Param2, out cellId))
             {
-                Giny.World.Managers.Chat.OneAirHavenBagPatch.HandleTeleportInteraction(character, parameter as MapElement, int.Parse(parameter.Param1), cellId, true);
+                Giny.World.Managers.HavenBag.OneAirHavenBagPatch.HandleTeleportInteraction(character, parameter as MapElement, int.Parse(parameter.Param1), cellId, true);
             }
             else
             {
-                Giny.World.Managers.Chat.OneAirHavenBagPatch.HandleTeleportInteraction(character, parameter as MapElement, int.Parse(parameter.Param1), (short)0, false);
+                Giny.World.Managers.HavenBag.OneAirHavenBagPatch.HandleTeleportInteraction(character, parameter as MapElement, int.Parse(parameter.Param1), (short)0, false);
             }
         }
         [GenericActionHandler(GenericActionEnum.OpenBank)]
@@ -119,7 +124,7 @@ namespace Giny.World.Managers.Generic
         [GenericActionHandler(GenericActionEnum.Zaap)]
         public static void HandleZaap(Character character, IGenericAction parameter)
         {
-            Giny.World.Managers.Chat.OneAirHavenBagPatch.HandleZaapInteraction(character, (MapElement)parameter);
+            Giny.World.Managers.HavenBag.OneAirHavenBagPatch.HandleZaapInteraction(character, (MapElement)parameter);
         }
         [GenericActionHandler(GenericActionEnum.Zaapi)]
         public static void HandleZaapi(Character character, IGenericAction parameter)
