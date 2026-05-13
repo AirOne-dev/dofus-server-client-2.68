@@ -89,12 +89,12 @@ CREATE TABLE IF NOT EXISTS dungeon_progress (
         //   * id=31 Antre du Kralamoure Géant (Kokulte Géant n'a pas de dialog)
         private static readonly OneAirDungeonResumeEntry[] ManualOverrides = new[]
         {
-            new OneAirDungeonResumeEntry { DungeonId = 4L,  DungeonName = "Centre du Labyrinthe du Minotoror", EntranceMapId = 34473220L,  ExitMapId = 34476294L,  NpcTemplateId = 783,  NpcName = "Lorkos",         QuestionMessageId = 3212,  EnterReplyId = 438125, ResumeReplyId = 331467, ExitReplyId = 331477 },
+            new OneAirDungeonResumeEntry { DungeonId = 4L,  DungeonName = "Centre du Labyrinthe du Minotoror", EntranceMapId = 34473220L,  ExitMapId = 34476294L,  NpcTemplateId = 783,  NpcName = "Lorkos",         QuestionMessageId = 3212,  EnterReplyId = 2844, ResumeReplyId = 8925, ExitReplyId = 2834 },
             new OneAirDungeonResumeEntry { DungeonId = 8L,  DungeonName = "Grange du Tournesol Affamé",        EntranceMapId = 192937992L, ExitMapId = 192937992L, NpcTemplateId = 780,  NpcName = "Mawy Ingalsse",  QuestionMessageId = 3178,  EnterReplyId = 386714, ResumeReplyId = 0,      ExitReplyId = 366337 },
             new OneAirDungeonResumeEntry { DungeonId = 25L, DungeonName = "Grotte Hesque",                     EntranceMapId = 161295L,    ExitMapId = 161295L,    NpcTemplateId = 941,  NpcName = "Tina Montini",   QuestionMessageId = 4190,  EnterReplyId = 378799, ResumeReplyId = 0,      ExitReplyId = 767068 },
             new OneAirDungeonResumeEntry { DungeonId = 39L, DungeonName = "Cale de l'Arche d'Otomaï",          EntranceMapId = 22546944L,  ExitMapId = 22546944L,  NpcTemplateId = 942,  NpcName = "Capitaine Flams",QuestionMessageId = 4195,  EnterReplyId = 28043,  ResumeReplyId = 29584,  ExitReplyId = 767079 },
             new OneAirDungeonResumeEntry { DungeonId = 42L, DungeonName = "Garde-manger du Rat Blanc",         EntranceMapId = 216402698L, ExitMapId = 218632194L, NpcTemplateId = 6612, NpcName = "Rat Blanc",      QuestionMessageId = 50024, EnterReplyId = 0,      ResumeReplyId = 0,      ExitReplyId = 925429 },
-            new OneAirDungeonResumeEntry { DungeonId = 53L, DungeonName = "Salle du Minotot",                  EntranceMapId = 34473476L,  ExitMapId = 34476294L,  NpcTemplateId = 783,  NpcName = "Lorkos",         QuestionMessageId = 3213,  EnterReplyId = 438125, ResumeReplyId = 331468, ExitReplyId = 21321 },
+            new OneAirDungeonResumeEntry { DungeonId = 53L, DungeonName = "Salle du Minotot",                  EntranceMapId = 34473476L,  ExitMapId = 34476294L,  NpcTemplateId = 783,  NpcName = "Lorkos",         QuestionMessageId = 3213,  EnterReplyId = 2844, ResumeReplyId = 8927, ExitReplyId = 2835 },
             new OneAirDungeonResumeEntry { DungeonId = 58L, DungeonName = "Tanière Givrefoux",                 EntranceMapId = 59510784L,  ExitMapId = 60031488L,  NpcTemplateId = 1385, NpcName = "Givrihaltès",    QuestionMessageId = 8293,  EnterReplyId = 20456,  ResumeReplyId = 26974,  ExitReplyId = 20464 },
         };
 
@@ -371,15 +371,55 @@ ON DUPLICATE KEY UPDATE LastRoomMapId=@r, UpdatedAt=CURRENT_TIMESTAMP";
             Logger.Write($"[OneAir] DungeonResume entrance NPCs : {created} spawned, {replaced} fallback removed, {kept} kept, {failed} failed, {skippedNoTemplate} skip-no-template", Channels.Info);
         }
 
+        // Marqueur pour reconnaître les rows qu'on a seedées et pouvoir les
+        // re-seeder sans accumuler de doublons si la table baked change.
+        private const string SeedMarker = "OneAirSeed";
+
         // Pour chaque NPC d'entrée qu'on a spawné mais qui n'a pas de TALK action
         // vanilla, seed npc_actions + npc_replies pour qu'il propose un dialog
         // fonctionnel (Donner la clef et entrer / Sortir). La reply "Reprendre"
         // est ajoutée dynamiquement par GetExtraRepliesForNpcTalk au moment du
-        // dialog — pas seedée car conditionnelle à la progression. Idempotent :
-        // skip si une TALK existe déjà sur ce spawn (les NPCs vanilla type
-        // Rotabla, Mawy, etc. l'ont déjà dans le dump initial).
+        // dialog — pas seedée car conditionnelle à la progression.
+        //
+        // Idempotent — et "auto-correctif" : avant de seeder, on supprime toutes
+        // les rows précédentes qui ont notre marqueur (Param3 = "OneAirSeed").
+        // Les NPCs vanilla déjà configurés (Rotabla, Mawy, Klasmor, etc.) ne
+        // sont jamais touchés — leur Param3 est vide dans le dump initial.
         public static void EnsureEntranceDialogs()
         {
+            // 1. Cleanup : drop les seed précédents (Param3 = SeedMarker). Permet
+            //    de re-seeder avec les bonnes données quand on patche la table.
+            int droppedActions = 0, droppedReplies = 0;
+            try
+            {
+                using var c = OpenConn();
+                using (var cmd = c.CreateCommand())
+                {
+                    cmd.CommandText = "DELETE FROM npc_replies WHERE Param3=@m";
+                    cmd.Parameters.AddWithValue("@m", SeedMarker);
+                    droppedReplies = cmd.ExecuteNonQuery();
+                }
+                using (var cmd = c.CreateCommand())
+                {
+                    cmd.CommandText = "DELETE FROM npc_actions WHERE Param3=@m";
+                    cmd.Parameters.AddWithValue("@m", SeedMarker);
+                    droppedActions = cmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.Write("[OneAir] DungeonResume seed cleanup failed: " + e.Message, Channels.Warning);
+            }
+            // Recharge les containers in-memory pour refléter le DELETE.
+            DatabaseManager.Instance.Reload<NpcActionRecord>();
+            DatabaseManager.Instance.Reload<NpcReplyRecord>();
+            // Réattache SpawnRecord.Actions aux nouvelles instances NpcActionRecord.
+            foreach (var sp in NpcSpawnRecord.GetNpcSpawns())
+            {
+                sp.Actions = NpcActionRecord.GetNpcActions(sp.Id).ToList();
+            }
+
+            // 2. Seed.
             int seededActions = 0, seededReplies = 0, kept = 0, failed = 0;
             foreach (var kv in _byEntranceMerged.Value)
             {
@@ -387,7 +427,6 @@ ON DUPLICATE KEY UPDATE LastRoomMapId=@r, UpdatedAt=CURRENT_TIMESTAMP";
                 var map = MapRecord.GetMap(mapId);
                 if (map == null) continue;
 
-                // Group entries by NPC template (un NPC peut handler plusieurs donjons).
                 var byTemplate = kv.Value.GroupBy(e => e.NpcTemplateId);
                 foreach (var grp in byTemplate)
                 {
@@ -396,22 +435,18 @@ ON DUPLICATE KEY UPDATE LastRoomMapId=@r, UpdatedAt=CURRENT_TIMESTAMP";
                     if (npc?.SpawnRecord == null) continue;
                     var spawnId = npc.SpawnRecord.Id;
 
-                    // Skip si TALK déjà présent (vanilla seed).
+                    // Skip si TALK vanilla déjà présent (le marqueur exclut les nôtres).
                     if (NpcActionRecord.GetNpcActions(spawnId).Any(a => a.Action == NpcActionsEnum.TALK))
                     {
                         kept++;
                         continue;
                     }
 
-                    // Pick le questionMsgId de la 1ère entrée (toutes les entrées
-                    // partagent forcément le même template + la même map, donc le
-                    // même messageId convient pour le dialog d'entrée commun).
                     int msgId = grp.First().QuestionMessageId;
                     if (msgId <= 0) continue;
 
                     try
                     {
-                        // Seed TALK action.
                         var action = new NpcActionRecord
                         {
                             Id = NpcActionRecord.PopNextId(),
@@ -419,14 +454,13 @@ ON DUPLICATE KEY UPDATE LastRoomMapId=@r, UpdatedAt=CURRENT_TIMESTAMP";
                             Action = NpcActionsEnum.TALK,
                             Param1 = msgId.ToString(),
                             Param2 = "",
-                            Param3 = "",
+                            Param3 = SeedMarker,
                             Criteria = "",
                         };
                         action.AddNow();
                         npc.SpawnRecord.Actions.Add(action);
                         seededActions++;
 
-                        // Seed enter + exit replies pour chaque donjon servi par ce NPC.
                         foreach (var entry in grp)
                         {
                             long firstRoom = 0;
@@ -446,7 +480,7 @@ ON DUPLICATE KEY UPDATE LastRoomMapId=@r, UpdatedAt=CURRENT_TIMESTAMP";
                                     ActionIdentifier = GenericActionEnum.Teleport,
                                     Param1 = firstRoom.ToString(),
                                     Param2 = enterCell.ToString(),
-                                    Param3 = "",
+                                    Param3 = SeedMarker,
                                     Criteria = "",
                                 };
                                 enterReply.AddNow();
@@ -463,7 +497,7 @@ ON DUPLICATE KEY UPDATE LastRoomMapId=@r, UpdatedAt=CURRENT_TIMESTAMP";
                                     ActionIdentifier = GenericActionEnum.None,
                                     Param1 = "",
                                     Param2 = "",
-                                    Param3 = "",
+                                    Param3 = SeedMarker,
                                     Criteria = "",
                                 };
                                 exitReply.AddNow();
@@ -478,7 +512,7 @@ ON DUPLICATE KEY UPDATE LastRoomMapId=@r, UpdatedAt=CURRENT_TIMESTAMP";
                     }
                 }
             }
-            Logger.Write($"[OneAir] DungeonResume entrance dialogs : {seededActions} TALK actions seeded, {seededReplies} replies seeded, {kept} kept (vanilla), {failed} failed", Channels.Info);
+            Logger.Write($"[OneAir] DungeonResume entrance dialogs : dropped {droppedActions} prev actions + {droppedReplies} prev replies ; seeded {seededActions} actions + {seededReplies} replies ; {kept} kept (vanilla), {failed} failed", Channels.Info);
         }
 
         private static MySqlConnection OpenConn()
