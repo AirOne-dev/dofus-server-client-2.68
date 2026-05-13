@@ -13,8 +13,10 @@ namespace Giny.World.Records.Social
     [Table("friends_book")]
     public class OneAirFriendsBookRecord : IRecord
     {
+        // ORM Giny utilise IRecord.Id (long) comme clef du Container, il faut
+        // donc un dict long-keyed même si la colonne SQL est INT.
         [Container]
-        private static readonly ConcurrentDictionary<int, OneAirFriendsBookRecord> Books = new ConcurrentDictionary<int, OneAirFriendsBookRecord>();
+        private static readonly ConcurrentDictionary<long, OneAirFriendsBookRecord> Books = new ConcurrentDictionary<long, OneAirFriendsBookRecord>();
 
         [Ignore]
         public long Id => AccountId;
@@ -41,7 +43,7 @@ namespace Giny.World.Records.Social
 
         public static OneAirFriendsBookRecord Get(int accountId)
         {
-            return Books.TryGetValue(accountId, out var book) ? book : null;
+            return Books.TryGetValue((long)accountId, out var book) ? book : null;
         }
 
         public static OneAirFriendsBookRecord GetOrCreate(int accountId)
