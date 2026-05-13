@@ -198,6 +198,9 @@ CREATE TABLE IF NOT EXISTS dungeon_progress (
                     var saved = GetSavedRoom(character.Id, entry.DungeonId);
                     if (!saved.HasValue) return false;
                     if (MapRecord.GetMap(saved.Value) == null) return false;
+                    // Close le dialog AVANT de tp : Character.Teleport short-circuit
+                    // si Busy (Dialog != null), donc on doit fermer en premier.
+                    character.LeaveDialog();
                     character.Teleport(saved.Value);
                     return true;
                 }
