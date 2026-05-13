@@ -240,6 +240,34 @@ namespace Giny.World.Managers.Chat
             OneAirHavenBagPatch.RegisterInteractive(client.Character, type, elemId);
         }
 
+        // Création de guilde sans Guildalogemme.
+        [ChatCommand("guildcreate", ServerRoleEnum.Player)]
+        public static void GuildCreateCommand(WorldClient client, string name)
+        {
+            if (client.Character.HasGuild) { client.Character.ReplyError("Vous êtes déjà dans une guilde."); return; }
+            if (string.IsNullOrWhiteSpace(name) || name.Length < 3 || name.Length > 30)
+            { client.Character.ReplyError("Nom de guilde invalide (3-30 caractères)."); return; }
+
+            // Emblème par défaut neutre (à modifier plus tard via l'UI vanilla).
+            var emblem = new Giny.Protocol.Types.SocialEmblem((short)1, 0x000000, (byte)1, 0xFFFFFF);
+            var result = Giny.World.Managers.Guilds.GuildsManager.Instance.CreateGuild(client.Character, name, emblem);
+            client.Character.OnGuildCreate(result);
+        }
+
+        // Création d'alliance. Le joueur doit être chef d'une guilde.
+        [ChatCommand("alliancecreate", ServerRoleEnum.Player)]
+        public static void AllianceCreateCommand(WorldClient client, string tag, string name)
+        {
+            var emblem = new Giny.World.Records.Alliances.AllianceEmblemRecord((short)1, 0x000000, (byte)1, 0xFFFFFF);
+            byte result = Giny.World.Managers.Alliances.OneAirAllianceManager.Instance.CreateAlliance(client.Character, name, tag, emblem);
+            client.Character.OnAllianceCreate(result);
+
+            if (result == Giny.World.Managers.Alliances.OneAirAllianceManager.CREATION_OK)
+                client.Character.Reply("Alliance « " + name + " » [" + tag + "] créée.");
+            else
+                client.Character.ReplyError("Création d'alliance impossible (code=" + result + ").");
+        }
+
         private static string JsonEscape(string s)
         {
             if (string.IsNullOrEmpty(s)) return "";

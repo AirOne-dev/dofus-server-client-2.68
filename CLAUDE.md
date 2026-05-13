@@ -244,6 +244,57 @@ listée dans `DungeonRecord.Rooms`. Purgée à l'entrée sur la map
 `ExitMapId`. Conservée si défaite + respawn entrée (cf.
 `Managers/Dungeons/OneAirDungeonRespawn.TryRespawnAtDungeonEntrance`).
 
+## Social (Amis / Guildes / Alliances)
+
+**Amis** — protocole Ankama complet, persisté côté serveur dans
+`friends_book (AccountId, FriendAccountIds, IgnoredAccountIds, WarnOnConnection,
+WarnOnLevelGain, StatusShared)`. La liste suit l'account (pas le perso). Code
+dans `Managers/Social/OneAirFriendsManager.cs` + `Records/Social/
+OneAirFriendsBookRecord.cs` + `Handlers/Roleplay/Social/FriendsHandler.cs`.
+Pas de tags (`#1234` Ankama) — on dérive un tag stable `AccountId:D4` depuis
+l'accountId. `PlayerSearchTagInformation` n'est pas supporté côté lookup,
+seulement `PlayerSearchCharacterNameInformation`.
+
+**Guildes** — moteur Giny vanilla déjà fonctionnel (création via Guildalogemme
+1575 → `GenericActionEnum.CreateGuild` → `OpenGuildCreationDialog`, invitation,
+motd, ranks, kick). On a ajouté la commande chat `.guildcreate <nom>` pour
+contourner l'item. Applications (`GuildSubmitApplicationMessage`, etc.) ne sont
+PAS implémentées : stubs no-op dans `OneAirNoopHandlers.cs` qui renvoient une
+liste vide pour ne pas geler l'UI. Coffre/paddocks pareil.
+
+**Alliances** — entièrement OneAir, pas de code Giny vanilla. Une alliance
+agrège des guildes (pas des personnages). Modèle :
+- Table `alliances` (Id, Name, Tag, Emblem, CreationDate, Motd, Bulletin,
+  LeaderCharacterId, Guilds=List<AllianceGuildLinkRecord>).
+- Colonne `guilds.AllianceId` ajoutée via `EnsureSchema()` au startup
+  `Initial` (avant `LoadTables`).
+- Le DatabaseManager Giny ne fait pas de CREATE TABLE auto au boot ; les
+  tables `alliances` et `friends_book` sont créées manuellement par
+  `OneAirAllianceManager.EnsureSchema()` (SQL natif), idem pour la
+  migration `ALTER TABLE guilds ADD COLUMN AllianceId`.
+- Création : commande chat `.alliancecreate <tag> <nom>` (le joueur doit
+  être chef de sa guilde). Pas de hook sur l'item "Pacte d'alliance" vanilla
+  côté Giny (l'enum `GenericActionEnum` n'a pas de `CreateAlliance`).
+- Pas de KoH/prismes : `AllianceInsiderInfoMessage` est envoyé avec
+  `prisms[]` et `taxCollectors[]` vides (sinon le panneau Alliance plante
+  à l'ouverture).
+- Ranks : on n'envoie pas de `AllianceRanksMessage` peuplé — deux rangs
+  conceptuels (`RANK_FOUNDER`=1, `RANK_MEMBER`=2), le client retombe sur
+  ses textes par défaut.
+- Invitations : pattern `RequestBox` comme les guildes
+  (`AllianceInvitationRequest.cs`). Seul un chef d'une guilde en alliance
+  peut inviter une autre guilde, et seul le chef de la guilde ciblée peut
+  accepter.
+
+Cycle de vie `Character.Alliance` :
+- Au login (post `Guild?.OnConnected`) → `OneAirAllianceManager.OnCharacterConnected`
+  résout l'alliance via `Guild.AllianceId` et envoie `AllianceMembership`.
+- Quand un joueur quitte sa guilde (`OnGuildKick`) → `OnCharacterLeftGuild`
+  nettoie aussi l'alliance.
+- Quand une guilde devient vide → `GuildsManager.RemoveGuild` ne purge pas
+  l'alliance (à câbler si besoin ; en pratique on s'en fout, la guilde
+  reste référencée mais n'a plus de membres en ligne).
+
 ## Havre-sac
 
 Map intérieure ID 162791424 (4 thèmes). `OneAirHavenBagHandler.cs` remplace

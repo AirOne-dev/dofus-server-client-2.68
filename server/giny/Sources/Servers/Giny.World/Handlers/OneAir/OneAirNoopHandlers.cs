@@ -18,12 +18,6 @@ namespace Giny.World.Handlers.OneAir
         public static void HandleSpouseGetInformationsMessage(SpouseGetInformationsMessage message, WorldClient client) { }
 
         [MessageHandler]
-        public static void HandleAllianceGetPlayerApplicationMessage(AllianceGetPlayerApplicationMessage message, WorldClient client) { }
-
-        [MessageHandler]
-        public static void HandleAllianceRanksRequestMessage(AllianceRanksRequestMessage message, WorldClient client) { }
-
-        [MessageHandler]
         public static void HandleAnomalySubareaInformationRequestMessage(AnomalySubareaInformationRequestMessage message, WorldClient client) { }
 
         [MessageHandler]
@@ -31,5 +25,49 @@ namespace Giny.World.Handlers.OneAir
 
         [MessageHandler]
         public static void HandleClientKeyMessage(ClientKeyMessage message, WorldClient client) { }
+
+        // Guild applications : pas de support OneAir, l'UI tape "aucune candidature".
+        [MessageHandler]
+        public static void HandleGuildListApplicationRequest(GuildListApplicationRequestMessage message, WorldClient client)
+        {
+            client.Send(new GuildListApplicationAnswerMessage(new Giny.Protocol.Types.SocialApplicationInformation[0], 0, 0, 0));
+        }
+
+        [MessageHandler]
+        public static void HandleGuildIsThereAnyApplication(GuildIsThereAnyApplicationMessage message, WorldClient client) { }
+
+        [MessageHandler]
+        public static void HandleGuildSubmitApplication(GuildSubmitApplicationMessage message, WorldClient client) { }
+
+        [MessageHandler]
+        public static void HandleGuildDeleteApplicationRequest(GuildDeleteApplicationRequestMessage message, WorldClient client) { }
+
+        [MessageHandler]
+        public static void HandleGuildApplicationAnswer(GuildApplicationAnswerMessage message, WorldClient client) { }
+
+        [MessageHandler]
+        public static void HandleGuildUpdateApplication(GuildUpdateApplicationMessage message, WorldClient client) { }
+
+        [MessageHandler]
+        public static void HandleGuildApplicationListen(GuildApplicationListenMessage message, WorldClient client) { }
+
+        // Alliance applications : idem
+        [MessageHandler]
+        public static void HandleAllianceSubmitApplication(AllianceSubmitApplicationMessage message, WorldClient client) { }
+
+        [MessageHandler]
+        public static void HandleAllianceDeleteApplicationRequest(AllianceDeleteApplicationRequestMessage message, WorldClient client) { }
+
+        [MessageHandler]
+        public static void HandleAllianceUpdateApplication(AllianceUpdateApplicationMessage message, WorldClient client) { }
+
+        [MessageHandler]
+        public static void HandleAllianceApplicationListen(AllianceApplicationListenMessage message, WorldClient client) { }
+
+        [MessageHandler]
+        public static void HandleAllianceIsThereAnyApplication(AllianceIsThereAnyApplicationMessage message, WorldClient client) { }
+
+        [MessageHandler]
+        public static void HandleAllianceApplicationAnswer(AllianceApplicationAnswerMessage message, WorldClient client) { }
     }
 }

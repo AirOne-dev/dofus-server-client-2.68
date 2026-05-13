@@ -360,6 +360,8 @@ namespace Giny.World.Managers.Guilds
         {
             return OnlineMembers.Values.FirstOrDefault(x => x.Name == name);
         }
+        // OneAir : exposé pour les broadcasts d'alliance.
+        public IEnumerable<Character> GetOnlineMembers() => OnlineMembers.Values;
 
         public void SetBulletin(Character source, string content)
         {

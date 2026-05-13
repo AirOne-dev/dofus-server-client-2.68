@@ -136,6 +136,10 @@ namespace Giny.World.Managers.Entities.Characters
         }
         public bool HasGuild => Record.GuildId != 0;
 
+        // OneAir : Alliance courante (résolue au login si la guilde est en alliance).
+        public Giny.World.Managers.Alliances.Alliance Alliance { get; set; }
+        public bool HasAlliance => Alliance != null;
+
         public bool JustCreatedOrReplayed
         {
             get;
@@ -1170,6 +1174,8 @@ namespace Giny.World.Managers.Entities.Characters
             // remove this (achievements do the job) ?
             CharacterLevelRewardManager.Instance.OnCharacterLevelUp(this, oldLevel, Level);
 
+            Giny.World.Managers.Social.OneAirFriendsManager.Instance.OnCharacterLevelGain(this, oldLevel, Level);
+
             if (HasParty)
             {
                 Party.UpdateMember(this);
@@ -1214,6 +1220,8 @@ namespace Giny.World.Managers.Entities.Characters
             this.Reply(ConfigManager<WorldConfig>.Instance.WelcomeMessage, Color.CornflowerBlue); Giny.World.Managers.Events.OneAirEventManager.SendStatusTo(this.Client);
             CheckSoldItems();
             Guild?.OnConnected(this);
+            Giny.World.Managers.Alliances.OneAirAllianceManager.Instance.OnCharacterConnected(this);
+            Giny.World.Managers.Social.OneAirFriendsManager.Instance.OnCharacterConnected(this);
         }
         public void NoMove()
         {
@@ -1294,6 +1302,7 @@ namespace Giny.World.Managers.Entities.Characters
 
             Record.InGameContext = false;
             Guild?.OnDisconnected(this);
+            Giny.World.Managers.Social.OneAirFriendsManager.Instance.OnCharacterDisconnected(this);
 
 
             if (Dialog != null)
@@ -1975,12 +1984,36 @@ namespace Giny.World.Managers.Entities.Characters
         }
         public void OnGuildKick(Guild guild)
         {
+            // OneAir : si la guilde est dans une alliance, on doit aussi sortir le perso de l'alliance.
+            Giny.World.Managers.Alliances.OneAirAllianceManager.Instance.OnCharacterLeftGuild(this);
+
             Guild = null;
             GuildMember = null;
             Record.GuildId = 0;
             Client.Send(new GuildLeftMessage());
             TextInformation(TextInformationTypeEnum.TEXT_INFORMATION_MESSAGE, 1431, guild.Record.Name);
             RemoveAllHumanOption<CharacterHumanOptionGuild>(true);
+        }
+
+        // OneAir : Alliance lifecycle hooks (équivalents des OnGuild*).
+        public void OnAllianceCreate(byte result)
+        {
+            Client.Send(new Giny.Protocol.Messages.AllianceCreationResultMessage(result));
+        }
+
+        public void OnAllianceJoined(Giny.World.Managers.Alliances.Alliance alliance)
+        {
+            Alliance = alliance;
+            Client.Send(new Giny.Protocol.Messages.AllianceJoinedMessage(alliance.GetAllianceInformations(), alliance.GetRankOfGuild(Record.GuildId)));
+            alliance.SendMembership(this);
+            alliance.RefreshMotd(this);
+        }
+
+        public void OnAllianceKick(Giny.World.Managers.Alliances.Alliance alliance)
+        {
+            Alliance = null;
+            Client.Send(new Giny.Protocol.Messages.AllianceLeftMessage());
+            TextInformation(TextInformationTypeEnum.TEXT_INFORMATION_MESSAGE, 247, alliance.Record.Name);
         }
 
 

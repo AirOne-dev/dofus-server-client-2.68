@@ -98,6 +98,14 @@ namespace Giny.World.Records.Guilds
             set;
         }
 
+        // OneAir : lien vers l'alliance hébergeante (0 = pas d'alliance).
+        [Update]
+        public long AllianceId
+        {
+            get;
+            set;
+        }
+
         public static bool Exists(string guildName)
         {
             return Guilds.Values.Any(x => x.Name == guildName);
