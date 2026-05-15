@@ -3,6 +3,11 @@
 
 # Bundles + zips clients (~5 GB chacun, générés par client/build.sh)
 client/build/
+OneAir-Windows
+OneAir.app
+client/dofus-darwin-2.68
+client/dofus-windows-2.68
+dist
 
 # Cache local (Swift SDK Darwin ~700 MB + assets Dofus officiels ~5 GB chacun
 # fetch via cytrus, modules go/swift téléchargés, etc.)
