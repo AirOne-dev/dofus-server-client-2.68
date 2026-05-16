@@ -4,7 +4,10 @@ name: dofus-giny
 #  Giny.NETCore — émulateur Dofus 2.7x complet (.NET 6, arm64-natif)
 #  Stack : MySQL 8 + DBGate + Auth + World (tout dans Docker)
 # -----------------------------------------------------------------------------
-#  Démarrage : docker compose up -d --build
+#  Démarrage release : docker compose --profile release up -d --build
+#  Démarrage debug   : docker compose --profile debug   up -d --build
+#    Les profils "release" et "debug" sont mutuellement exclusifs :
+#    ne jamais les combiner, ils partagent les mêmes ports.
 
 services:
 
@@ -17,8 +20,6 @@ services:
       MYSQL_DATABASE: ${MYSQL_AUTH_DB:-giny_auth}
       MYSQL_USER: ${MYSQL_USER:-giny}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD requis dans .env}
-      # Lu par init-sql/03_patch_world_servers.sh au premier setup pour
-      # renseigner world_servers.Host (sinon fallback 127.0.0.1).
       SERVER_HOST: ${SERVER_HOST:-127.0.0.1}
     command:
       - --character-set-server=utf8mb4
@@ -30,12 +31,8 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
       - ./server/init-sql:/docker-entrypoint-initdb.d:ro
-    # Bind localhost-only : MySQL n'est jamais consommé depuis l'extérieur du
-    # VPS (les containers Giny passent par giny-net via le hostname `mysql`,
-    # cf. MYSQL_HOST=mysql plus bas). Un dump distant peut toujours se faire
-    # via SSH tunnel : `ssh vps -L 3306:127.0.0.1:3306`.
     ports:
-      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
+      - "0.0.0.0:${MYSQL_PORT:-3306}:3306"
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD"]
       interval: 5s
@@ -43,9 +40,6 @@ services:
       retries: 60
     networks: [giny-net]
 
-  # DBGate en mode interne uniquement : pas de port host, accessible uniquement
-  # via le reverse-proxy de l'admin sur /dbgate/. WEB_ROOT pour que les URLs
-  # générées soient préfixées correctement.
   dbgate:
     image: dbgate/dbgate:latest
     container_name: giny-dbgate
@@ -72,9 +66,6 @@ services:
     volumes: [dbgate-data:/root/.dbgate]
     networks: [giny-net]
 
-  # Site OneAir : landing publique, articles, login joueur, panel admin et
-  # reverse-proxy dbgate (sous /dbgate/, gated par session admin). Une seule
-  # binaire Go servant tout le HTTP du serveur. (Anciennement "admin".)
   web:
     build:
       context: ./server/web
@@ -107,26 +98,22 @@ services:
     volumes:
       - ./server/backups:/backups
       - web-items-cache:/items-cache
-      # Bundle macOS du client : sert à la fois (1) source des assets
-      # (icônes items/heads/breeds, .d2p) et (2) fallback du download
-      # /download/macos si le zip statique est absent. Tous les paths Go
-      # default-pointent vers /app/OneAir.app/Contents/Resources/...
       - ./client/build/OneAir.app:/app/OneAir.app:ro
-      # Bundle Windows du client : fallback du /download/windows.
       - ./client/build/OneAir-Windows:/app/OneAir-Windows:ro
-      # Zips statiques produits par client/build.sh.
-      # Chemins par défaut : /app/build/OneAir-MacOS.zip + OneAir-Windows.zip
-      # → servis directement par http.ServeFile (Range supporté, instant).
-      # Override via env ONEAIR_APP_ZIP / ONEAIR_WIN_ZIP.
       - ./client/build:/app/build:ro
     networks: [giny-net]
 
+  # ---------------------------------------------------------------------------
+  # Auth — Release (profil "release" uniquement)
+  # ---------------------------------------------------------------------------
   auth:
     build:
       context: ./server
       dockerfile: Dockerfile
+      target: runtime          # stage release
     image: giny/server:latest
     container_name: giny-auth
+    profiles: ["release"]
     restart: unless-stopped
     tty: true
     stdin_open: true
@@ -141,21 +128,58 @@ services:
       AUTH_PORT: ${AUTH_PORT:-5555}
       IPC_PORT: ${IPC_PORT:-800}
       AUTH_API_PORT: ${AUTH_API_PORT:-9001}
-    # 5555 = protocole jeu Dofus (auth), exposé publiquement (le client y tape).
-    # 800 = IPC auth↔world : aucune authentification du handshake côté Giny,
-    #       donc bind localhost-only. World y accède via le hostname `auth`
-    #       sur giny-net (cf. IPC_HOST=auth dans le service world).
-    # 9001 = API HTTP auth (Account/auth, Account/register, Version/launcher)
-    #       : non gated, expose register/login. Bind localhost-only.
     ports:
       - "${PUBLIC_AUTH_PORT:-5555}:5555"
       - "127.0.0.1:${IPC_PORT:-800}:800"
       - "127.0.0.1:${AUTH_API_PORT:-9001}:9001"
     networks: [giny-net]
 
+  # ---------------------------------------------------------------------------
+  # Auth — Debug (profil "debug" uniquement)
+  # Lance la variante compilée en Debug avec vsdbg disponible.
+  # VSCodium s'y attache via pipeTransport docker exec sur giny-auth-debug.
+  # ---------------------------------------------------------------------------
+  auth-debug:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      target: runtime-debug    # stage debug
+    image: giny/server:debug
+    container_name: giny-auth-debug
+    profiles: ["debug"]
+    restart: unless-stopped
+    tty: true
+    stdin_open: true
+    depends_on:
+      mysql: { condition: service_healthy }
+    command: ["auth"]
+    # SYS_PTRACE + seccomp:unconfined sont obligatoires pour que vsdbg
+    # puisse s'attacher au process .NET dans le container.
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: ${MYSQL_USER:-giny}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD requis dans .env}
+      MYSQL_AUTH_DB: ${MYSQL_AUTH_DB:-giny_auth}
+      AUTH_PORT: ${AUTH_PORT:-5555}
+      IPC_PORT: ${IPC_PORT:-800}
+      AUTH_API_PORT: ${AUTH_API_PORT:-9001}
+    ports:
+      - "${PUBLIC_AUTH_PORT:-5555}:5555"
+      - "127.0.0.1:${IPC_PORT:-800}:800"
+      - "127.0.0.1:${AUTH_API_PORT:-9001}:9001"
+    networks: [giny-net]
+
+  # ---------------------------------------------------------------------------
+  # World — Release (profil "release" uniquement)
+  # ---------------------------------------------------------------------------
   world:
     image: giny/server:latest
     container_name: giny-world
+    profiles: ["release"]
     restart: unless-stopped
     tty: true
     stdin_open: true
@@ -178,13 +202,51 @@ services:
       JOB_RATE: ${JOB_RATE:-1}
       DROP_RATE: ${DROP_RATE:-1}
       XP_RATE: ${XP_RATE:-1}
-    # 5556 = protocole jeu Dofus (world), exposé publiquement.
-    # 9000 = API HTTP world (Common/stats, Reload/items, Reload/npcs) : non
-    #       authentifiée, déclencher `/Reload/items` est un DoS à la demande.
-    #       Bind localhost-only.
     ports:
       - "${PUBLIC_WORLD_PORT:-5556}:5556"
       - "127.0.0.1:${WORLD_API_PORT:-9000}:9000"
+    networks: [giny-net]
+
+  # ---------------------------------------------------------------------------
+  # World — Debug (profil "debug" uniquement)
+  # Dépend de auth-debug au lieu de auth pour que l'IPC reste cohérent.
+  # ---------------------------------------------------------------------------
+  world-debug:
+    image: giny/server:debug
+    container_name: giny-world-debug
+    profiles: ["debug"]
+    restart: unless-stopped
+    tty: true
+    stdin_open: true
+    depends_on:
+      mysql:      { condition: service_healthy }
+      auth-debug: { condition: service_started }
+    command: ["world"]
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: ${MYSQL_USER:-giny}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD requis dans .env}
+      MYSQL_WORLD_DB: ${MYSQL_WORLD_DB:-giny_world}
+      WORLD_PORT: ${WORLD_PORT:-5556}
+      WORLD_API_PORT: ${WORLD_API_PORT:-9000}
+      WORLD_ID: ${WORLD_ID:-291}
+      WORLD_NAME: ${WORLD_NAME:-One Air}
+      WELCOME_MESSAGE: ${WELCOME_MESSAGE:-Bienvenue sur <b>OneAir</b> !}
+      IPC_HOST: auth-debug     # pointe vers le container auth debug
+      IPC_PORT: ${IPC_PORT:-800}
+      JOB_RATE: ${JOB_RATE:-1}
+      DROP_RATE: ${DROP_RATE:-1}
+      XP_RATE: ${XP_RATE:-1}
+      DOTNET_TieredCompilation: "0"
+      DOTNET_EnableDiagnostics: "1"
+      COMPlus_ZapDisable: "1"
+    ports:
+      - "${PUBLIC_WORLD_PORT:-5556}:5556"
+      - "0.0.0.0:${WORLD_API_PORT:-9000}:9000"
     networks: [giny-net]
 
   db:
@@ -197,9 +259,6 @@ services:
     entrypoint: ["mysql", "-hmysql", "-u${MYSQL_USER:-giny}"]
     networks: [giny-net]
 
-  # Dump périodique des bases auth + world dans ./server/backups/
-  # (intervalle ${BACKUP_INTERVAL_SECONDS}, garde ${BACKUP_KEEP_COUNT} fichiers).
-  # Démarrage : `docker compose up -d backup`
   backup:
     image: mysql:8.0
     container_name: giny-backup
