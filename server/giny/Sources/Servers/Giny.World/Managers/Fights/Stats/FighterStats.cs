@@ -174,7 +174,7 @@ namespace Giny.World.Managers.Fights.Stats
             this[CharacteristicEnum.FIRE_ELEMENT_RESIST_PERCENT] = ResistanceCharacteristic.New(monsterGrade.FireResistance);
             this[CharacteristicEnum.GLYPH_POWER] = DetailedCharacteristic.Zero();
             this[CharacteristicEnum.HEAL_BONUS] = DetailedCharacteristic.Zero();
-            this[CharacteristicEnum.INTELLIGENCE] = DetailedCharacteristic.New(monsterGrade.Intelligence);
+            this[CharacteristicEnum.INTELLIGENCE] = DetailedCharacteristic.New((short)(monsterGrade.Intelligence * coeff));
             this[CharacteristicEnum.WISDOM] = DetailedCharacteristic.New((short)(monsterGrade.Wisdom * coeff));
             this[CharacteristicEnum.CHANCE] = DetailedCharacteristic.New((short)(monsterGrade.Chance * coeff));
             this[CharacteristicEnum.AGILITY] = DetailedCharacteristic.New((short)(monsterGrade.Agility * coeff));
