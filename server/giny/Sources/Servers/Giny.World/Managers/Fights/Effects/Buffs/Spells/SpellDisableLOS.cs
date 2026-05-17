@@ -29,6 +29,14 @@ namespace Giny.World.Managers.Fights.Effects.Buffs.Spells
             {
                 foreach (var spell in target.GetSpells())
                 {
+                    if (this.Effect.Min != 0 && this.Effect.Min != spell.Id) // Fix spells that only creates one LOSBuff like morph
+                    {
+                         continue;
+                    }
+                    if (spell.Id == 0) // Fix no LOS on weapons
+                    {
+                         continue;
+                    }
                     int id = target.BuffIdProvider.Pop();
                     Buff buff = new SpellBoostRemoveLOSBuff(id, spell.Id, (short)Effect.Value, target, this, Effect.DispellableEnum,
                      (short)ActionsEnum.ACTION_BOOST_SPELL_NOLINEOFSIGHT);
