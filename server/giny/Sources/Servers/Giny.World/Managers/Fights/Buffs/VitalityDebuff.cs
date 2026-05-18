@@ -27,8 +27,6 @@ namespace Giny.World.Managers.Fights.Buffs
         public override void Execute()
         {
             Target.RemoveVitality(GetDelta());
-
-        
         }
 
         public override void Dispell()
