@@ -2034,7 +2034,7 @@ namespace Giny.World.Managers.Fights.Fighters
         }
         public void AddVitality(short delta)
         {
-            Stats.Life.Current += delta;
+            Stats.Life.Current = Math.Min(Stats.Life.Current + delta, Stats.MaxLifePoints);
 
             TriggerBuffs(TriggerTypeEnum.LifeAffected, null);
             TriggerBuffs(TriggerTypeEnum.LifePointsAffected, null);
@@ -2046,7 +2046,6 @@ namespace Giny.World.Managers.Fights.Fighters
         {
             Stats[CharacteristicEnum.VITALITY].Context += delta;
 
-
             TriggerBuffs(TriggerTypeEnum.LifeAffected, null);
             TriggerBuffs(TriggerTypeEnum.LifePointsAffected, null);
             TriggerBuffs(TriggerTypeEnum.MaxLifePointsAffected, null);
@@ -2054,7 +2053,6 @@ namespace Giny.World.Managers.Fights.Fighters
         public void RemoveMaxVitality(short delta)
         {
             Stats[CharacteristicEnum.VITALITY].Context -= delta;
-
 
             TriggerBuffs(TriggerTypeEnum.LifeAffected, null);
             TriggerBuffs(TriggerTypeEnum.LifePointsAffected, null);
