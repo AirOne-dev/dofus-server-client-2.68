@@ -981,7 +981,7 @@ namespace Giny.World.Managers.Fights
         }
         public virtual bool CheckFightEnd()
         {
-            if (BlueTeam.Alives == 0 || RedTeam.Alives == 0 && !Ended)
+            if (BlueTeam.Alives == 0 || RedTeam.Alives == 0 || this.RoundNumber > 666 && !Ended)
             {
                 Ended = true;
                 Phase = FightPhaseEnum.Ended;
