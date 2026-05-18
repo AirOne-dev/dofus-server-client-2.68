@@ -763,6 +763,21 @@ namespace Giny.World.Managers.Fights.Fighters
             return result;
         }
 
+        public void removeStateBuffFromID(Fighter source, int id)
+        {
+            foreach (var buff in this.Buffs)
+            {
+                if (buff.Effect.EffectEnum == EffectsEnum.Effect_AddState)
+                {
+                   if (((StateBuff)buff).StateId == id)
+                    {
+                        this.RemoveBuff(source, buff);
+                        return;
+                    }
+                }
+            }
+        }
+
         public IEnumerable<T> GetBuffs<T>(bool enabledOnly = true) where T : Buff
         {
             return GetBuffs(enabledOnly).OfType<T>();
