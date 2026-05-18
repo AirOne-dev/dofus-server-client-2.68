@@ -1,4 +1,5 @@
 ﻿using Giny.Protocol.Custom.Enums;
+using Giny.Protocol.Messages;
 using Giny.Protocol.Types;
 using Giny.World.Managers.Effects;
 using Giny.World.Managers.Fights.Cast;
@@ -238,6 +239,16 @@ namespace Giny.World.Managers.Fights.Marks
         public bool ContainsCell(short cellId)
         {
             return Cells.Any(x => x.Id == cellId);
+        }
+
+        private bool checkInsideCells(CellRecord cell, List<Records.Maps.CellRecord> cells)
+        {
+            return cells.Any(x => x.Id == cell.Id);
+        }
+
+        public bool crossContainsCell(List<Records.Maps.CellRecord> cells)
+        {
+            return Cells.Any(x => checkInsideCells(x, cells));
         }
 
         public abstract void Trigger(Fighter target, MarkTriggerType triggerType, ITriggerToken? token);
