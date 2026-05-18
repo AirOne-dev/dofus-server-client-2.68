@@ -1,7 +1,7 @@
 ﻿using Giny.Core.DesignPattern;
 using Giny.Protocol.Enums;
 using Giny.World.Managers.Effects;
-
+using Giny.World.Managers.Fights.Buffs;
 using Giny.World.Managers.Fights.Cast;
 using Giny.World.Managers.Fights.Fighters;
 using Giny.World.Records.Maps;
@@ -38,6 +38,10 @@ namespace Giny.World.Managers.Fights.Effects.Summons
                 if (summonCell != null)
                 {
                     SummonedMonster summon = CreateSummon(record, (byte)Effect.Max, summonCell);
+                    if (summon.Record.Id == 5834) // fix Pelle Animée qui ne doit pas infliger de dmg
+                    {
+                        summon.canDealPushBackDamages = false;
+                    }
 
                     if (Source.CanSummon() || !summon.UseSummonSlot())
                     {
