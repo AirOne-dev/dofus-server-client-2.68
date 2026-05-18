@@ -47,6 +47,8 @@ namespace Giny.World.Managers.Fights.Fighters
 
         public const short GravityState = 7;
 
+        public bool canDealPushBackDamages = true;
+
         /* -- Fight events API -- */
         public delegate void FighterEventDelegate(Fighter target);
 
@@ -1900,6 +1902,10 @@ namespace Giny.World.Managers.Fights.Fighters
         {
             return !GetBuffs<StateBuff>().Where(x => x.Record.CantBeTackled).Any(y => HasState(y.StateId));
         }
+        public virtual bool CanDealPushBackDamages()
+        {
+            return this.canDealPushBackDamages;
+        }
         public virtual bool CanDealDamages()
         {
             return !GetBuffs<StateBuff>().Where(x => x.Record.CantDealDamage).Any(y => HasState(y.StateId));
@@ -2125,8 +2131,12 @@ namespace Giny.World.Managers.Fights.Fighters
 
             LastAttacker = damage.Source;
 
-            if ((IsInvulnerable() || !damage.Source.CanDealDamages()) || (IsInvulnerableMelee() && damage.Source.IsMeleeWith(this))
-             || (IsInvulnerableRange() && !damage.Source.IsMeleeWith(this)) || delta < 0)
+            if (IsInvulnerable()
+            || !damage.Source.CanDealDamages()
+            || (damage.FromPushback && !damage.Source.CanDealPushBackDamages())
+            || (IsInvulnerableMelee() && damage.Source.IsMeleeWith(this))
+            || (IsInvulnerableRange() && !damage.Source.IsMeleeWith(this))
+            || delta < 0)
             {
                 TriggerBuffs(damage);
                 return DamageResult.Zero();
