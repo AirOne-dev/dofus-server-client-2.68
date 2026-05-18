@@ -780,6 +780,18 @@ namespace Giny.World.Managers.Fights.Fighters
             }
         }
 
+        public void removeBuffFromSpellId(Fighter source, int id)
+        {
+            foreach (var buff in this.Buffs)
+            {
+                if (buff.Cast.SpellId == id)
+                {
+                    this.RemoveBuff(source, buff);
+                    return;
+                }
+            }
+        }
+
         public IEnumerable<T> GetBuffs<T>(bool enabledOnly = true) where T : Buff
         {
             return GetBuffs(enabledOnly).OfType<T>();
