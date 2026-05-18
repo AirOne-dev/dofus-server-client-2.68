@@ -40,6 +40,11 @@ namespace Giny.World.Managers.Fights.Buffs
 
         public override void Dispell()
         {
+            if (this.StateId == 516) // Si on perd l'etat proie/gibier
+            {
+                this.Target.removeStateBuffFromID(this.Target, 4155); // Remove l'etat poursuite
+                this.Target.removeBuffFromSpellId(this.Target, 13801); // Remove le trigger poursuite
+            }
             Target.OnStateRemoved(this);
         }
 
