@@ -25,7 +25,7 @@ namespace Giny.World.Managers.Fights.Effects.Marks
         {
             var cells = GetAffectedCells();
 
-            IEnumerable<Rune> runes = Source.GetMarks<Rune>().Where(x => x.ContainsCell(x.CenterCell.Id));
+            IEnumerable<Rune> runes = Source.GetMarks<Rune>().Where(x => x.crossContainsCell(cells));
 
             using (Source.Fight.SequenceManager.StartSequence(SequenceTypeEnum.SEQUENCE_GLYPH_TRAP))
             {
